@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Ajv2020 } from "ajv/dist/2020.js"
 import { readFileSync } from "node:fs"
+import { classifyPattern } from "../../src/classify.js"
 import { decide } from "../../src/decide.js"
 import { buildBashRules, loadRules } from "../../src/rules.js"
 
@@ -12,7 +13,13 @@ interface Case {
 
 const read = (file: string): unknown =>
   JSON.parse(readFileSync(new URL(`../../rules/${file}`, import.meta.url), "utf8"))
-const file = read("cases.json") as { commands: Case[] }
+interface PatternCase {
+  pattern: string
+  ok: boolean
+  reason?: string
+}
+
+const file = read("cases.json") as { commands: Case[]; patterns: PatternCase[] }
 const bash = buildBashRules(loadRules())
 
 test("cases.json matches its schema", () => {
@@ -42,4 +49,12 @@ describe("expected verdicts (rules/cases.json)", () => {
       }
     },
   )
+})
+
+describe("pattern vetting (rules/cases.json)", () => {
+  test.each(file.patterns.map((entry) => [JSON.stringify(entry.pattern), entry] as const))("%s", (_name, entry) => {
+    const verdict = classifyPattern(entry.pattern)
+    expect(verdict.ok).toBe(entry.ok)
+    if (!entry.ok && entry.reason) expect(verdict.reason).toContain(entry.reason)
+  })
 })

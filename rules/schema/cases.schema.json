@@ -4,11 +4,15 @@
   "title": "readonly-guard expected verdicts",
   "description": "Regression cases for the shared rules, run by the test suite against the shipped allowlist.",
   "type": "object",
-  "required": ["version", "commands"],
+  "required": ["version", "commands", "patterns"],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
     "commands": {
       "type": "array",
       "items": {
@@ -16,12 +20,39 @@
         "required": ["command", "verdict"],
         "additionalProperties": false,
         "properties": {
-          "command": { "type": "string", "minLength": 1 },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
           "verdict": {
             "enum": ["allow", "ask", "block"],
             "description": "allow: runs without a prompt. ask: needs approval. block: refused by the write guard."
           },
-          "reason": { "type": "string", "description": "For block cases: text the block reason must contain." }
+          "reason": {
+            "type": "string",
+            "description": "For block cases: text the block reason must contain."
+          }
+        }
+      }
+    },
+    "patterns": {
+      "type": "array",
+      "description": "Patterns offered to /guard-review or set in the `allow` option: ok means they may be added to the allowlist.",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "ok"],
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "description": "For refused patterns: text the refusal reason must contain."
+          }
         }
       }
     }
