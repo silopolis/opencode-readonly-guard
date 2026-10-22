@@ -6,6 +6,7 @@ local linters = new Mapping<String, Step> {
   ["oxlint"] = (Builtins.ox_lint) { depends = "prettier" }
   ["tsc"] = Builtins.tsc
   ["mise"] = Builtins.mise
+  ["actionlint"] = Builtins.actionlint
   ["trailing_whitespace"] = Builtins.trailing_whitespace
   ["newlines"] = Builtins.newlines
   ["check_merge_conflict"] = Builtins.check_merge_conflict

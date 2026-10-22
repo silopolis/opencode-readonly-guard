@@ -4,6 +4,8 @@ min_version = "2026.10.0"
 bun = "1.4.3"
 node = "24.22.1"
 hk = "2.8.0"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
 # Only needed for integration and e2e tests: the opencode release the plugin is verified against.
 "aqua:anomalyco/opencode" = "1.19.3"
 
