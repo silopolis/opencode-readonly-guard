@@ -38,6 +38,15 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [ ] More rules: `docker ps/images/logs`, `kubectl get/describe`, `gh pr view`, `systemctl status`, `journalctl`,
       `lsblk`, … each with its write flags in `ask.json` and cases in `cases.json`.
 
+## Sharing rules
+
+- [ ] A command to contribute rule changes upstream: `opencode-readonly-guard submit` (also reachable from
+      `/guard-review`). It would turn the user's learned rules, and the dismissed or refused ones worth discussing,
+      into a diff against `rules/allow.json` / `ask.json` / `commands.json` plus matching `rules/cases.json` entries,
+      run the schema and test checks, and open a pull request with `gh` against `origin` (or `upstream` when `origin`
+      is a fork, creating the fork if needed). Every rule needs a `reason`, and nothing leaves the machine without a
+      preview and a confirmation; the event log is never uploaded.
+
 ## Learning and review
 
 - [ ] Check in a real TUI that the "always" warning toast is shown (only the API call is covered by tests).
@@ -49,7 +58,28 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 
 - [ ] rtk: models retry commands the rtk plugin rewrote (`ls` → `rtk ls`) because they think they mistyped them.
       Options: tell the model in the tool description, skip the rewrite in read-only agents, or fix upstream.
-- [ ] Warn at startup when the plugin is loaded twice, or when another plugin also injects bash rules.
+- [ ] Warn at startup when another plugin also injects bash rules.
+
+## Loading
+
+- [ ] Guarantee the plugin runs once per opencode process. Today a global and a project entry (or a `plugins/` copy
+      plus an npm entry) load two instances that both inject rules, register the tools and log every event twice.
+      Add a process-wide guard (for example a `globalThis` symbol set by the first instance) and decide which
+      instance wins: if a global instance is already loaded and the project config also lists the plugin, the
+      project's options should take effect (re-run the config injection with the project's options, replacing the
+      global instance's rules) rather than being ignored. Cover it with an integration test that loads both.
+
+## Repository
+
+- [ ] opencode project config for contributors: `opencode.json` and `.opencode/` in this repository (an `AGENTS.md`
+      with the commands and conventions, the repository's own plugin loaded from `dist/` for dogfooding, a
+      `permission` setup that allows the mise tasks, and project commands such as `/check` and `/add-rule`). Keep the
+      plugin out of it when the contributor already has it globally (see "Loading").
+- [ ] Automated dependency updates: a Renovate or Dependabot config covering npm (bun lockfile), GitHub Actions
+      (pinned to SHAs) and the mise tool versions in `mise.toml`, with grouped minor/patch updates and the
+      conventional-commit prefix (`build(deps):`, `ci(deps):`). Renovate handles `mise.toml` and bun; Dependabot does
+      not, so Renovate is likely the better fit. Also bump the pinned opencode version and run the integration suite
+      against it.
 
 ## Testing
 
