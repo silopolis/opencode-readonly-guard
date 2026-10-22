@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-readonly-guard",
+  "version": "0.1.0",
+  "description": "Make opencode's read-only agents (plan, explore, ...) actually read-only: shell write guard, shared allowlist, prompt log and reviewed learning.",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "plugin",
+    "permissions",
+    "read-only",
+    "guard",
+    "security",
+    "bash"
+  ],
+  "homepage": "https://github.com/silopolis/opencode-readonly-guard#readme",
+  "bugs": "https://github.com/silopolis/opencode-readonly-guard/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/silopolis/opencode-readonly-guard.git"
+  },
+  "license": "MIT",
+  "author": "Jérémie Tarot <silopolis@gmail.com>",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./rules/*.json": "./rules/*.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "opencode-readonly-guard": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "rules",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings",
+    "fmt": "prettier --write .",
+    "fmt:check": "prettier --check .",
+    "test": "bun test test/unit",
+    "check": "bun run lint && bun run fmt:check && bun run typecheck && bun run test",
+    "prepack": "bun run build"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.18.29 <2"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "1.19.3",
+    "@types/bun": "1.4.3",
+    "@types/node": "24.12.2",
+    "oxlint": "1.89.0",
+    "prettier": "3.6.2",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22",
+    "opencode": ">=1.18.29 <2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
