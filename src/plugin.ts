@@ -1,12 +1,14 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { createAnalyzer } from "./analyze.js"
 import { classifyPattern, normalizePattern } from "./classify.js"
+import { registerReviewCommand } from "./command.js"
 import { UTILITY_AGENTS } from "./constants.js"
 import { injectRules, type MutableConfig } from "./inject.js"
 import { clip, createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { loadRules } from "./rules.js"
 import { loadStore } from "./store.js"
+import { createTools } from "./tools.js"
 
 /** opencode's runtime events are richer than the v1 SDK types: permission events arrive as `permission.asked`. */
 interface RuntimeEvent {
@@ -87,8 +89,11 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
       })
       readOnly.clear()
       for (const name of names) readOnly.add(name)
+      if (options.command) registerReviewCommand(config as MutableConfig, options.command)
       guardLog.write({ type: "init", project: worktree, roAgents: [...names], learned: learned.length })
     },
+
+    tool: createTools({ readOnly, rules, log: guardLog, storeFile: options.storeFile, project: worktree }),
 
     "chat.params": async (input) => {
       if (input.sessionID && input.agent && !UTILITY_AGENTS.has(input.agent)) agentOf.set(input.sessionID, input.agent)

@@ -93,6 +93,19 @@ describe("config hook", () => {
   })
 })
 
+describe("review command and tools", () => {
+  test("registers the tools and the command", async () => {
+    const { hooks, config } = await start()
+    expect(Object.keys(hooks.tool ?? {}).toSorted()).toEqual(["readonly_guard_review", "readonly_guard_update"])
+    expect(config.command?.["guard-review"]).toMatchObject({ agent: "build" })
+  })
+
+  test("the command can be renamed or disabled", async () => {
+    expect((await start({ command: "review-guard" })).config.command).toHaveProperty("review-guard")
+    expect((await start({ command: false })).config.command).toBeUndefined()
+  })
+})
+
 describe("write guard", () => {
   test("blocks writes in a read-only agent and logs them", async () => {
     const { hooks } = await start()
