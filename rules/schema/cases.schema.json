@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/silopolis/opencode-readonly-guard/rules/schema/cases.schema.json",
+  "title": "readonly-guard expected verdicts",
+  "description": "Regression cases for the shared rules, run by the test suite against the shipped allowlist.",
+  "type": "object",
+  "required": ["version", "commands"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["command", "verdict"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "verdict": {
+            "enum": ["allow", "ask", "block"],
+            "description": "allow: runs without a prompt. ask: needs approval. block: refused by the write guard."
+          },
+          "reason": { "type": "string", "description": "For block cases: text the block reason must contain." }
+        }
+      }
+    }
+  }
+}
