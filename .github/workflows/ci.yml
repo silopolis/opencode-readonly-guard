@@ -17,8 +17,8 @@ jobs:
     name: lint, types, unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
       - run: bun install --frozen-lockfile
       - run: mise run check
       - run: hk check --all
@@ -27,8 +27,8 @@ jobs:
     name: package and opencode integration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
       - run: bun install --frozen-lockfile
       - run: mise run pack
       - run: mise run test:integration
