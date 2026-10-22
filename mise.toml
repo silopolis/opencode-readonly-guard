@@ -1,0 +1,62 @@
+min_version = "2026.10.0"
+
+[tools]
+bun = "1.4.3"
+node = "24.22.1"
+hk = "2.8.0"
+# Only needed for integration and e2e tests: the opencode release the plugin is verified against.
+"aqua:anomalyco/opencode" = "1.19.3"
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]
+HK_MISE = "1"
+
+[tasks.setup]
+description = "Install dependencies and git hooks"
+run = ["bun install --frozen-lockfile", "hk install --mise"]
+
+[tasks.build]
+description = "Compile TypeScript to dist/"
+sources = ["src/**/*.ts", "tsconfig*.json", "package.json"]
+outputs = ["dist/**/*"]
+run = "rm -rf dist && tsc -p tsconfig.build.json"
+
+[tasks.typecheck]
+description = "Type-check sources and tests"
+run = "tsc --noEmit"
+
+[tasks.lint]
+description = "Lint with oxlint"
+run = "oxlint --deny-warnings"
+
+[tasks.fmt]
+description = "Format with prettier"
+run = "prettier --write ."
+
+[tasks."fmt:check"]
+description = "Check formatting"
+run = "prettier --check ."
+
+[tasks.test]
+description = "Run unit tests"
+run = "bun test test/unit"
+
+[tasks."test:integration"]
+description = "Run integration tests against the installed opencode (no model needed)"
+depends = ["build"]
+run = "bun test test/integration"
+
+[tasks."test:e2e"]
+description = "Run end-to-end tests with a real model (opt-in; set E2E_MODEL to override)"
+depends = ["build"]
+env = { OPENCODE_E2E = "1" }
+run = "bun test test/e2e"
+
+[tasks.check]
+description = "Everything CI runs: lint, format, types, unit tests"
+depends = ["lint", "fmt:check", "typecheck", "test"]
+
+[tasks.pack]
+description = "Show what would be published"
+depends = ["build"]
+run = "npm pack --dry-run"
