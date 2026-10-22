@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/silopolis/opencode-readonly-guard/rules/schema/commands.schema.json",
+  "title": "readonly-guard command classification",
+  "type": "object",
+  "required": ["version", "hardWrite", "packageManagers", "git", "wildcardSafe", "rtkReadSubcommands"],
+  "additionalProperties": false,
+  "$defs": {
+    "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" } }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "hardWrite": {
+      "description": "Commands that modify files or system state whatever their arguments: blocked in read-only agents.",
+      "$ref": "#/$defs/names"
+    },
+    "packageManagers": {
+      "type": "object",
+      "required": ["names", "writeSubcommands"],
+      "additionalProperties": false,
+      "properties": {
+        "names": { "$ref": "#/$defs/names" },
+        "writeSubcommands": {
+          "description": "First non-option argument that makes a package manager modify dependencies or files.",
+          "$ref": "#/$defs/names"
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "required": ["write", "read"],
+      "additionalProperties": false,
+      "properties": {
+        "write": {
+          "description": "git subcommands that modify the repository or working tree.",
+          "$ref": "#/$defs/names"
+        },
+        "read": {
+          "description": "git subcommands for which a learned wildcard rule may be offered.",
+          "$ref": "#/$defs/names"
+        }
+      }
+    },
+    "wildcardSafe": {
+      "description": "Commands for which /guard-review may offer a wildcard rule: all their read-only uses are safe, and their write flags are caught by ask.json or the guard.",
+      "$ref": "#/$defs/names"
+    },
+    "rtkReadSubcommands": {
+      "description": "rtk subcommands that wrap a read-only command.",
+      "$ref": "#/$defs/names"
+    }
+  }
+}

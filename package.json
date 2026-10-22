@@ -67,6 +67,7 @@
     "@opencode-ai/plugin": "1.19.3",
     "@types/bun": "1.4.3",
     "@types/node": "24.12.2",
+    "ajv": "8",
     "oxlint": "1.89.0",
     "prettier": "3.6.2",
     "typescript": "7.0.2"

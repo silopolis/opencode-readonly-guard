@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/silopolis/opencode-readonly-guard/rules/schema/patterns.schema.json",
+  "title": "readonly-guard pattern list",
+  "description": "opencode bash permission patterns (`*` matches anything, a trailing ` *` also matches the bare command). Order matters: the last matching rule wins.",
+  "type": "object",
+  "required": ["version", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1, "maxLength": 200, "not": { "pattern": "[;&|<>`\\n]" } },
+          "reason": { "type": "string", "minLength": 3 }
+        }
+      }
+    }
+  }
+}
