@@ -1,5 +1,8 @@
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+
+/** The rules file looked up in herdr's config directory. */
+export const HERDR_FILE_NAME = "readonly-guard.json"
 
 /** Plugin options, as set in `opencode.json`: `"plugin": [["opencode-readonly-guard", { … }]]`. */
 export interface GuardOptions {
@@ -11,6 +14,8 @@ export interface GuardOptions {
   }
   /** Extra bash patterns to allow in read-only agents. Each one must pass the same safety check as learned rules. */
   allow?: string[]
+  /** Switch built-in rule sets on or off, e.g. `{ "herdr-ui": false }`. See `PRESETS` in `sources.ts`. */
+  presets?: Record<string, boolean>
   /** Where learned rules are stored. Default: `$XDG_CONFIG_HOME/opencode/readonly-guard.json`. */
   store?: string
   /** Where the event log is written. Default: `$XDG_DATA_HOME/opencode/readonly-guard`. */
@@ -25,6 +30,11 @@ export interface ResolvedOptions {
   includeAgents: string[]
   excludeAgents: string[]
   allow: string[]
+  presets: Record<string, boolean>
+  /** Is opencode running in a herdr pane (`HERDR_ENV=1`)? */
+  insideHerdr: boolean
+  /** Rules file in herdr's config directory, read only inside herdr. */
+  herdrFile: string
   storeFile: string
   logDir: string
   toast: boolean
@@ -38,9 +48,18 @@ const text = (value: unknown): string | undefined => (typeof value === "string" 
 const stringList = (value: unknown): string[] | undefined =>
   Array.isArray(value) && value.every((item) => typeof item === "string") ? (value as string[]) : undefined
 
+const switchTable = (value: unknown): Record<string, boolean> | undefined =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.values(value).every((item) => typeof item === "boolean")
+    ? (value as Record<string, boolean>)
+    : undefined
+
 /**
  * Validate options and apply defaults. Precedence for paths: option, then `READONLY_GUARD_STORE` /
- * `READONLY_GUARD_DATA` (handy in tests), then the XDG defaults.
+ * `READONLY_GUARD_DATA` (handy in tests), then the XDG defaults. herdr's rules file sits next to herdr's config:
+ * in the directory of `HERDR_CONFIG_PATH`, else `$XDG_CONFIG_HOME/herdr`.
  */
 export function resolveOptions(raw: unknown, env: NodeJS.ProcessEnv = process.env): ResolvedOptions {
   const options = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
@@ -60,6 +79,12 @@ export function resolveOptions(raw: unknown, env: NodeJS.ProcessEnv = process.en
     includeAgents: stringList(agents.include) ?? [],
     excludeAgents: stringList(agents.exclude) ?? [],
     allow: take("allow", stringList, []),
+    presets: take("presets", switchTable, {}),
+    insideHerdr: env.HERDR_ENV === "1",
+    herdrFile: join(
+      env.HERDR_CONFIG_PATH ? dirname(env.HERDR_CONFIG_PATH) : join(configHome, "herdr"),
+      HERDR_FILE_NAME,
+    ),
     storeFile: take("store", text, env.READONLY_GUARD_STORE || join(configHome, "opencode", "readonly-guard.json")),
     logDir: take("logDir", text, env.READONLY_GUARD_DATA || join(dataHome, "opencode", "readonly-guard")),
     toast: take("toast", (value) => (typeof value === "boolean" ? value : undefined), true),

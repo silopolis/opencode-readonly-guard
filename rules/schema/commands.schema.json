@@ -62,7 +62,7 @@
           "$ref": "#/$defs/herdrWords"
         },
         "ui": {
-          "description": "Subcommands that only change what herdr displays (a tab label, a notification). Opt-in: accepted when the user lists them in their store or in the plugin options, never part of the shared allowlist.",
+          "description": "Subcommands that only change what herdr displays (a tab label, a notification). Allowed by the herdr-ui preset when opencode runs in a herdr pane, and accepted when the user lists them (inside herdr); never part of the shared allowlist.",
           "$ref": "#/$defs/herdrWords"
         },
         "write": {

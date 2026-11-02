@@ -86,7 +86,8 @@ For every read-only agent the plugin writes this ordered bash rule list into the
 
 1. `"*": ask`
 2. the shared allowlist, [`rules/allow.json`](rules/allow.json)
-3. learned rules (`readonly-guard.json`) and the `allow` option, each re-checked at startup
+3. presets that are on (see [Working inside herdr](#working-inside-herdr)), learned rules (`readonly-guard.json`) and
+   the `allow` option, each re-checked at startup
 4. the agent's own bash rules, if it had any
 5. the always-ask flags, [`rules/ask.json`](rules/ask.json): `find -delete/-exec`, `rg --pre`, `git … --output`, …
 
@@ -113,17 +114,33 @@ Agents that run in a [herdr](https://herdr.dev) pane can inspect it with the `he
 - **Blocked** like other writes: `herdr update`, `worktree create|remove`, `config reset-keys`,
   `integration install|uninstall`, `session delete`, `plugin install|update`, `api schema --output FILE`, and
   `pane run PANE CMD` when `CMD` would itself be blocked (`herdr pane run w1:p2 'rm -rf build'`).
-- **Opt-in UI commands:** `herdr tab rename` and `herdr notification show` only change what herdr displays, which
-  is how a plan-mode agent can report its state. They are off by default and never part of the shared allowlist. Turn
-  them on in your store or in the plugin options:
+- **UI commands, on inside herdr:** `herdr tab rename` and `herdr notification show` only change what herdr
+  displays, which is how a plan-mode agent can report its state. They are the `herdr-ui` preset: allowed without a
+  prompt when opencode runs in a herdr pane (`HERDR_ENV=1`), and not otherwise. Outside a pane the herdr CLI still
+  reaches the running session and acts on whatever is focused there, so a UI command listed in your store or options
+  is ignored outside herdr too. The preset is built into the plugin and is not part of the shared allowlist.
+
+  Switch it off with `"presets": { "herdr-ui": false }`, and list the one command you want instead:
 
   ```jsonc
-  // ~/.config/opencode/readonly-guard.json            or:  ["opencode-readonly-guard", { "allow": [...] }]
-  { "allow": ["herdr tab rename *", "herdr notification show *"] }
+  // ~/.config/opencode/readonly-guard.json (the store), or in the plugin options,
+  // or in herdr's own directory: ~/.config/herdr/readonly-guard.json
+  { "presets": { "herdr-ui": false }, "allow": ["herdr tab rename *"] }
   ```
 
-  Listing one opens only that subcommand: `herdr tab close` still asks. `opencode-readonly-guard vet 'herdr tab rename *'`
-  shows what the safety check says about a pattern.
+  Where the settings come from:
+
+  | Source                                  | Keys                    | Notes                                                       |
+  | --------------------------------------- | ----------------------- | ----------------------------------------------------------- |
+  | plugin options in `opencode.json`       | `presets`, `allow`      | lowest precedence                                           |
+  | the store `readonly-guard.json`         | `presets`, `allow`, ... | the file `/guard-review` writes                             |
+  | `readonly-guard.json` in herdr's config | `presets`, `allow`      | read only inside herdr, never written, wins over the others |
+
+  herdr's directory is the one holding `$HERDR_CONFIG_PATH`, else `$XDG_CONFIG_HOME/herdr` (`~/.config/herdr`). If
+  sources disagree about a preset, the last in the table wins; `allow` lists add up. Every `allow` pattern passes the
+  same safety check, so no file can allow `herdr agent prompt`, and herdr's file may only hold `herdr …` patterns.
+  `opencode-readonly-guard vet 'herdr tab rename *'` shows what the safety check says about a pattern, and `check`
+  follows the same rules as the plugin (`--no-store` means the shared rules only: no store, no presets).
 
 herdr is not in opencode's table of known programs, so an "always" answer to any herdr prompt is saved by opencode as
 `herdr *`, for every agent until restart. The write guard still blocks the commands above, but nothing stops
@@ -139,6 +156,7 @@ Set them with the tuple form: `["opencode-readonly-guard", { … }]`.
 | `agents.include` | `[]`                                            | extra agents to treat as read-only (they must exist)            |
 | `agents.exclude` | `[]`                                            | agents to leave alone                                           |
 | `allow`          | `[]`                                            | extra bash patterns to allow; each passes the same safety check |
+| `presets`        | `{}`                                            | switch built-in rule sets on or off: `{ "herdr-ui": false }`    |
 | `store`          | `$XDG_CONFIG_HOME/opencode/readonly-guard.json` | learned rules, dismissed candidates, agent lists                |
 | `logDir`         | `$XDG_DATA_HOME/opencode/readonly-guard`        | `events.jsonl` (rotated at 5 MB to `events.old.jsonl`)          |
 | `toast`          | `true`                                          | warn when an "always" answer is given in a read-only agent      |
@@ -146,6 +164,7 @@ Set them with the tuple form: `["opencode-readonly-guard", { … }]`.
 
 `READONLY_GUARD_STORE` and `READONLY_GUARD_DATA` override the default paths (an explicit option wins). The store file
 is plain JSON and safe to keep in your dotfiles; the event log contains the commands your agents ran, so keep it local.
+The startup `init` event in the log lists the `presets` in effect next to the number of `learned` rules.
 
 ## What it does not do
 

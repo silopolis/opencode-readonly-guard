@@ -1,12 +1,12 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { createAnalyzer } from "./analyze.js"
-import { classifyPattern, normalizePattern } from "./classify.js"
 import { registerReviewCommand } from "./command.js"
 import { UTILITY_AGENTS } from "./constants.js"
 import { injectRules, type MutableConfig } from "./inject.js"
 import { clip, createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { loadRules } from "./rules.js"
+import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 import { createTools } from "./tools.js"
 
@@ -68,32 +68,42 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
     }
   }
 
-  const vetted = (patterns: readonly string[], where: string): string[] =>
-    patterns.map(normalizePattern).filter((pattern) => {
-      const verdict = classifyPattern(pattern, rules.commands)
-      if (!verdict.ok) guardLog.write({ type: "error", where, pattern, error: `ignored rule: ${verdict.reason}` })
-      return verdict.ok
-    })
-
   return {
     config: async (config) => {
       const store = loadStore(options.storeFile, (error) =>
         guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
       )
-      const learned = [...vetted(store.allow, "store"), ...vetted(options.allow, "options")]
+      const herdr = loadHerdrRules(options, (error) =>
+        guardLog.write({ type: "error", where: "herdr config", error: String(error.cause ?? error) }),
+      )
+      const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
+      for (const problem of effective.problems) guardLog.write({ type: "error", ...problem })
       const names = injectRules(config as MutableConfig, {
         rules,
-        learned,
+        learned: effective.patterns,
         include: [...options.includeAgents, ...store.agents.include],
         exclude: [...options.excludeAgents, ...store.agents.exclude],
       })
       readOnly.clear()
       for (const name of names) readOnly.add(name)
       if (options.command) registerReviewCommand(config as MutableConfig, options.command)
-      guardLog.write({ type: "init", project: worktree, roAgents: [...names], learned: learned.length })
+      guardLog.write({
+        type: "init",
+        project: worktree,
+        roAgents: [...names],
+        learned: effective.learned.length,
+        presets: effective.presets,
+      })
     },
 
-    tool: createTools({ readOnly, rules, log: guardLog, storeFile: options.storeFile, project: worktree }),
+    tool: createTools({
+      readOnly,
+      rules,
+      log: guardLog,
+      storeFile: options.storeFile,
+      project: worktree,
+      options,
+    }),
 
     "chat.params": async (input) => {
       if (input.sessionID && input.agent && !UTILITY_AGENTS.has(input.agent)) agentOf.set(input.sessionID, input.agent)

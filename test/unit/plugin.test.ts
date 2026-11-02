@@ -1,6 +1,6 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { MutableConfig } from "../../src/inject.js"
@@ -38,17 +38,43 @@ async function start(options: Record<string, unknown> = {}): Promise<{ hooks: Ho
 }
 
 const events = (): LogEvent[] => createLog(join(dir, "log")).read()
+/** The bash rules the plugin injected for an agent. */
+const bashRules = (config: MutableConfig, agent = "plan"): Record<string, string> => {
+  const permission = config.agent?.[agent]?.permission as { bash?: Record<string, string> } | undefined
+  return permission?.bash ?? {}
+}
 const useAgent = async (hooks: Hooks, sessionID: string, agent: string) =>
   hooks["chat.params"]!({ sessionID, agent } as never, {} as never)
 const bash = async (hooks: Hooks, sessionID: string, command: string, callID = "c1") =>
   hooks["tool.execute.before"]!({ tool: "bash", sessionID, callID }, { args: { command } })
 
+const saved = { env: process.env.HERDR_ENV, config: process.env.HERDR_CONFIG_PATH }
+/** Run the plugin as if started from a herdr pane (it reads `HERDR_ENV` at startup). */
+const insideHerdr = () => void (process.env.HERDR_ENV = "1")
+/** herdr's rules file, in a herdr config directory under the test directory. */
+const herdrFile = () => join(dir, "herdr", "readonly-guard.json")
+const writeHerdrFile = (content: string) => {
+  mkdirSync(join(dir, "herdr"), { recursive: true })
+  writeFileSync(herdrFile(), content)
+}
+
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "rg-plugin-"))
   toasts = []
   sessions = {}
+  delete process.env.HERDR_ENV // the suite may itself run from a herdr pane
+  process.env.HERDR_CONFIG_PATH = join(dir, "herdr", "config.toml") // never the real ~/.config/herdr
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true })
+  for (const [name, value] of [
+    ["HERDR_ENV", saved.env],
+    ["HERDR_CONFIG_PATH", saved.config],
+  ] as const) {
+    if (value === undefined) delete process.env[name]
+    else process.env[name] = value
+  }
+})
 
 describe("plugin module", () => {
   test("has a stable id and a server entrypoint, and nothing else is exported", async () => {
@@ -76,6 +102,86 @@ describe("config hook", () => {
     expect(rules["rm *"]).toBeUndefined()
     expect(rules["tee *"]).toBeUndefined()
     expect(events().filter((event) => event.type === "error")).toHaveLength(2)
+  })
+
+  test("outside herdr the UI commands are not allowed and no preset is in effect", async () => {
+    const { config } = await start()
+    const rules = bashRules(config)
+    expect(rules["herdr tab rename *"]).toBeUndefined()
+    expect(rules["herdr notification show *"]).toBeUndefined()
+    expect(events().find((event) => event.type === "init")).toMatchObject({ learned: 0, presets: [] })
+  })
+
+  test("inside herdr the herdr-ui preset allows the UI commands, and is logged apart from learned rules", async () => {
+    insideHerdr()
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["whoami *"] }))
+    const { config } = await start()
+    for (const agent of ["plan", "explore"]) {
+      const rules = bashRules(config, agent)
+      expect(rules["herdr tab rename *"]).toBe("allow")
+      expect(rules["herdr notification show *"]).toBe("allow")
+      expect(rules["herdr agent prompt *"]).toBe("ask")
+      expect(rules["herdr tab close *"]).toBe("ask")
+    }
+    expect(events().find((event) => event.type === "init")).toMatchObject({ learned: 1, presets: ["herdr-ui"] })
+  })
+
+  test("the preset can be switched off in the plugin options or in the store", async () => {
+    insideHerdr()
+    for (const [store, options] of [
+      [{}, { presets: { "herdr-ui": false } }],
+      [{ presets: { "herdr-ui": false } }, {}],
+    ] as const) {
+      writeFileSync(join(dir, "store.json"), JSON.stringify(store))
+      const { config } = await start(options)
+      expect(bashRules(config)["herdr tab rename *"]).toBeUndefined()
+    }
+    expect(
+      events()
+        .filter((event) => event.type === "init")
+        .map((event) => event.presets),
+    ).toEqual([[], []])
+  })
+
+  test("herdr's own rules file can switch the preset off and add herdr patterns, inside herdr", async () => {
+    insideHerdr()
+    writeHerdrFile(
+      JSON.stringify({ presets: { "herdr-ui": false }, allow: ["herdr notification show *", "herdr agent prompt *"] }),
+    )
+    const { config } = await start()
+    const rules = bashRules(config)
+    expect(rules["herdr notification show *"]).toBe("allow")
+    expect(rules["herdr tab rename *"]).toBeUndefined()
+    expect(rules["herdr agent prompt *"]).toBe("ask") // refused: it can never be learned
+    expect(events().find((event) => event.type === "init")).toMatchObject({ learned: 1, presets: [] })
+    expect(events().filter((event) => event.type === "error")).toMatchObject([
+      { where: "herdr config", pattern: "herdr agent prompt *" },
+    ])
+  })
+
+  test("herdr's rules file is not read outside herdr", async () => {
+    writeHerdrFile(JSON.stringify({ allow: ["herdr agent list *", "herdr pane read *"] }))
+    await start()
+    expect(events().find((event) => event.type === "init")).toMatchObject({ learned: 0, presets: [] })
+    expect(events().some((event) => event.type === "error")).toBe(false)
+  })
+
+  test("a corrupt herdr rules file is reported and does not stop the plugin", async () => {
+    insideHerdr()
+    writeHerdrFile("{ nope")
+    const { config } = await start()
+    expect(bashRules(config)["herdr tab rename *"]).toBe("allow") // the preset still applies
+    expect(events().filter((event) => event.type === "error")).toMatchObject([{ where: "herdr config" }])
+  })
+
+  test("a UI command listed by the user is dropped outside herdr, an unknown preset is reported", async () => {
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["herdr tab rename *"], presets: { nope: true } }))
+    const { config } = await start()
+    expect(bashRules(config)["herdr tab rename *"]).toBeUndefined()
+    expect(events().find((event) => event.type === "init")).toMatchObject({ learned: 0 })
+    expect(events().filter((event) => event.type === "error")).toMatchObject([
+      { where: "presets", error: 'unknown preset "nope" ignored' },
+    ])
   })
 
   test("a corrupt store does not stop the plugin", async () => {

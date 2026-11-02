@@ -20,7 +20,12 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - herdr rules: read-only `herdr` commands (`agent list`, `pane read`, `status`, …) are allowed in read-only agents;
   every other subcommand always asks and cannot be learned; `update`, `worktree create|remove`,
   `integration install|uninstall`, `session delete`, `plugin install|update`, `api schema --output` and `pane run` of a
-  writing command are blocked. `herdr tab rename` and `herdr notification show` are opt-in UI commands, accepted only
-  from the user's store or the `allow` option.
+  writing command are blocked.
+- The `herdr-ui` preset: `herdr tab rename` and `herdr notification show`, which only change what herdr displays, are
+  allowed when opencode runs in a herdr pane (`HERDR_ENV=1`) and not elsewhere. Switch it off with
+  `"presets": { "herdr-ui": false }` in the plugin options, the store or herdr's own `readonly-guard.json` (in the
+  directory of `HERDR_CONFIG_PATH`, else `$XDG_CONFIG_HOME/herdr`; read only inside herdr, never written, the last
+  source wins); `allow` patterns from these sources pass the same safety check. UI commands listed by the user only
+  take effect inside herdr. The `init` log event gains the `presets` in effect.
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main

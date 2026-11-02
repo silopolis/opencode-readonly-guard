@@ -44,6 +44,17 @@ describe("review", () => {
     expect(text).toContain('[REFUSED: wildcards are only allowed for known read-only commands; "npm" is not one')
   })
 
+  test("herdr: a candidate the herdr-ui preset already allows is not proposed, and the preset is listed", () => {
+    const events = [always("herdr tab rename w1:t1 plan ready", "herdr *")]
+    const inside = { allow: [], presets: {}, insideHerdr: true }
+    const text = review({ store: emptyStore(), events, rules, options: inside })
+    expect(text).toContain("Presets in effect: herdr-ui")
+    expect(text).toContain('### Candidates from "always" answers (0)')
+    const outside = review({ store: emptyStore(), events, rules, options: { ...inside, insideHerdr: false } })
+    expect(outside).not.toContain("Presets in effect")
+    expect(outside).toContain("1. `herdr tab rename w1:t1 plan ready`")
+  })
+
   test("herdr: opencode's general `herdr *` is refused, the exact UI command is offered", () => {
     const text = run([always("herdr tab rename w1:t1 plan ready", "herdr *")])
     expect(text).toContain("[OK] exact: `herdr tab rename w1:t1 plan ready`")

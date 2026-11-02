@@ -31,6 +31,8 @@ export interface Sandbox {
   write(path: string, content: string): void
   /** Pre-fill the learned-rules file. */
   writeStore(data: unknown): void
+  /** Pre-fill the rules file in herdr's config directory (only read when the sandbox runs `herdr: true`). */
+  writeHerdrFile(data: unknown): void
   /** Run opencode in the project with the sandbox environment. */
   opencode(args: string[], timeout?: number): Run
   cleanup(): void
@@ -41,6 +43,8 @@ export interface SandboxOptions {
   plugin?: string | [string, Record<string, unknown>]
   /** Use the real opencode home (credentials, models) instead of an empty one. Needed for e2e tests only. */
   realHome?: boolean
+  /** Run opencode as if started from a herdr pane (`HERDR_ENV=1`). Default: never, whatever the caller's environment. */
+  herdr?: boolean
 }
 
 /** The package must be built first: opencode loads `dist/`. */
@@ -49,7 +53,7 @@ export function requireBuild(): void {
 }
 
 /** A throwaway project with the plugin configured, and an environment that keeps opencode away from the user's. */
-export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions = {}): Sandbox {
+export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }: SandboxOptions = {}): Sandbox {
   const dir = mkdtempSync(join(tmpdir(), "rg-sandbox-"))
   const project = join(dir, "project")
   const store = join(dir, "store.json")
@@ -61,6 +65,13 @@ export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions
     PWD: project,
     READONLY_GUARD_STORE: store,
     READONLY_GUARD_DATA: logDir,
+  }
+  // The suite may run from a herdr pane: whether opencode sees herdr must not depend on where the tests are started.
+  for (const name of Object.keys(env)) if (name.startsWith("HERDR_")) delete env[name]
+  const herdrDir = join(dir, "herdr")
+  if (herdr) {
+    env.HERDR_ENV = "1"
+    env.HERDR_CONFIG_PATH = join(herdrDir, "config.toml") // never the real ~/.config/herdr
   }
   if (!realHome) {
     for (const [name, sub] of [
@@ -97,6 +108,10 @@ export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions
     events: () => createLog(logDir).read(),
     write,
     writeStore: (data) => writeFileSync(store, JSON.stringify(data)),
+    writeHerdrFile: (data) => {
+      mkdirSync(herdrDir, { recursive: true })
+      writeFileSync(join(herdrDir, "readonly-guard.json"), JSON.stringify(data))
+    },
     opencode: (args, timeout = 120_000) => {
       const result = spawnSync("opencode", args, {
         cwd: project,

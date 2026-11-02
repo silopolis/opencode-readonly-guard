@@ -47,8 +47,8 @@ Other files:
 - **`commands.json` → `packageManagers`, `git`:** which subcommands write, and which git subcommands may get a
   wildcard rule from `/guard-review`.
 - **`commands.json` → `herdr`:** `help` (printed help, allowed only as exact commands), `read` (read-only
-  subcommands, a wildcard may follow), `ui` (opt-in, accepted from the user's store or options but never in
-  `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
+  subcommands, a wildcard may follow), `ui` (what the `herdr-ui` preset in `src/sources.ts` allows inside herdr;
+  never in `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
   there is no catch-all, because a `herdr *` ask rule would also silence the allowed reads. Keep the four lists
   disjoint and `allow.json` in step with `help` and `read` (the unit tests check both).
 - **`commands.json` → `wildcardSafe`:** commands for which `/guard-review` may offer `cmd *`. Only add a command whose

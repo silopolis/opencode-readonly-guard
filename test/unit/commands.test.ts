@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { EXIT, runCli, type CliIo } from "../../src/commands.js"
@@ -10,16 +10,23 @@ let stdout: string
 let stderr: string
 let ran: [string, string[]][]
 
-const io = (): CliIo => ({
+const io = (env: NodeJS.ProcessEnv = {}): CliIo => ({
   out: (text) => void (stdout += text),
   err: (text) => void (stderr += text),
-  env: { READONLY_GUARD_STORE: join(dir, "store.json"), READONLY_GUARD_DATA: join(dir, "log") },
+  env: {
+    READONLY_GUARD_STORE: join(dir, "store.json"),
+    READONLY_GUARD_DATA: join(dir, "log"),
+    HERDR_CONFIG_PATH: join(dir, "herdr", "config.toml"),
+    ...env,
+  },
   run: (command, args) => {
     ran.push([command, args])
     return 0
   },
 })
 const cli = (...argv: string[]) => runCli(argv, io())
+/** Run as if started from a herdr pane. */
+const inHerdr = (...argv: string[]) => runCli(argv, io({ HERDR_ENV: "1" }))
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "rg-cli-"))
@@ -72,6 +79,38 @@ describe("check", () => {
     writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["whoami *"] }))
     expect(cli("check", "whoami")).toBe(EXIT.allow)
     expect(cli("check", "--no-store", "whoami")).toBe(EXIT.ask)
+  })
+
+  test("inside herdr the UI commands are allowed, anywhere else they ask", () => {
+    const rename = "herdr tab rename w1:t1 plan ready"
+    expect(cli("check", rename)).toBe(EXIT.ask)
+    expect(inHerdr("check", rename)).toBe(EXIT.allow)
+    expect(inHerdr("check", "herdr notification show done")).toBe(EXIT.allow)
+    // the neighbours still ask
+    expect(inHerdr("check", "herdr tab close w1:t1")).toBe(EXIT.ask)
+    expect(inHerdr("check", "herdr agent prompt reviewer hi")).toBe(EXIT.ask)
+  })
+
+  test("the store can switch the herdr-ui preset off, and --no-store ignores presets too", () => {
+    const rename = "herdr tab rename w1:t1 plan ready"
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ presets: { "herdr-ui": false } }))
+    expect(inHerdr("check", rename)).toBe(EXIT.ask)
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["herdr tab rename *"] }))
+    expect(inHerdr("check", rename)).toBe(EXIT.allow)
+    expect(cli("check", rename)).toBe(EXIT.ask) // a listed UI command only applies inside herdr
+    expect(inHerdr("check", "--no-store", rename)).toBe(EXIT.ask)
+  })
+
+  test("herdr's rules file applies inside herdr only, and --no-store ignores it", () => {
+    mkdirSync(join(dir, "herdr"))
+    writeFileSync(
+      join(dir, "herdr", "readonly-guard.json"),
+      JSON.stringify({ presets: { "herdr-ui": false }, allow: ["herdr notification show *"] }),
+    )
+    expect(inHerdr("check", "herdr notification show done")).toBe(EXIT.allow)
+    expect(inHerdr("check", "herdr tab rename w1:t1 x")).toBe(EXIT.ask)
+    expect(cli("check", "herdr notification show done")).toBe(EXIT.ask)
+    expect(inHerdr("check", "--no-store", "herdr notification show done")).toBe(EXIT.ask)
   })
 
   test("needs a command", () => {
