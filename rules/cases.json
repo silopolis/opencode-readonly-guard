@@ -60,6 +60,7 @@
     { "command": "make", "verdict": "ask" },
     { "command": "whoami", "verdict": "ask" },
     { "command": "rtk proxy uname -r", "verdict": "ask" },
+    { "command": "herdr pane run w1:p2 ls -la", "verdict": "ask" },
     { "command": "rtk read /etc/hostname > /tmp/opencode/g1", "verdict": "block", "reason": "write redirection" },
     { "command": "ls | cat > /tmp/opencode/g2", "verdict": "block", "reason": "write redirection" },
     { "command": "{ cat /etc/hostname; } > /tmp/opencode/g3", "verdict": "block", "reason": "write redirection" },
@@ -120,7 +121,24 @@
     { "command": "tee /tmp/x", "verdict": "block", "reason": "tee writes" },
     { "command": "tee /dev/null /tmp/x", "verdict": "block", "reason": "tee writes" },
     { "command": "touch /tmp/x", "verdict": "block", "reason": "modifies files" },
-    { "command": "git push", "verdict": "block", "reason": "git push" }
+    { "command": "git push", "verdict": "block", "reason": "git push" },
+    { "command": "herdr update", "verdict": "block", "reason": "herdr update" },
+    { "command": "herdr config reset-keys", "verdict": "block", "reason": "herdr config reset-keys" },
+    { "command": "herdr worktree create --branch x", "verdict": "block", "reason": "herdr worktree create" },
+    {
+      "command": "herdr --machine box worktree remove --path p",
+      "verdict": "block",
+      "reason": "herdr worktree remove"
+    },
+    { "command": "herdr integration install opencode", "verdict": "block", "reason": "herdr integration install" },
+    { "command": "herdr integration uninstall opencode", "verdict": "block", "reason": "herdr integration uninstall" },
+    { "command": "herdr session delete old", "verdict": "block", "reason": "herdr session delete" },
+    { "command": "herdr plugin install owner/repo --yes", "verdict": "block", "reason": "herdr plugin install" },
+    { "command": "herdr plugin update", "verdict": "block", "reason": "herdr plugin update" },
+    { "command": "sudo herdr update", "verdict": "block", "reason": "herdr update" },
+    { "command": "herdr api schema --output /tmp/s.json", "verdict": "block", "reason": "herdr api schema --output" },
+    { "command": "herdr pane run w1:p2 rm -rf build", "verdict": "block", "reason": "herdr pane run" },
+    { "command": "herdr pane run w1:p2 'echo hi > notes.txt'", "verdict": "block", "reason": "herdr pane run" }
   ],
   "patterns": [
     { "pattern": "cat *", "ok": true },

@@ -10,6 +10,7 @@ export interface Commands {
   hardWrite: string[]
   packageManagers: { names: string[]; writeSubcommands: string[] }
   git: { write: string[]; read: string[] }
+  herdr: { write: string[] }
   wildcardSafe: string[]
   rtkReadSubcommands: string[]
 }
@@ -54,7 +55,13 @@ function patternRules(raw: unknown, file: string): PatternRule[] {
 }
 
 function commands(raw: unknown): Commands {
-  if (!isRecord(raw) || raw.version !== 1 || !isRecord(raw.packageManagers) || !isRecord(raw.git)) {
+  if (
+    !isRecord(raw) ||
+    raw.version !== 1 ||
+    !isRecord(raw.packageManagers) ||
+    !isRecord(raw.git) ||
+    !isRecord(raw.herdr)
+  ) {
     throw new Error("readonly-guard: commands.json has an unexpected shape")
   }
   return {
@@ -70,6 +77,7 @@ function commands(raw: unknown): Commands {
       write: stringList(raw.git.write, "commands.json git.write"),
       read: stringList(raw.git.read, "commands.json git.read"),
     },
+    herdr: { write: stringList(raw.herdr.write, "commands.json herdr.write") },
     wildcardSafe: stringList(raw.wildcardSafe, "commands.json wildcardSafe"),
     rtkReadSubcommands: stringList(raw.rtkReadSubcommands, "commands.json rtkReadSubcommands"),
   }

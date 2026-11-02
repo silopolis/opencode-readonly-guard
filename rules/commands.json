@@ -162,6 +162,19 @@
       "help"
     ]
   },
+  "herdr": {
+    "write": [
+      "update",
+      "config reset-keys",
+      "worktree create",
+      "worktree remove",
+      "integration install",
+      "integration uninstall",
+      "session delete",
+      "plugin install",
+      "plugin update"
+    ]
+  },
   "wildcardSafe": [
     "ls",
     "tree",
