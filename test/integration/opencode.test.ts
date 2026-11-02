@@ -39,9 +39,14 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
       expect(patterns).toContain("herdr agent prompt *=ask")
       expect(patterns).not.toContain("herdr tab rename *=allow")
       expect(patterns).not.toContain("herdr notification show *=allow")
-      // the ask flags come after every allow rule, so they win
-      const last = bash(rules).at(-1)
-      expect(last?.action).toBe("ask")
+      // the ask flags come after every allow rule, so they win; only exact `<subcommand> --help` rules follow them
+      const list = bash(rules)
+      const lastWildcard = list.findLastIndex((rule) => /[*?]/.test(rule.pattern))
+      expect(list[lastWildcard]?.action).toBe("ask")
+      const after = list.slice(lastWildcard + 1)
+      expect(after.length).toBeGreaterThan(50)
+      expect(after.every((rule) => rule.action === "allow" && rule.pattern.endsWith(" --help"))).toBe(true)
+      expect(patterns).toContain("herdr worktree create --help=allow")
       expect(lastFor(rules, "readonly_guard_review")?.action).toBe("deny")
     }
   })

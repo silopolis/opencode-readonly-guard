@@ -27,5 +27,28 @@ and the project follows [Semantic Versioning](https://semver.org/).
   directory of `HERDR_CONFIG_PATH`, else `$XDG_CONFIG_HOME/herdr`; read only inside herdr, never written, the last
   source wins); `allow` patterns from these sources pass the same safety check. UI commands listed by the user only
   take effect inside herdr. The `init` log event gains the `presets` in effect.
+- Rules learned from real sessions: read-only agents no longer ask for text tools (`echo`, `printf`, `sort`, `uniq`,
+  `cut`, `tr`, `comm`, `join`, `diff`, `basename`, `dirname`, `strings`), process and system reads (`date`, `du`,
+  `df`, `pgrep`, `whoami`, `id`, `getent`, `printenv`, `env`, `command -v`, `hostname`), git reads (`ls-tree`,
+  `rev-list`, `merge-base`, `worktree list`, `ls-remote`, `remote -v`, the listing forms of `branch` and `tag`, the
+  reading forms of `config`), `npm view` and the mise reads (`--version`, `ls`, `ls-remote`, `tasks`, `settings`,
+  `config ls|get`), with their `rtk` forms. Their write options ask (`sort --compress-program/-T`, `date -s`,
+  `git ls-remote --upload-pack`, `npm view --cache/--logs-dir`, `mise -y`) and the write guard blocks
+  `uniq IN OUT`, `date -s`/`date MMDDhhmm`, `hostname NAME`, `sort --compress-program=<writer>`,
+  `git ls-remote --upload-pack=<writer>` and `mise set` / `npm set`.
+- Exact `<program> <subcommand> --help` commands for git, herdr, npm and mise are allowed, after the always-ask flags
+  (`git commit --help`, `herdr worktree create --help`); `opencode-readonly-guard rules` reports them.
+
+### Fixed
+
+- The write guard blocked a sole trailing `--help` (`herdr worktree create --help`, `npm install --help`) like the
+  subcommand itself.
+- The write guard missed writes: `git remote -v add|rename|remove`, `git branch -v|--sort|--format NAME` and
+  `git tag --sort|--format NAME` (these flags do not list), abbreviated or bundled git branch and tag write options
+  (`git branch -a --edit-desc`, `-rd`), `sort --out=FILE`, and `uniq - OUT` / `uniq IN 5`. It blocked
+  `git tag -n1 NAME`, which lists.
+- `/guard-review` proposed already allowed stages of compound commands: every candidate was offered the general
+  patterns of all the stages, and the prompt statistics counted allowed commands. Only the stages the current rules
+  still ask about count now, each with its own general pattern.
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main

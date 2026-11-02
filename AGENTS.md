@@ -47,8 +47,9 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
 - `wildcard.ts`: opencode's pattern matching, last match wins. `decide.ts`: allow, ask or block for a command line.
-- `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list. `inject.ts`: finds the read-only agents and
-  writes their rules into opencode's config.
+- `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list, ending with the help layer (exact
+  `<program> <subcommand> --help` commands). `inject.ts`: finds the read-only agents and writes their rules into
+  opencode's config.
 - `classify.ts`: the safety check for patterns (learned rules, the `allow` option, `vet`).
 - `sources.ts`: presets (`herdr-ui`) and the merge of options, store and herdr's file. `options.ts`: plugin options
   and default paths.

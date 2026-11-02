@@ -74,6 +74,17 @@ const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "fish"])
 const COMPRESSORS = new Set(["gzip", "gunzip", "bzip2", "bunzip2", "xz", "unxz", "zstd", "unzstd", "lz4"])
 const MAX_DEPTH = 5
 
+/**
+ * `<subcommand path> --help` and nothing else: git (which turns it into `git help <subcommand>`), herdr, npm and
+ * mise print the help and run nothing, so it is not the subcommand's write. Only a sole trailing `--help` after at
+ * most `maxWords` plain words counts; `-h` and `--help` next to other options are judged as usual.
+ */
+const helpRequest = (args: readonly string[], maxWords: number): boolean =>
+  args.length >= 2 &&
+  args.length <= maxWords + 1 &&
+  args.at(-1) === "--help" &&
+  args.slice(0, -1).every((arg) => !arg.startsWith("-"))
+
 function redirectionWrites({ op, target }: Redirection): string | null {
   const base = op.replace(/^(\d+|\{[^}]*\})/, "")
   if (base === "<" || base === "<<<" || base === "<&") return null
@@ -140,6 +151,135 @@ function commandStart(words: readonly string[]): number {
     break
   }
   return k
+}
+
+/** Is `arg` one of the long options `names`, possibly abbreviated (`--edit-desc`), possibly with `=value`? */
+function isLongOption(arg: string, names: readonly string[]): boolean {
+  if (!arg.startsWith("--")) return false
+  const name = arg.slice(2).split("=")[0]
+  return name.length > 0 && names.some((full) => full.startsWith(name))
+}
+
+/** Is there a write option: a short one in a bundle (`-rd`), or a long one, abbreviated or not? */
+function writesWith(args: readonly string[], shortLetters: string, longNames: readonly string[]): boolean {
+  return args.some(
+    (arg) =>
+      (/^-[^-]/.test(arg) && Array.from(arg.slice(1)).some((letter) => shortLetters.includes(letter))) ||
+      isLongOption(arg, longNames),
+  )
+}
+
+const BRANCH_WRITE = [
+  "delete",
+  "move",
+  "copy",
+  "force",
+  "set-upstream-to",
+  "set-upstream",
+  "unset-upstream",
+  "edit-description",
+  "track",
+  "no-track",
+  "create-reflog",
+  "recurse-submodules",
+]
+const TAG_WRITE = [
+  "delete",
+  "annotate",
+  "sign",
+  "no-sign",
+  "local-user",
+  "force",
+  "message",
+  "file",
+  "edit",
+  "cleanup",
+  "create-reflog",
+  "trailer",
+]
+
+/** uniq's options that take a value: `-f N`, `-s N`, `-w N` and their long forms (abbreviations included). */
+const UNIQ_SHORT_WITH_VALUE = new Set(["f", "s", "w"])
+const UNIQ_LONG_WITH_VALUE = ["skip-fields", "skip-chars", "check-chars"]
+
+/** The OUTPUT operand of `uniq [OPTION]... [INPUT [OUTPUT]]`, if any. `-` and numbers are operands too. */
+function uniqOutput(args: readonly string[]): string | undefined {
+  const operands: string[] = []
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") {
+      operands.push(...args.slice(j + 1))
+      break
+    }
+    if (arg === "-" || !arg.startsWith("-")) {
+      operands.push(arg)
+    } else if (arg.startsWith("--")) {
+      const name = arg.slice(2)
+      if (!name.includes("=") && UNIQ_LONG_WITH_VALUE.some((option) => option.startsWith(name))) j++
+    } else {
+      // a cluster of short options (`-cf 1`, `-f1`): the first one that takes a value ends it
+      const at = Array.from(arg.slice(1)).findIndex((letter) => UNIQ_SHORT_WITH_VALUE.has(letter))
+      if (at === arg.length - 2) j++
+    }
+  }
+  return operands[1]
+}
+
+/** GNU date's options. Long options may be abbreviated to any unambiguous prefix (`--se` is `--set`). */
+const DATE_LONG = [
+  "date",
+  "debug",
+  "file",
+  "iso-8601",
+  "resolution",
+  "rfc-email",
+  "rfc-3339",
+  "reference",
+  "set",
+  "utc",
+  "universal",
+  "help",
+  "version",
+]
+const DATE_LONG_WITH_VALUE = new Set(["date", "file", "reference", "rfc-3339", "set"])
+const DATE_SHORT_WITH_VALUE = new Set(["d", "f", "r", "s"])
+
+/** Does `date` set the clock: `-s`/`--set`, or an operand that is not a `+FORMAT` (`date MMDDhhmm`)? */
+function dateSets(args: readonly string[]): boolean {
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") return args.slice(j + 1).some((operand) => !operand.startsWith("+"))
+    if (arg === "-" || !arg.startsWith("-")) {
+      if (!arg.startsWith("+")) return true
+    } else if (arg.startsWith("--")) {
+      const [name, value] = arg.slice(2).split(/=(.*)/s)
+      const matches = DATE_LONG.filter((option) => option.startsWith(name))
+      const option = DATE_LONG.includes(name) ? name : matches.length === 1 ? matches[0] : undefined
+      if (option === "set") return true
+      if (option && value === undefined && DATE_LONG_WITH_VALUE.has(option)) j++
+    } else {
+      for (let c = 1; c < arg.length; c++) {
+        const letter = arg[c]
+        if (letter === "s") return true
+        if (letter === "I") break // -I[FMT]: an optional value, attached
+        if (DATE_SHORT_WITH_VALUE.has(letter)) {
+          if (c === arg.length - 1) j++
+          break
+        }
+      }
+    }
+  }
+  return false
+}
+
+/** `hostname NAME`, `-F FILE`/`--file FILE` and `-b`/`--boot` set the host name; the other options print it. */
+function hostnameSets(args: readonly string[]): boolean {
+  return args.some((arg) => {
+    if (!arg.startsWith("-")) return true
+    if (!arg.startsWith("--")) return /[Fb]/.test(arg.slice(1))
+    const name = arg.slice(2).split("=")[0]
+    return (name.length >= 2 && "file".startsWith(name)) || (name.length >= 1 && "boot".startsWith(name))
+  })
 }
 
 function curlWrites(args: readonly string[]): string | null {
@@ -241,12 +381,12 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       return why ? `fd ${args[j]}: ${why}` : null
     }
     if (name === "tree" && has("-o")) return "tree -o writes a file"
-    if (name === "sort" && args.some((arg) => arg.startsWith("--output") || /^-[a-zA-Z]*o/.test(arg))) {
-      return "sort -o writes a file"
-    }
+    if (name === "sort") return sortWrites(args, depth)
+    if (name === "date" && dateSets(args)) return "date -s/--set or a MMDDhhmm operand sets the system clock"
+    if (name === "hostname" && hostnameSets(args)) return "hostname NAME, -F or -b sets the host name"
     if (name === "uniq") {
-      const positional = args.filter((arg) => !arg.startsWith("-") && !/^\d+$/.test(arg))
-      if (positional.length >= 2) return "uniq INPUT OUTPUT writes a file"
+      const output = uniqOutput(args)
+      if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "uniq INPUT OUTPUT writes a file"
     }
     if (name === "tar") {
       const first = args[0] ?? ""
@@ -287,15 +427,31 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (name === "journalctl" && args.some((arg) => /^--(vacuum|rotate|flush|sync|relinquish)/.test(arg))) {
       return "journalctl maintenance flags modify journals"
     }
-    if (name === "git") return gitWrites(args)
+    if (name === "git") return gitWrites(args, depth)
     if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {
+      if ((name === "npm" && helpRequest(args, 1)) || (name === "mise" && helpRequest(args, 2))) return null
       if (firstArg && packageWrite.has(firstArg)) return `${name} ${firstArg} modifies dependencies or files`
       if (name === "go" && firstArg === "mod") {
         const sub = args[args.indexOf("mod") + 1] ?? ""
         if (["tidy", "edit", "vendor", "init", "download"].includes(sub)) return "go mod modifies module files"
       }
       if (name === "go" && firstArg === "build") return "go build writes binaries"
+    }
+    return null
+  }
+
+  /** `-o FILE` / `--output=FILE` (any abbreviation: `--o`, `--out`) write; `--compress-program=PROG` runs PROG. */
+  function sortWrites(args: readonly string[], depth: number): string | null {
+    for (let j = 0; j < args.length && args[j] !== "--"; j++) {
+      const arg = args[j]
+      if (arg.startsWith("--o") || /^-[a-zA-Z]*o/.test(arg)) return "sort -o writes a file"
+      if (arg.startsWith("--co")) {
+        const program = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : args[j + 1]
+        // sort pipes its data through PROG and `PROG -d` without operands: a compressor only filters
+        const why = program && !COMPRESSORS.has(basename(program)) ? commandWrites([program], depth + 1) : null
+        if (why) return `sort --compress-program: ${why}`
+      }
     }
     return null
   }
@@ -326,6 +482,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       if (HERDR_OPTIONS_WITH_ARGUMENT.has(args[j++])) j++
     }
     const rest = args.slice(j)
+    if (helpRequest(rest, 3)) return null
     const words: string[] = []
     for (const word of rest) {
       if (word.startsWith("-") || words.length === 3) break
@@ -351,7 +508,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     return null
   }
 
-  function gitWrites(args: readonly string[]): string | null {
+  function gitWrites(args: readonly string[], depth: number): string | null {
     let j = 0
     while (j < args.length && args[j].startsWith("-")) {
       const option = args[j++]
@@ -359,7 +516,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     }
     const sub = args[j]
     const rest = args.slice(j + 1)
-    if (!sub) return null
+    if (!sub || helpRequest(args.slice(j), 1)) return null
     const has = (...flags: string[]) => rest.some((arg) => flags.includes(arg))
     const positional = rest.filter((arg) => !arg.startsWith("-"))
     const startsWithAny = (...prefixes: string[]) =>
@@ -374,38 +531,38 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     switch (sub) {
       case "stash":
         return rest[0] && ["list", "show"].includes(rest[0]) ? null : "git stash modifies the working tree"
+      // Only the flags below switch to list mode (or make git refuse a name). -v, --sort, --format, --color, …
+      // do not: `git branch -v NAME` and `git tag --sort=x NAME` create a ref. Write options count in any
+      // abbreviation git accepts (`--edit-desc`) and in bundles (`-rd`, `-uorigin/main`).
       case "branch": {
-        if (
-          has("-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "-f", "--force", "-u") ||
-          has("--unset-upstream", "--edit-description", "-t", "--track") ||
-          startsWithAny("--set-upstream-to")
-        ) {
-          return "git branch modifies branches"
-        }
+        if (writesWith(rest, "dDmMcCfut", BRANCH_WRITE)) return "git branch modifies branches"
         const listing =
-          has("-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose", "--contains") ||
-          has("--no-contains", "--merged", "--no-merged", "--points-at", "--show-current") ||
-          startsWithAny("--format", "--sort")
+          has("-l", "--list", "-a", "--all", "-r", "--remotes", "--show-current") ||
+          startsWithAny("--contains", "--no-contains", "--merged", "--no-merged", "--points-at")
         return positional.length && !listing ? "git branch <name> creates a branch" : null
       }
       case "tag": {
-        if (
-          has("-d", "--delete", "-a", "--annotate", "-s", "--sign", "-u", "--local-user", "-f", "--force") ||
-          has("-m", "--message", "-F", "--file", "-e", "--edit")
-        ) {
-          return "git tag modifies tags"
-        }
+        if (writesWith(rest, "dasufmFe", TAG_WRITE)) return "git tag modifies tags"
         const listing =
-          has("-l", "--list", "-n", "--contains", "--no-contains", "--merged", "--no-merged", "--points-at") ||
-          has("-v", "--verify") ||
-          startsWithAny("--format", "--sort")
+          has("-l", "--list", "-v", "--verify") ||
+          rest.some((arg) => /^-n\d*$/.test(arg)) ||
+          startsWithAny("--contains", "--no-contains", "--merged", "--no-merged", "--points-at")
         return positional.length && !listing ? "git tag <name> creates a tag" : null
       }
-      case "remote":
-        return rest[0] &&
-          ["add", "remove", "rm", "rename", "set-url", "set-head", "set-branches", "prune", "update"].includes(rest[0])
-          ? `git remote ${rest[0]} modifies remotes`
-          : null
+      case "ls-remote":
+        for (let k = 0; k < rest.length; k++) {
+          if (!isLongOption(rest[k], ["upload-pack", "exec"])) continue
+          const arg = rest[k]
+          const program = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : (rest[k + 1] ?? "")
+          const verdict = analyzeCommand(program, depth + 1)
+          if (verdict.block) return `git ls-remote --upload-pack runs a command: ${verdict.reason}`
+        }
+        return null
+      case "remote": {
+        // `-v` may come before the subcommand (`git remote -v add …` adds a remote)
+        const action = rest.find((arg) => !arg.startsWith("-"))
+        return action && !["show", "get-url"].includes(action) ? `git remote ${action} modifies remotes` : null
+      }
       case "config": {
         const writing =
           has("--unset", "--unset-all", "--add", "--replace-all", "--rename-section", "--remove-section", "-e") ||

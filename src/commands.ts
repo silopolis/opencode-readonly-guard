@@ -6,7 +6,7 @@ import { decide } from "./decide.js"
 import { createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { review } from "./review.js"
-import { buildBashRules, loadRules } from "./rules.js"
+import { buildBashRules, helpPatterns, loadRules } from "./rules.js"
 import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 
@@ -101,14 +101,16 @@ function vet(args: string[], io: CliIo): number {
 
 function printRules(args: string[], io: CliIo): number {
   const rules = loadRules()
+  const help = helpPatterns(rules)
   if (takeFlag(args, "--json")) {
-    io.out(`${JSON.stringify({ allow: rules.allow, ask: rules.ask }, null, 2)}\n`)
+    io.out(`${JSON.stringify({ allow: rules.allow, ask: rules.ask, help }, null, 2)}\n`)
     return 0
   }
   io.out("Allowed without a prompt (read-only agents):\n")
   for (const { pattern, reason } of rules.allow) io.out(`  ${pattern.padEnd(22)} ${reason}\n`)
   io.out("\nAlways ask (override the allowlist and learned rules):\n")
   for (const { pattern, reason } of rules.ask) io.out(`  ${pattern.padEnd(22)} ${reason}\n`)
+  io.out(`\nAllowed after the ask flags: ${help.length} exact help commands, e.g. ${help.slice(0, 3).join(", ")}\n`)
   return 0
 }
 

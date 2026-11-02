@@ -10,8 +10,8 @@ shell command, so a model that ignores the reminder can still `rm`, `sed -i` or 
   `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). The model gets an
   error that tells it to return the data in its reply instead.
 - **Shared allowlist.** Read-only agents ask before running anything except a vetted list of read-only commands
-  (`ls`, `cat`, `rg`, `git log`, `herdr agent list`, …). The list lives in [`rules/`](rules) as plain JSON that anyone
-  can extend.
+  (`ls`, `cat`, `rg`, `sort`, `echo`, `git log`, `git branch -a`, `herdr agent list`, …). The list lives in
+  [`rules/`](rules) as plain JSON that anyone can extend.
 - **Reviewed learning.** An "always" answer in a read-only agent is only logged as a candidate. `/guard-review` shows
   candidates with safe pattern options, and a rule is added only after you confirm the exact pattern.
 - **Event log.** Every shell command, block, prompt and answer in a read-only agent is recorded, so the policy can be
@@ -33,7 +33,7 @@ or add it to your config by hand, with options if you want them:
 {
   "plugin": [
     "opencode-readonly-guard",
-    // or: ["opencode-readonly-guard", { "agents": { "include": ["reviewer"] }, "allow": ["whoami *"] }]
+    // or: ["opencode-readonly-guard", { "agents": { "include": ["reviewer"] }, "allow": ["uptime *"] }]
   ],
 }
 ```
@@ -76,8 +76,8 @@ $ opencode-readonly-guard check 'git log --oneline | head'
 allow
 $ opencode-readonly-guard check 'ls | cat > notes.txt'
 block  write redirection "> notes.txt"
-$ opencode-readonly-guard check 'whoami'
-ask    needs approval: whoami
+$ opencode-readonly-guard check 'uptime'
+ask    needs approval: uptime
 ```
 
 ## How the policy is built
@@ -89,9 +89,19 @@ For every read-only agent the plugin writes this ordered bash rule list into the
 3. presets that are on (see [Working inside herdr](#working-inside-herdr)), learned rules (`readonly-guard.json`) and
    the `allow` option, each re-checked at startup
 4. the agent's own bash rules, if it had any
-5. the always-ask flags, [`rules/ask.json`](rules/ask.json): `find -delete/-exec`, `rg --pre`, `git … --output`, …
+5. the always-ask flags, [`rules/ask.json`](rules/ask.json): `find -delete/-exec`, `rg --pre`, `git … --output`,
+   `sort --compress-program`, `git ls-remote --upload-pack`, …
+6. the help layer: exact `<program> <subcommand> --help` commands for git, herdr, npm and mise (`git commit --help`,
+   `herdr worktree create --help`), derived from [`rules/commands.json`](rules/commands.json). They only print help;
+   the layer holds no wildcard, never covers an ask-listed flag, and never overrides a deny or an exact rule of the
+   agent's own.
 
-Because the flags come last, a broad learned rule such as `find *` never silences `find . -delete`.
+Because the flags come after every allow rule, a broad learned rule such as `find *` never silences `find . -delete`.
+
+Some commands are only allowed in their read-only forms, because the bare subcommand writes: `git branch` lists, but
+`git branch NAME` creates a branch, so the allowlist has `git branch`, `git branch -a *`, `git branch --contains*`, …
+and the write guard blocks the creating forms. `git config KEY`, `git -C DIR …` and commands behind an environment
+prefix (`LC_ALL=C sort`) still ask.
 
 Read-only agents are `plan`, `explore`, every agent whose `permission.edit` is `deny` (or `tools.edit: false`), plus
 `agents.include`, minus `agents.exclude`. `plan` additionally asks before delegating to a subagent that is not
@@ -106,6 +116,8 @@ Agents that run in a [herdr](https://herdr.dev) pane can inspect it with the `he
   and the read-only subcommands: `status`, `agent list|get|read|wait|explain`,
   `pane list|current|get|layout|process-info|neighbor|edges|read|wait-output`, `workspace|tab list|get`,
   `worktree|session|machine|plugin|integration` listings, `api snapshot|schema`, `config check`, `channel show`.
+  Also `herdr <subcommand> --help` exactly, for every subcommand below except the UI ones
+  (`herdr worktree create --help`): it only prints help.
 - **Always asks**, even when an agent's own rules allow `herdr *`, and can never be learned (exact or with a wildcard):
   every other subcommand, such as `pane send-text|send-keys|run|split|close`, `agent prompt|send-keys|start`,
   `tab|workspace create|close|focus`, `server stop`, `session stop`. A read-only agent must not send instructions to
