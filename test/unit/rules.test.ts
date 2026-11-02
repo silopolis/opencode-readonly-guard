@@ -3,8 +3,9 @@ import type { ValidateFunction } from "ajv"
 import { Ajv2020 } from "ajv/dist/2020.js"
 import { readFileSync } from "node:fs"
 import { classifyPattern } from "../../src/classify.js"
-import { buildBashRules, loadRules } from "../../src/rules.js"
-import { evaluate } from "../../src/wildcard.js"
+import { decide } from "../../src/decide.js"
+import { buildBashRules, helpPatterns, loadRules } from "../../src/rules.js"
+import { evaluate, wildcardMatch } from "../../src/wildcard.js"
 
 const read = (file: string): unknown =>
   JSON.parse(readFileSync(new URL(`../../rules/${file}`, import.meta.url), "utf8"))
@@ -133,6 +134,81 @@ describe("herdr rules", () => {
   })
 })
 
+describe("the help layer", () => {
+  const rules = loadRules()
+  const bash = buildBashRules(rules)
+  const help = helpPatterns(rules)
+  /** ask.json patterns about an option (`*-delete*`, `herdr --machine *`), not a subcommand (`herdr pane close *`). */
+  const flags = rules.ask.map(({ pattern }) => pattern).filter((pattern) => /(^|[ *])-/.test(pattern))
+
+  test("allows the help of blocked and ask-listed subcommands", () => {
+    for (const command of [
+      "git commit --help",
+      "rtk git push --help",
+      "git config --help",
+      "herdr worktree create --help",
+      "herdr agent prompt --help",
+      "herdr server --help",
+      "npm install --help",
+      "rtk npm run --help",
+      "mise use --help",
+      "mise settings set --help",
+      "rtk mise run --help",
+    ]) {
+      expect({ command, decision: decide(command, bash) }).toEqual({ command, decision: { verdict: "allow" } })
+    }
+  })
+
+  test("every derived command is allowed", () => {
+    expect(help.length).toBeGreaterThan(100)
+    for (const command of help) {
+      expect({ command, decision: decide(command, bash) }).toEqual({ command, decision: { verdict: "allow" } })
+    }
+  })
+
+  test("holds exact `<subcommand> --help` commands only", () => {
+    for (const pattern of help) {
+      expect({ pattern, exact: !/[*?]/.test(pattern) && pattern.endsWith(" --help") }).toEqual({ pattern, exact: true })
+    }
+  })
+
+  test("never shadows an ask-listed flag", () => {
+    expect(flags).toContain("*-delete*")
+    expect(flags).toContain("herdr --machine *")
+    expect(flags).not.toContain("herdr pane close *")
+    for (const pattern of help) {
+      expect({ pattern, flags: flags.filter((flag) => wildcardMatch(pattern, flag)) }).toEqual({ pattern, flags: [] })
+    }
+  })
+
+  test("anything next to --help is judged as usual", () => {
+    for (const [command, verdict] of [
+      ["herdr worktree create --branch x", "block"],
+      ["herdr worktree create --branch x --help", "block"],
+      ["herdr agent prompt reviewer --help", "ask"],
+      ["git commit -m x --help", "block"],
+      ["git commit -h", "block"],
+      ["npm install left-pad --help", "block"],
+      ["mise use node --help", "ask"],
+    ] as const) {
+      expect({ command, verdict: decide(command, bash).verdict }).toEqual({ command, verdict })
+    }
+  })
+
+  test("leaves the herdr UI subcommands alone: outside herdr nothing about them is allowed", () => {
+    for (const path of rules.commands.herdr.ui) {
+      expect(help.filter((pattern) => pattern.startsWith(`herdr ${path}`))).toEqual([])
+      expect(evaluate(`herdr ${path} --help`, bash)).toBe("ask")
+    }
+  })
+
+  test("skips what the rules before it already allow", () => {
+    expect(help).not.toContain("git log --help")
+    expect(help).not.toContain("herdr agent list --help")
+    expect(evaluate("git log --help", bash)).toBe("allow")
+  })
+})
+
 describe("buildBashRules", () => {
   const rules = loadRules()
 
@@ -140,11 +216,14 @@ describe("buildBashRules", () => {
     expect(buildBashRules(rules)[0]).toEqual(["*", "ask"])
   })
 
-  test("ask flags come last so they override allow and learned rules", () => {
+  test("ask flags come after allow and learned rules, so they override them; only exact help follows", () => {
     const bash = buildBashRules(rules, ["find *"])
-    const lastAllow = bash.findLastIndex(([, action]) => action === "allow")
+    const help = new Set(helpPatterns(rules))
+    const lastAllow = bash.findLastIndex(([pattern, action]) => action === "allow" && !help.has(pattern))
     const firstAsk = bash.findIndex(([pattern]) => rules.ask.some((rule) => rule.pattern === pattern))
+    const lastAsk = bash.findLastIndex(([pattern]) => rules.ask.some((rule) => rule.pattern === pattern))
     expect(firstAsk).toBeGreaterThan(lastAllow)
+    expect(bash.slice(lastAsk + 1).every(([pattern, action]) => action === "allow" && help.has(pattern))).toBe(true)
     expect(evaluate("find . -delete", bash)).toBe("ask")
   })
 

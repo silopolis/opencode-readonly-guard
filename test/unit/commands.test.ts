@@ -138,13 +138,15 @@ describe("rules", () => {
     expect(stdout).toContain("git log*")
     expect(stdout).toContain("Always ask")
     expect(stdout).toContain("*-delete*")
+    expect(stdout).toMatch(/Allowed after the ask flags: \d+ exact help commands, e\.g\. git \S+ --help/)
   })
 
   test("--json is machine readable", () => {
     cli("rules", "--json")
-    const parsed = JSON.parse(stdout) as { allow: unknown[]; ask: unknown[] }
+    const parsed = JSON.parse(stdout) as { allow: unknown[]; ask: unknown[]; help: string[] }
     expect(parsed.allow.length).toBeGreaterThan(10)
     expect(parsed.ask.length).toBeGreaterThan(5)
+    expect(parsed.help).toContain("herdr worktree create --help")
   })
 })
 

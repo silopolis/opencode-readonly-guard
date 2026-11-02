@@ -3,7 +3,16 @@
   "$id": "https://github.com/silopolis/opencode-readonly-guard/rules/schema/commands.schema.json",
   "title": "readonly-guard command classification",
   "type": "object",
-  "required": ["version", "hardWrite", "packageManagers", "git", "herdr", "wildcardSafe", "rtkReadSubcommands"],
+  "required": [
+    "version",
+    "hardWrite",
+    "packageManagers",
+    "git",
+    "herdr",
+    "subcommandHelp",
+    "wildcardSafe",
+    "rtkReadSubcommands"
+  ],
   "additionalProperties": false,
   "$defs": {
     "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" } },
@@ -68,6 +77,22 @@
         "write": {
           "description": "herdr subcommands that write files, worktrees or the herdr installation: blocked in read-only agents.",
           "$ref": "#/$defs/herdrWords"
+        }
+      }
+    },
+    "subcommandHelp": {
+      "description": "Subcommands whose exact `<program> <subcommand> --help` is allowed after the ask flags, because it only prints help. git also gets every subcommand in git.write and git.read, herdr every path in herdr.read and herdr.write and every `herdr <path> *` rule in ask.json (never the UI subcommands). A form already allowed by the rules before it is skipped.",
+      "type": "object",
+      "required": ["git", "npm", "mise"],
+      "additionalProperties": false,
+      "properties": {
+        "git": { "$ref": "#/$defs/names" },
+        "npm": { "$ref": "#/$defs/names" },
+        "mise": {
+          "description": "Subcommand paths of one or two words, e.g. `use` or `settings set`.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*( [a-z][a-z0-9-]*)?$" }
         }
       }
     },
