@@ -10,7 +10,8 @@ shell command, so a model that ignores the reminder can still `rm`, `sed -i` or 
   `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). The model gets an
   error that tells it to return the data in its reply instead.
 - **Shared allowlist.** Read-only agents ask before running anything except a vetted list of read-only commands
-  (`ls`, `cat`, `rg`, `git log`, …). The list lives in [`rules/`](rules) as plain JSON that anyone can extend.
+  (`ls`, `cat`, `rg`, `git log`, `herdr agent list`, …). The list lives in [`rules/`](rules) as plain JSON that anyone
+  can extend.
 - **Reviewed learning.** An "always" answer in a read-only agent is only logged as a candidate. `/guard-review` shows
   candidates with safe pattern options, and a rule is added only after you confirm the exact pattern.
 - **Event log.** Every shell command, block, prompt and answer in a read-only agent is recorded, so the policy can be
@@ -94,6 +95,40 @@ Because the flags come last, a broad learned rule such as `find *` never silence
 Read-only agents are `plan`, `explore`, every agent whose `permission.edit` is `deny` (or `tools.edit: false`), plus
 `agents.include`, minus `agents.exclude`. `plan` additionally asks before delegating to a subagent that is not
 read-only, and never to `general`.
+
+## Working inside herdr
+
+Agents that run in a [herdr](https://herdr.dev) pane can inspect it with the `herdr` CLI. The rules treat `herdr` like
+`git`: they judge the subcommand, never the program as a whole (`herdr *` is never accepted).
+
+- **Allowed without a prompt:** `--help`, `--version`, `--skill`, a bare command group (`herdr agent`, `herdr pane`, …)
+  and the read-only subcommands: `status`, `agent list|get|read|wait|explain`,
+  `pane list|current|get|layout|process-info|neighbor|edges|read|wait-output`, `workspace|tab list|get`,
+  `worktree|session|machine|plugin|integration` listings, `api snapshot|schema`, `config check`, `channel show`.
+- **Always asks**, even when an agent's own rules allow `herdr *`, and can never be learned (exact or with a wildcard):
+  every other subcommand, such as `pane send-text|send-keys|run|split|close`, `agent prompt|send-keys|start`,
+  `tab|workspace create|close|focus`, `server stop`, `session stop`. A read-only agent must not send instructions to
+  another agent, so `agent prompt` stays a prompt. The `--machine`, `--session` and `--remote` prefixes, bare `herdr`
+  (it opens the terminal UI) and `--trust-repository` ask too.
+- **Blocked** like other writes: `herdr update`, `worktree create|remove`, `config reset-keys`,
+  `integration install|uninstall`, `session delete`, `plugin install|update`, `api schema --output FILE`, and
+  `pane run PANE CMD` when `CMD` would itself be blocked (`herdr pane run w1:p2 'rm -rf build'`).
+- **Opt-in UI commands:** `herdr tab rename` and `herdr notification show` only change what herdr displays, which
+  is how a plan-mode agent can report its state. They are off by default and never part of the shared allowlist. Turn
+  them on in your store or in the plugin options:
+
+  ```jsonc
+  // ~/.config/opencode/readonly-guard.json            or:  ["opencode-readonly-guard", { "allow": [...] }]
+  { "allow": ["herdr tab rename *", "herdr notification show *"] }
+  ```
+
+  Listing one opens only that subcommand: `herdr tab close` still asks. `opencode-readonly-guard vet 'herdr tab rename *'`
+  shows what the safety check says about a pattern.
+
+herdr is not in opencode's table of known programs, so an "always" answer to any herdr prompt is saved by opencode as
+`herdr *`, for every agent until restart. The write guard still blocks the commands above, but nothing stops
+`herdr pane send-text`. Answer "once" to herdr prompts. rtk does not rewrite herdr commands, so there are no `rtk herdr`
+rules.
 
 ## Options
 

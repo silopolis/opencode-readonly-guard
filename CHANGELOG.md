@@ -17,5 +17,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `readonly_guard_update` tools add vetted rules after an explicit confirmation of the exact pattern.
 - `opencode-readonly-guard` command-line tool: `check`, `vet`, `rules`, `review`, `install`.
 - Plugin options (`agents`, `allow`, `store`, `logDir`, `toast`, `command`).
+- herdr rules: read-only `herdr` commands (`agent list`, `pane read`, `status`, …) are allowed in read-only agents;
+  every other subcommand always asks and cannot be learned; `update`, `worktree create|remove`,
+  `integration install|uninstall`, `session delete`, `plugin install|update`, `api schema --output` and `pane run` of a
+  writing command are blocked. `herdr tab rename` and `herdr notification show` are opt-in UI commands, accepted only
+  from the user's store or the `allow` option.
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main
