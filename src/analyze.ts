@@ -1,5 +1,13 @@
 import { basename } from "node:path"
-import { containerWrites, ipWrites, journalctlWrites, mountLists, pacmanWrites, systemctlWrites } from "./programs.js"
+import {
+  containerWrites,
+  ipWrites,
+  journalctlWrites,
+  mountLists,
+  pacmanWrites,
+  systemctlWrites,
+  virshWrites,
+} from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
 
@@ -360,6 +368,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (name === "ip") return ipWrites(args, (inner) => commandWrites(inner, depth + 1))
     if (name === "pacman") return pacmanWrites(args)
     if (containerNames.has(name)) return containerWrites(name, args, containerWrite)
+    if (name === "virsh") return virshWrites(args)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null

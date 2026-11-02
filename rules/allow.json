@@ -438,6 +438,92 @@
     { "pattern": "rtk docker ps *", "reason": "`docker ps` after the rtk plugin rewrites it" },
     { "pattern": "rtk docker images *", "reason": "`docker images` after the rtk plugin rewrites it" },
     { "pattern": "rtk docker logs *", "reason": "`docker logs` after the rtk plugin rewrites it" },
+    { "pattern": "virsh list *", "reason": "list domains (other connection URIs ask: some run a program)" },
+    { "pattern": "virsh dominfo *", "reason": "show a domain (other connection URIs ask: some run a program)" },
+    {
+      "pattern": "virsh domstate *",
+      "reason": "show a domain's state (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh domblklist *",
+      "reason": "list a domain's block devices (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh domiflist *",
+      "reason": "list a domain's network interfaces (other connection URIs ask: some run a program)"
+    },
+    { "pattern": "virsh net-list *", "reason": "list networks (other connection URIs ask: some run a program)" },
+    { "pattern": "virsh pool-list *", "reason": "list storage pools (other connection URIs ask: some run a program)" },
+    {
+      "pattern": "virsh vol-list *",
+      "reason": "list the volumes of a pool (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system list *",
+      "reason": "list domains on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system dominfo *",
+      "reason": "show a domain on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domstate *",
+      "reason": "show a domain's state on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domblklist *",
+      "reason": "list a domain's block devices on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domiflist *",
+      "reason": "list a domain's network interfaces on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system net-list *",
+      "reason": "list networks on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system pool-list *",
+      "reason": "list storage pools on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system vol-list *",
+      "reason": "list the volumes of a pool on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session list *",
+      "reason": "list domains on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session dominfo *",
+      "reason": "show a domain on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domstate *",
+      "reason": "show a domain's state on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domblklist *",
+      "reason": "list a domain's block devices on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domiflist *",
+      "reason": "list a domain's network interfaces on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session net-list *",
+      "reason": "list networks on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session pool-list *",
+      "reason": "list storage pools on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session vol-list *",
+      "reason": "list the volumes of a pool on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    { "pattern": "VBoxManage list *", "reason": "list VirtualBox VMs, disks, networks or system properties" },
+    { "pattern": "vagrant box list *", "reason": "list installed boxes (it does not evaluate the Vagrantfile)" },
     { "pattern": "tee /dev/null", "reason": "exact match only: tee to the null device writes nothing" }
   ]
 }

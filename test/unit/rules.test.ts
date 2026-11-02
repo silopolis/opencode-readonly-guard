@@ -41,7 +41,7 @@ describe("shared rule files", () => {
   })
 
   test("allow patterns start with a literal command", () => {
-    for (const { pattern } of loadRules().allow) expect(pattern).toMatch(/^[a-z]/)
+    for (const { pattern } of loadRules().allow) expect(pattern).toMatch(/^[A-Za-z]/) // VBoxManage
   })
 
   test("every allow pattern is really allowed once the ask rules are applied", () => {

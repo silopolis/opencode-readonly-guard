@@ -615,6 +615,31 @@ describe("analyze", () => {
     }
   })
 
+  test("virsh: one string of several commands, and a log file, are blocked", () => {
+    for (const command of [
+      "virsh 'list; destroy vm1'",
+      "virsh -c qemu:///system 'list --all; undefine vm1'",
+      'virsh "list\ndestroy vm1"',
+      "virsh -l /tmp/virsh.log list",
+      "virsh --log=/tmp/virsh.log list",
+      "virsh --lo /tmp/virsh.log list",
+      "virsh -ql /tmp/virsh.log list",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("virsh") })
+    }
+    for (const command of [
+      "virsh list --all",
+      "virsh -c qemu:///system list --all",
+      "virsh --connect=qemu:///session dominfo vm1",
+      "virsh -r -c qemu:///system domblklist vm1",
+      "virsh list --title",
+      "virsh 'list --all'",
+      "virsh -l /dev/null list",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
     for (const command of [
       "journalctl --vacuum-time=1d",

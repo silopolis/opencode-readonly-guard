@@ -349,6 +349,52 @@ export function containerWrites(name: string, args: readonly string[], write: Re
   return null
 }
 
+const VIRSH_LONG = [
+  "connect",
+  "debug",
+  "escape",
+  "help",
+  "keepalive-interval",
+  "keepalive-count",
+  "log",
+  "no-pkttyagent",
+  "quiet",
+  "readonly",
+  "timing",
+  "version",
+]
+const VIRSH_LONG_WITH_VALUE = new Set(["connect", "debug", "escape", "keepalive-interval", "keepalive-count", "log"])
+const VIRSH_SHORT_WITH_VALUE = "cdekKl"
+
+/**
+ * virsh writes a log file with `-l/--log FILE`, and runs every command of a single string argument separated by `;`
+ * or a newline (`virsh 'list; destroy vm'` destroys vm), which the rules would match as `virsh list …`.
+ */
+export function virshWrites(args: readonly string[]): string | null {
+  let j = 0
+  for (; j < args.length && args[j].startsWith("-") && args[j] !== "-"; j++) {
+    const arg = args[j]
+    if (arg.startsWith("--")) {
+      const [name, value] = arg.slice(2).split(/=(.*)/s)
+      const option = VIRSH_LONG.includes(name) ? name : VIRSH_LONG.find((full) => matches(name, full))
+      if (option === "log" && !NULL_TARGETS.has(value ?? args[j + 1] ?? "")) return "virsh --log writes a log file"
+      if (option && value === undefined && VIRSH_LONG_WITH_VALUE.has(option)) j++
+      continue
+    }
+    for (let c = 1; c < arg.length; c++) {
+      if (!VIRSH_SHORT_WITH_VALUE.includes(arg[c])) continue
+      const value = c < arg.length - 1 ? arg.slice(c + 1) : args[++j]
+      if (arg[c] === "l" && !NULL_TARGETS.has(value ?? "")) return "virsh -l writes a log file"
+      break
+    }
+  }
+  const rest = args.slice(j)
+  if (rest.length === 1 && /[;\n]/.test(rest[0])) {
+    return "virsh runs every command of a string separated by ';': run one virsh command per call"
+  }
+  return null
+}
+
 /** pacman's operations, long and short. */
 const PACMAN_OPERATIONS: Readonly<Record<string, string>> = {
   database: "D",
