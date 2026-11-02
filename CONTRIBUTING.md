@@ -59,6 +59,9 @@ Other files:
   never in `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
   there is no catch-all, because a `herdr *` ask rule would also silence the allowed reads. Keep the four lists
   disjoint and `allow.json` in step with `help` and `read` (the unit tests check both).
+- **`commands.json` → `containers`:** the docker and podman `read` paths (`allow.json` must have
+  `<engine> <path> *` for each, the unit tests check it) and the `write` paths the guard blocks. Allow rules start
+  with the subcommand, so global options that pick another daemon (`-H`, `--context`) never match them.
 - **`commands.json` → `subcommandHelp`:** extra git subcommands, and npm and mise subcommand paths, whose exact
   `<program> <subcommand> --help` is allowed by the help layer, after `ask.json` (git also gets `git.write` and
   `git.read`, herdr its `read` and `write` paths and its `herdr <path> *` ask rules; git, npm and mise get the `rtk`
@@ -68,7 +71,10 @@ Other files:
   every read-only use is harmless and whose write options are covered by `ask.json` or the analyzer.
 
 Behaviour that depends on arguments (`tee`, `sed -i`, `find -exec`, `curl -o`, `git branch <name>`, …) lives in
-`src/analyze.ts`; add a unit test in `test/unit/analyze.test.ts` and a case in `cases.json`.
+`src/analyze.ts`, and for system tools with their own option rules (`systemctl`, `journalctl`, `ip`, `pacman`,
+`docker`/`podman`, `virsh`) in `src/programs.ts`; add a unit test in `test/unit/analyze.test.ts` and a case in
+`cases.json`. Check the program's real behaviour (its sources, or a run against a scratch target such as
+`virsh -c test:///default`) rather than its manual alone.
 
 ## Tests
 

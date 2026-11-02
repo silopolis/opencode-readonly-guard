@@ -1,4 +1,13 @@
 import { basename } from "node:path"
+import {
+  containerWrites,
+  ipWrites,
+  journalctlWrites,
+  mountLists,
+  pacmanWrites,
+  systemctlWrites,
+  virshWrites,
+} from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
 
@@ -322,6 +331,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
   const packageWrite = new Set(commands.packageManagers.writeSubcommands)
   const gitWrite = new Set(commands.git.write)
   const herdrWrite = new Set(commands.herdr.write)
+  const containerNames = new Set(commands.containers.names)
+  const containerWrite = new Set(commands.containers.write)
 
   function analyzeCommand(command: string, depth = 0): Verdict {
     if (depth > MAX_DEPTH) return { block: true, reason: "command nesting too deep to analyze" }
@@ -352,7 +363,12 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     const firstArg = args.find((arg) => !arg.startsWith("-"))
     const has = (...flags: string[]) => args.some((arg) => flags.includes(arg))
 
+    if (name === "mount" && mountLists(args)) return null
     if (hardWrite.has(name) || name.startsWith("mkfs")) return `"${name}" modifies files or system state`
+    if (name === "ip") return ipWrites(args, (inner) => commandWrites(inner, depth + 1))
+    if (name === "pacman") return pacmanWrites(args)
+    if (containerNames.has(name)) return containerWrites(name, args, containerWrite)
+    if (name === "virsh") return virshWrites(args)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null
@@ -418,15 +434,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       return safe ? null : "wget downloads to a file (use -O - to print instead)"
     }
     if (name === "crontab" && !has("-l")) return "crontab modifies the crontab"
-    if (name === "systemctl") {
-      if (firstArg && !/^(status|show|cat|help|list-.*|is-.*)$/.test(firstArg)) {
-        return `systemctl ${firstArg} changes system state`
-      }
-      return null
-    }
-    if (name === "journalctl" && args.some((arg) => /^--(vacuum|rotate|flush|sync|relinquish)/.test(arg))) {
-      return "journalctl maintenance flags modify journals"
-    }
+    if (name === "systemctl") return systemctlWrites(args)
+    if (name === "journalctl") return journalctlWrites(args)
     if (name === "git") return gitWrites(args, depth)
     if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {
@@ -503,6 +512,45 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       if (inner) {
         const verdict = analyzeCommand(inner, depth + 1)
         if (verdict.block) return `herdr pane run: ${verdict.reason}`
+      }
+    }
+    return null
+  }
+
+  /**
+   * `git grep -O[PAGER]` / `--open-files-in-pager[=PAGER]` runs PAGER through the shell on the matching files. The
+   * ask rules see `-O` written apart; in a bundle (`-nO`) they cannot, so it is blocked. A PAGER that writes is
+   * blocked too.
+   */
+  function grepPager(args: readonly string[], depth: number): string | null {
+    const pager = (command: string) => {
+      const verdict = analyzeCommand(command, depth + 1)
+      return verdict.block ? `git grep -O runs a pager command: ${verdict.reason}` : null
+    }
+    for (let j = 0; j < args.length; j++) {
+      const arg = args[j]
+      if (arg === "--") break
+      if (arg.startsWith("--")) {
+        const [name, value] = arg.slice(2).split(/=(.*)/s)
+        if (name.length >= 2 && "open-files-in-pager".startsWith(name) && value) {
+          const why = pager(value)
+          if (why) return why
+        }
+        continue
+      }
+      for (let c = 1; c < arg.length; c++) {
+        const letter = arg[c]
+        if (letter === "O") {
+          if (c > 1) return "git grep -O in a bundle: write -O apart so it asks"
+          const why = arg.length > 2 ? pager(arg.slice(2)) : null
+          if (why) return why
+          break
+        }
+        if ("ABCefm".includes(letter)) {
+          if (c === arg.length - 1) j++ // the value is the next word
+          break
+        }
+        if (/\d/.test(letter)) break // -3: context lines
       }
     }
     return null
@@ -586,7 +634,10 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       case "symbolic-ref":
         return has("-d", "--delete") || positional.length >= 2 ? "git symbolic-ref modifies refs" : null
       case "hash-object":
-        return has("-w") ? "git hash-object -w writes objects" : null
+        // -t takes a value: `-tw` is type "w", `-wt blob` writes
+        return rest.some((arg) => /^-[^-t]*w/.test(arg)) ? "git hash-object -w writes objects" : null
+      case "grep":
+        return grepPager(rest, depth)
       default:
         return null
     }

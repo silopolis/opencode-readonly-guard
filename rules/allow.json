@@ -61,6 +61,14 @@
     { "pattern": "git ls-files*", "reason": "list tracked files" },
     { "pattern": "git rev-parse*", "reason": "resolve revisions and paths" },
     { "pattern": "git ls-tree*", "reason": "list the contents of a tree object" },
+    {
+      "pattern": "git grep*",
+      "reason": "search tracked files (-O/--open-files-in-pager runs a pager and is in ask.json)"
+    },
+    { "pattern": "git check-ignore*", "reason": "explain why paths are ignored" },
+    { "pattern": "git show-ref*", "reason": "list references" },
+    { "pattern": "git for-each-ref*", "reason": "list references with a format" },
+    { "pattern": "git hash-object*", "reason": "compute an object id (-w writes the object: ask.json and the guard)" },
     { "pattern": "git rev-list*", "reason": "list commits (--output is in ask.json)" },
     { "pattern": "git merge-base*", "reason": "find common ancestors" },
     { "pattern": "git worktree list *", "reason": "list worktrees (the other worktree subcommands are blocked)" },
@@ -118,6 +126,39 @@
       "reason": "show registry information about a package (--cache/--logs-dir are in ask.json)"
     },
     { "pattern": "mise --version", "reason": "print the mise version" },
+    {
+      "pattern": "node --version",
+      "reason": "print the Node.js version (exact: node with any other argument runs code)"
+    },
+    {
+      "pattern": "python3 --version",
+      "reason": "print the Python version (exact: python3 with any other argument runs code)"
+    },
+    { "pattern": "bun --version", "reason": "print the Bun version" },
+    { "pattern": "npm --version", "reason": "print the npm version" },
+    { "pattern": "git --version", "reason": "print the git version" },
+    {
+      "pattern": "gh --version",
+      "reason": "print the gh version (gh writes its own device id under ~/.local/state on first run)"
+    },
+    { "pattern": "opencode --version", "reason": "print the opencode version (opencode writes its own log file)" },
+    { "pattern": "hk --version", "reason": "print the hk version" },
+    { "pattern": "docker --version", "reason": "print the docker client version" },
+    { "pattern": "podman --version", "reason": "print the podman version" },
+    { "pattern": "VBoxManage --version", "reason": "print the VirtualBox version" },
+    { "pattern": "vagrant --version", "reason": "print the vagrant version (it does not evaluate the Vagrantfile)" },
+    { "pattern": "chezmoi --version", "reason": "print the chezmoi version" },
+    { "pattern": "flatpak --version", "reason": "print the flatpak version" },
+    { "pattern": "virsh --version", "reason": "print the virsh version" },
+    {
+      "pattern": "mise version",
+      "reason": "exact match only: print the mise version (mise keeps its own state and version-check cache)"
+    },
+    { "pattern": "mise which *", "reason": "print the path of the executable mise would run" },
+    {
+      "pattern": "mise where *",
+      "reason": "print the install directory of an installed tool version (it fails rather than installs)"
+    },
     { "pattern": "mise ls *", "reason": "list installed and requested tool versions" },
     { "pattern": "mise ls-remote *", "reason": "list the versions a tool can be installed in" },
     { "pattern": "mise tasks", "reason": "exact match only: list tasks (mise tasks add/edit/run change or run tasks)" },
@@ -233,6 +274,297 @@
     { "pattern": "herdr agent read *", "reason": "read an agent's terminal output" },
     { "pattern": "herdr agent wait *", "reason": "wait for an agent state (pass --timeout)" },
     { "pattern": "herdr agent explain *", "reason": "explain agent detection state" },
+    {
+      "pattern": "systemctl status *",
+      "reason": "show the runtime status of units (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl show *", "reason": "show unit properties (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl cat *",
+      "reason": "print unit files and drop-ins (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-active *",
+      "reason": "check whether units are active (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-enabled *",
+      "reason": "check whether unit files are enabled (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-failed *",
+      "reason": "check whether units have failed (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-system-running *",
+      "reason": "check whether the system is fully running (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-units *", "reason": "list loaded units (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl list-unit-files *",
+      "reason": "list installed unit files (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-timers *", "reason": "list timers (-H/-M ask; the other verbs are blocked)" },
+    { "pattern": "systemctl list-sockets *", "reason": "list socket units (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl list-dependencies *",
+      "reason": "list the dependencies of a unit (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-jobs *", "reason": "list queued jobs (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl show-environment *",
+      "reason": "print the manager's environment (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl get-default *",
+      "reason": "print the default target (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl --user status *", "reason": "show the runtime status of units, user manager" },
+    { "pattern": "systemctl --user show *", "reason": "show unit properties, user manager" },
+    { "pattern": "systemctl --user cat *", "reason": "print unit files and drop-ins, user manager" },
+    { "pattern": "systemctl --user is-active *", "reason": "check whether units are active, user manager" },
+    { "pattern": "systemctl --user is-enabled *", "reason": "check whether unit files are enabled, user manager" },
+    { "pattern": "systemctl --user is-failed *", "reason": "check whether units have failed, user manager" },
+    {
+      "pattern": "systemctl --user is-system-running *",
+      "reason": "check whether the system is fully running, user manager"
+    },
+    { "pattern": "systemctl --user list-units *", "reason": "list loaded units, user manager" },
+    { "pattern": "systemctl --user list-unit-files *", "reason": "list installed unit files, user manager" },
+    { "pattern": "systemctl --user list-timers *", "reason": "list timers, user manager" },
+    { "pattern": "systemctl --user list-sockets *", "reason": "list socket units, user manager" },
+    { "pattern": "systemctl --user list-dependencies *", "reason": "list the dependencies of a unit, user manager" },
+    { "pattern": "systemctl --user list-jobs *", "reason": "list queued jobs, user manager" },
+    { "pattern": "systemctl --user show-environment *", "reason": "print the manager's environment, user manager" },
+    { "pattern": "systemctl --user get-default *", "reason": "print the default target, user manager" },
+    { "pattern": "rtk systemctl status *", "reason": "`systemctl status` after the rtk plugin rewrites it" },
+    {
+      "pattern": "journalctl *",
+      "reason": "read the journal (--vacuum-*, --rotate, --flush, --sync, --cursor-file, ... are in ask.json)"
+    },
+    { "pattern": "lsblk *", "reason": "list block devices" },
+    { "pattern": "findmnt *", "reason": "list mounted file systems" },
+    { "pattern": "mount", "reason": "exact match only: list the mounts (the guard blocks every other mount)" },
+    { "pattern": "mount -l", "reason": "exact match only: list the mounts with their labels" },
+    {
+      "pattern": "ip a *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip addr *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip address *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip l *",
+      "reason": "show the link table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip link *",
+      "reason": "show the link table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip r *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip ro *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip route *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip n *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neigh *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neighbor *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neighbour *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    { "pattern": "ip -br a *", "reason": "ip -br a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br addr *", "reason": "ip -br addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br link *", "reason": "ip -br link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br route *", "reason": "ip -br route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br neigh *", "reason": "ip -br neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 a *", "reason": "ip -4 a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 addr *", "reason": "ip -4 addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 link *", "reason": "ip -4 link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 route *", "reason": "ip -4 route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 neigh *", "reason": "ip -4 neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 a *", "reason": "ip -6 a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 addr *", "reason": "ip -6 addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 link *", "reason": "ip -6 link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 route *", "reason": "ip -6 route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 neigh *", "reason": "ip -6 neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j a *", "reason": "ip -j a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j addr *", "reason": "ip -j addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j link *", "reason": "ip -j link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j route *", "reason": "ip -j route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j neigh *", "reason": "ip -j neigh: a read unless the guard blocks the verb" },
+    {
+      "pattern": "pacman -Q*",
+      "reason": "query the local package database (pacman refuses a second operation; the guard blocks -S/-R/-U)"
+    },
+    { "pattern": "pacman --query *", "reason": "query the local package database" },
+    { "pattern": "flatpak list *", "reason": "list installed flatpaks" },
+    { "pattern": "flatpak info *", "reason": "show an installed flatpak" },
+    { "pattern": "flatpak remotes *", "reason": "list configured remotes" },
+    { "pattern": "flatpak ps *", "reason": "list running flatpak instances" },
+    { "pattern": "snap list *", "reason": "list installed snaps" },
+    { "pattern": "snap info *", "reason": "show a snap (queries the store)" },
+    { "pattern": "snap version", "reason": "print the snapd version" },
+    { "pattern": "snap services *", "reason": "list snap services" },
+    { "pattern": "snap connections *", "reason": "list interface connections" },
+    {
+      "pattern": "docker ps *",
+      "reason": "list containers (global options such as -H/--host must come first, so they ask)"
+    },
+    { "pattern": "docker images *", "reason": "list images" },
+    { "pattern": "docker inspect *", "reason": "show low-level information on objects" },
+    { "pattern": "docker logs *", "reason": "print a container's logs" },
+    { "pattern": "docker version *", "reason": "print the client and server versions" },
+    { "pattern": "docker info *", "reason": "print system-wide information" },
+    { "pattern": "docker image ls *", "reason": "list images" },
+    { "pattern": "docker image inspect *", "reason": "show an image" },
+    { "pattern": "docker container ls *", "reason": "list containers" },
+    { "pattern": "docker container inspect *", "reason": "show a container" },
+    { "pattern": "docker container logs *", "reason": "print a container's logs" },
+    { "pattern": "docker volume ls *", "reason": "list volumes" },
+    { "pattern": "docker volume inspect *", "reason": "show a volume" },
+    { "pattern": "docker network ls *", "reason": "list networks" },
+    { "pattern": "docker network inspect *", "reason": "show a network" },
+    { "pattern": "docker system df *", "reason": "show disk usage" },
+    {
+      "pattern": "podman ps *",
+      "reason": "list containers (global options such as -H/--host must come first, so they ask)"
+    },
+    { "pattern": "podman images *", "reason": "list images" },
+    { "pattern": "podman inspect *", "reason": "show low-level information on objects" },
+    { "pattern": "podman logs *", "reason": "print a container's logs" },
+    { "pattern": "podman version *", "reason": "print the client and server versions" },
+    { "pattern": "podman info *", "reason": "print system-wide information" },
+    { "pattern": "podman image ls *", "reason": "list images" },
+    { "pattern": "podman image inspect *", "reason": "show an image" },
+    { "pattern": "podman container ls *", "reason": "list containers" },
+    { "pattern": "podman container inspect *", "reason": "show a container" },
+    { "pattern": "podman container logs *", "reason": "print a container's logs" },
+    { "pattern": "podman volume ls *", "reason": "list volumes" },
+    { "pattern": "podman volume inspect *", "reason": "show a volume" },
+    { "pattern": "podman network ls *", "reason": "list networks" },
+    { "pattern": "podman network inspect *", "reason": "show a network" },
+    { "pattern": "podman system df *", "reason": "show disk usage" },
+    { "pattern": "docker stats --no-stream*", "reason": "one snapshot of container resource usage" },
+    { "pattern": "podman stats --no-stream*", "reason": "one snapshot of container resource usage" },
+    {
+      "pattern": "docker context ls *",
+      "reason": "list contexts (use, create, rm, update, import and export are blocked)"
+    },
+    { "pattern": "docker context show", "reason": "print the current context" },
+    { "pattern": "docker context inspect *", "reason": "show a context" },
+    { "pattern": "podman pod ps *", "reason": "list pods" },
+    { "pattern": "podman pod inspect *", "reason": "show a pod" },
+    { "pattern": "rtk docker ps *", "reason": "`docker ps` after the rtk plugin rewrites it" },
+    { "pattern": "rtk docker images *", "reason": "`docker images` after the rtk plugin rewrites it" },
+    { "pattern": "rtk docker logs *", "reason": "`docker logs` after the rtk plugin rewrites it" },
+    { "pattern": "virsh list *", "reason": "list domains (other connection URIs ask: some run a program)" },
+    { "pattern": "virsh dominfo *", "reason": "show a domain (other connection URIs ask: some run a program)" },
+    {
+      "pattern": "virsh domstate *",
+      "reason": "show a domain's state (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh domblklist *",
+      "reason": "list a domain's block devices (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh domiflist *",
+      "reason": "list a domain's network interfaces (other connection URIs ask: some run a program)"
+    },
+    { "pattern": "virsh net-list *", "reason": "list networks (other connection URIs ask: some run a program)" },
+    { "pattern": "virsh pool-list *", "reason": "list storage pools (other connection URIs ask: some run a program)" },
+    {
+      "pattern": "virsh vol-list *",
+      "reason": "list the volumes of a pool (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system list *",
+      "reason": "list domains on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system dominfo *",
+      "reason": "show a domain on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domstate *",
+      "reason": "show a domain's state on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domblklist *",
+      "reason": "list a domain's block devices on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system domiflist *",
+      "reason": "list a domain's network interfaces on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system net-list *",
+      "reason": "list networks on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system pool-list *",
+      "reason": "list storage pools on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///system vol-list *",
+      "reason": "list the volumes of a pool on the system libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session list *",
+      "reason": "list domains on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session dominfo *",
+      "reason": "show a domain on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domstate *",
+      "reason": "show a domain's state on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domblklist *",
+      "reason": "list a domain's block devices on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session domiflist *",
+      "reason": "list a domain's network interfaces on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session net-list *",
+      "reason": "list networks on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session pool-list *",
+      "reason": "list storage pools on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    {
+      "pattern": "virsh -c qemu:///session vol-list *",
+      "reason": "list the volumes of a pool on the session libvirtd (other connection URIs ask: some run a program)"
+    },
+    { "pattern": "VBoxManage list *", "reason": "list VirtualBox VMs, disks, networks or system properties" },
+    { "pattern": "vagrant box list *", "reason": "list installed boxes (it does not evaluate the Vagrantfile)" },
     { "pattern": "tee /dev/null", "reason": "exact match only: tee to the null device writes nothing" }
   ]
 }

@@ -226,6 +226,49 @@ describe("analyze", () => {
     }
   })
 
+  test("git grep: -O runs a pager command; in a bundle the ask rules cannot see it", () => {
+    for (const command of [
+      "git grep -Orm foo",
+      "git grep '-Orm -rf' foo",
+      "git grep --open-files-in-pager='touch x' foo",
+      "git grep --open='rm -rf x' foo",
+      "git grep --op=rm foo",
+      "git grep -nO foo",
+      "git grep -nOless foo",
+      "git grep -iOpython3 foo",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("git grep") })
+    }
+    for (const command of [
+      "git grep -n -i herdr -- docs",
+      "git grep -O foo",
+      "git grep -Oless foo",
+      "git grep --open-files-in-pager foo",
+      "git grep -e -O foo",
+      "git grep -eO foo",
+      "git grep -A3 -B 2 TODO",
+      "git grep -C1 -O",
+      "git grep --no-open-files-in-pager foo",
+      "git grep -l foo -- '*.ts'",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("git hash-object: -w writes the object, in a bundle too", () => {
+    for (const command of ["git hash-object -w f", "git hash-object -wt blob f", "git hash-object --stdin -w"]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("hash-object") })
+    }
+    for (const command of [
+      "git hash-object f",
+      "git hash-object -t blob f",
+      "git hash-object -tw f",
+      "git hash-object --stdin",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git ls-remote: --upload-pack and --exec run a command", () => {
     for (const command of [
       "git ls-remote --upload-pack='touch /tmp/x' .",
@@ -312,6 +355,373 @@ describe("analyze", () => {
   test("systemctl: status is fine, changes are not", () => {
     expect(analyze("systemctl status sshd")).toEqual({ block: false })
     expect(reason("systemctl restart sshd")).toContain("systemctl restart")
+  })
+
+  test("systemctl: read verbs pass, also after options that take a value", () => {
+    for (const command of [
+      "systemctl show-environment",
+      "systemctl --user show-environment",
+      "systemctl get-default",
+      "systemctl is-system-running",
+      "systemctl -t service list-units",
+      "systemctl --type service --state failed list-units",
+      "systemctl -p Id -p ActiveState show sshd",
+      "systemctl -at service list-units",
+      "systemctl -n 20 status sshd",
+      "systemctl --user list-unit-files --state=enabled --no-pager",
+      "systemctl --user list-units 'backup-*' --no-pager --no-legend",
+      "systemctl status sshd -H host",
+      "systemctl status sshd --host=host",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "systemctl -t service restart sshd",
+      "systemctl -p Id stop sshd",
+      "systemctl --user --no-pager daemon-reload",
+      "systemctl set-environment A=1",
+      "systemctl edit sshd",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("systemctl") })
+    }
+  })
+
+  test("systemctl: -H and -M only as separate options, so that the ask rules see them", () => {
+    for (const command of [
+      "systemctl status -aH host sshd",
+      "systemctl status -lHhost sshd",
+      "systemctl -qM box status",
+      "systemctl status --ho=host sshd",
+      "systemctl status --hos host sshd",
+      "systemctl status --mach=box sshd",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("separate") })
+    }
+  })
+
+  test("mount: listing the mounts is a read, anything else still modifies", () => {
+    for (const command of ["mount", "mount -l", "mount -t ext4", "mount -l -t btrfs", "mount | grep fuse"]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "mount /dev/sdb1 /mnt",
+      "mount -a",
+      "mount -t ext4 /dev/x /m",
+      "mount -l /dev/x",
+      "mount -o remount,rw /",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("mount") })
+    }
+  })
+
+  test("ip: show, list and get pass, in every abbreviation iproute2 accepts", () => {
+    for (const command of [
+      "ip a",
+      "ip addr",
+      "ip address show dev eth0",
+      "ip a s",
+      "ip a sh dev lo",
+      "ip a l",
+      "ip a lst",
+      "ip addr save",
+      "ip addr showdump",
+      "ip add",
+      "ip -br addr",
+      "ip -br a",
+      "ip -4 -br a show up",
+      "ip -j -p addr",
+      "ip -s -s link",
+      "ip -d link show type bridge",
+      "ip l",
+      "ip link",
+      "ip link sh",
+      "ip link l",
+      "ip link xstats type bridge",
+      "ip link afstats",
+      "ip r",
+      "ip ro",
+      "ip route list table main",
+      "ip route get 1.1.1.1",
+      "ip r g 1.1.1.1",
+      "ip -6 route show",
+      "ip n",
+      "ip neigh",
+      "ip neighbour show dev eth0",
+      "ip neighbor get 10.0.0.1 dev eth0",
+      "ip -n blue addr",
+      "ip -netns blue link",
+      "ip -c -br link",
+      "ip -color=always -br a",
+      "ip netns list",
+      "ip vrf show",
+      "ip netns exec blue ip addr",
+      "ip vrf exec red ls",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ip: add, change, delete, set, flush, restore and the rest are blocked, abbreviated too", () => {
+    for (const command of [
+      "ip addr add 10.0.0.1/24 dev eth0",
+      "ip a a 10.0.0.1/24 dev eth0",
+      "ip a d 10.0.0.1/24 dev eth0",
+      "ip a del 10.0.0.1/24 dev eth0",
+      "ip a c 10.0.0.1/24 dev eth0",
+      "ip a chg 10.0.0.1/24 dev eth0",
+      "ip a r 10.0.0.1/24 dev eth0",
+      "ip a f dev eth0",
+      "ip address flush dev eth0",
+      "ip a restore",
+      "ip -4 -br addr flush dev eth0",
+      "ip -color=always addr add 10.0.0.1/24 dev eth0",
+      "ip -c=never l s eth0 up",
+      "ip link set eth0 down",
+      "ip link s eth0 down",
+      "ip l se eth0 up",
+      "ip link change eth0 mtu 1400",
+      "ip link add br0 type bridge",
+      "ip link del br0",
+      "ip link replace br0 type bridge",
+      "ip link property add dev eth0 altname x",
+      "ip link p add dev eth0 altname x",
+      "ip route add default via 10.0.0.1",
+      "ip r a default via 10.0.0.1",
+      "ip r p default via 10.0.0.1",
+      "ip r app default via 10.0.0.1",
+      "ip r t default via 10.0.0.1",
+      "ip r d default",
+      "ip r c default via 10.0.0.2",
+      "ip r f cache",
+      "ip route restore",
+      "ip -6 route replace ::/0 via fe80::1 dev eth0",
+      "ip neigh add 10.0.0.2 lladdr 00:11:22:33:44:55 dev eth0",
+      "ip n del 10.0.0.2 dev eth0",
+      "ip n f all",
+      "ip n r 10.0.0.2 dev eth0",
+      "ip -j neighbour change 10.0.0.2 dev eth0",
+      "ip netns add blue",
+      "ip netns delete blue",
+      "ip netns set blue 1",
+      "ip netns attach blue 1234",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("ip ") })
+    }
+  })
+
+  test("ip: -batch runs a file of commands, netns and vrf exec run one", () => {
+    for (const command of [
+      "ip -batch cmds.txt",
+      "ip -b cmds.txt",
+      "ip -ba -",
+      "ip -force -batch cmds.txt",
+      "ip -4 -b cmds.txt",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("-batch") })
+    }
+    for (const command of [
+      "ip netns exec blue rm -rf /x",
+      "ip netns e blue touch x",
+      "ip -br netns exec blue sh -c 'echo x > f'",
+      "ip vrf exec red rm x",
+      "ip vrf e red rm x",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("exec") })
+    }
+  })
+
+  test("pacman: queries pass, transactions and database changes are blocked", () => {
+    for (const command of [
+      "pacman -Q",
+      "pacman -Qqen",
+      "pacman -Qi openssh",
+      "pacman -Qo /usr/bin/ls",
+      "pacman -Qkk openssh",
+      "pacman --query --info openssh",
+      "pacman -Ss ripgrep",
+      "pacman -Si ripgrep",
+      "pacman -Sl core",
+      "pacman -Sg",
+      "pacman -Sp ripgrep",
+      "pacman -S --print-format %n ripgrep",
+      "pacman -T 'bash>=3.2'",
+      "pacman -Dk",
+      "pacman -Fl ripgrep",
+      "pacman -F /usr/bin/rg",
+      "pacman -V",
+      "pacman -Qi -b /tmp/db x",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "pacman -S ripgrep",
+      "pacman -Syu",
+      "pacman -Sy",
+      "pacman -Ssy ripgrep",
+      "pacman -Sc",
+      "pacman -Sw ripgrep",
+      "pacman --sync ripgrep",
+      "pacman --sync --refresh",
+      "pacman -S --needed base-devel",
+      "sudo pacman -Syu --noconfirm",
+      "pacman -R ripgrep",
+      "pacman -Rns ripgrep",
+      "pacman --remove ripgrep",
+      "pacman --rem ripgrep",
+      "pacman -U ./x.pkg.tar.zst",
+      "pacman --upgrade ./x.pkg.tar.zst",
+      "pacman -D --asdeps ripgrep",
+      "pacman -D --asexplicit ripgrep",
+      "pacman -Fy",
+      "pacman -F --refresh",
+      "pacman -Qi x -Rns y",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("pacman") })
+    }
+  })
+
+  test("docker and podman: reads pass", () => {
+    for (const command of [
+      "docker ps -a --format '{{.Names}}'",
+      "docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}'",
+      "docker inspect --format '{{.State.Status}}' web",
+      "docker logs --tail 50 web",
+      "docker volume ls -q",
+      "docker network inspect bridge",
+      "docker system df",
+      "docker context ls",
+      "docker -H unix:///run/docker.sock ps",
+      "docker --context remote image ls",
+      "podman ps --all",
+      "podman images",
+      "podman pod ps",
+      "podman --remote ps",
+      "podman -c box volume ls",
+      "docker save image",
+      "docker save image -o /dev/null",
+      "docker exec web cat /etc/hostname",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("docker and podman: containers, images, volumes, networks, contexts and files are not changed", () => {
+    for (const command of [
+      "docker run --rm alpine ls",
+      "docker create alpine",
+      "docker start web",
+      "docker stop web",
+      "docker restart web",
+      "docker kill web",
+      "docker rm -f web",
+      "docker rmi alpine",
+      "docker cp web:/etc/hosts .",
+      "docker commit web snap",
+      "docker build -t x .",
+      "docker pull alpine",
+      "docker push x",
+      "docker tag x y",
+      "docker load -i x.tar",
+      "docker import x.tar",
+      "docker login",
+      "docker logout",
+      "docker container rm web",
+      "docker container prune -f",
+      "docker image prune -a",
+      "docker image rm alpine",
+      "docker volume rm data",
+      "docker volume create data",
+      "docker volume prune",
+      "docker network create n",
+      "docker network connect n web",
+      "docker system prune -af",
+      "docker context use remote",
+      "docker context create x --docker host=ssh://box",
+      "docker context export remote",
+      "docker save -o img.tar alpine",
+      "docker save alpine --output=img.tar",
+      "docker image save -o img.tar alpine",
+      "docker export -o fs.tar web",
+      "docker container export --output fs.tar web",
+      "docker -H tcp://box:2375 rm web",
+      "docker --context remote container prune",
+      "sudo docker rm web",
+      "podman rm web",
+      "podman pod rm p",
+      "podman system reset",
+      "podman --root /tmp/r rmi x",
+      "podman machine init",
+      "podman --out /tmp/out.txt ps",
+      "podman --out=/tmp/out.txt ps",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringMatching(/docker|podman/) })
+    }
+  })
+
+  test("virsh: one string of several commands, and a log file, are blocked", () => {
+    for (const command of [
+      "virsh 'list; destroy vm1'",
+      "virsh -c qemu:///system 'list --all; undefine vm1'",
+      'virsh "list\ndestroy vm1"',
+      "virsh -l /tmp/virsh.log list",
+      "virsh --log=/tmp/virsh.log list",
+      "virsh --lo /tmp/virsh.log list",
+      "virsh -ql /tmp/virsh.log list",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("virsh") })
+    }
+    for (const command of [
+      "virsh list --all",
+      "virsh -c qemu:///system list --all",
+      "virsh --connect=qemu:///session dominfo vm1",
+      "virsh -r -c qemu:///system domblklist vm1",
+      "virsh list --title",
+      "virsh 'list --all'",
+      "virsh -l /dev/null list",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
+    for (const command of [
+      "journalctl --vacuum-time=1d",
+      "journalctl --vac=1d",
+      "journalctl --vacuum-s 1G",
+      "journalctl --rotate",
+      "journalctl --rot",
+      "journalctl --flush",
+      "journalctl --fl",
+      "journalctl --sync",
+      "journalctl -f --synchronize-on-exit=yes",
+      "journalctl --relinquish-var",
+      "journalctl --smart-relinquish-var",
+      "journalctl --sm",
+      "journalctl --setup-keys",
+      "journalctl --se",
+      "journalctl --update-catalog",
+      "journalctl --up",
+      "journalctl -u sshd --cursor-file=/tmp/cursor",
+      "journalctl -u sshd --cursor-f /tmp/cursor",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("journalctl") })
+    }
+    for (const command of [
+      "journalctl -u sshd --since today",
+      "journalctl --user -u backup-sync -n 50 --no-pager",
+      "journalctl -b -1 -p err",
+      "journalctl --cursor=s=abc",
+      "journalctl --since=-1h --until now",
+      "journalctl --list-boots",
+      "journalctl --disk-usage",
+      "journalctl --verify",
+      "journalctl -o json --output-fields=MESSAGE",
+      "journalctl --root /mnt -k",
+      "journalctl -g 'rotate' --system",
+      "journalctl -- --rotate",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
   })
 
   test("sed -i and perl -i edit in place", () => {

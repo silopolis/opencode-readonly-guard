@@ -40,12 +40,12 @@ describe("review", () => {
   test("refuses unsafe options and explains why", () => {
     const text = run([
       always("rtk proxy cat /etc/hostname", "rtk *", "explore"),
-      always("npm --version", "npm --version *"),
+      always("cargo --version", "cargo --version *"),
     ])
     expect(text).toContain("[REFUSED: `rtk proxy` passes arbitrary commands through] exact")
     expect(text).toContain("[REFUSED: the command name must be literal (no wildcard)] general: `rtk *`")
-    expect(text).toContain('"npm" is not a known read-only command')
-    expect(text).toContain('[REFUSED: wildcards are only allowed for known read-only commands; "npm" is not one')
+    expect(text).toContain('"cargo" is not a known read-only command')
+    expect(text).toContain('[REFUSED: wildcards are only allowed for known read-only commands; "cargo" is not one')
   })
 
   test("herdr: a candidate the herdr-ui preset already allows is not proposed, and the preset is listed", () => {

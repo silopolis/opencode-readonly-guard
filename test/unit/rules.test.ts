@@ -41,7 +41,7 @@ describe("shared rule files", () => {
   })
 
   test("allow patterns start with a literal command", () => {
-    for (const { pattern } of loadRules().allow) expect(pattern).toMatch(/^[a-z]/)
+    for (const { pattern } of loadRules().allow) expect(pattern).toMatch(/^[A-Za-z]/) // VBoxManage
   })
 
   test("every allow pattern is really allowed once the ask rules are applied", () => {
@@ -56,7 +56,9 @@ describe("shared rule files", () => {
     const patterns = loadRules().allow.map(({ pattern }) => pattern)
     // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff
     const rewritten = patterns.filter((pattern) =>
-      /^(git (status|log|diff|show|branch|worktree)\b|(du|df|diff) )/.test(pattern),
+      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff) |systemctl status |docker (ps|images|logs) )/.test(
+        pattern,
+      ),
     )
     expect(rewritten.length).toBeGreaterThan(20)
     for (const pattern of rewritten) expect(patterns).toContain(`rtk ${pattern}`)
@@ -141,6 +143,29 @@ describe("herdr rules", () => {
     expect(evaluate("herdr agent list", shipped)).toBe("allow")
     expect(evaluate("herdr pane read w1:p1 --lines 20", shipped)).toBe("allow")
     expect(evaluate("herdr --machine box agent list", shipped)).toBe("ask")
+  })
+})
+
+describe("container rules", () => {
+  const { allow, commands } = loadRules()
+  const patterns = new Set(allow.map(({ pattern }) => pattern))
+
+  test("allow.json has `<engine> <path> *` for every read-only path of every engine", () => {
+    for (const name of commands.containers.names) {
+      for (const path of commands.containers.read) expect(patterns).toContain(`${name} ${path} *`)
+    }
+  })
+
+  test("the read and write paths do not overlap, and no allow rule starts with a write path", () => {
+    const { write } = commands.containers
+    expect(commands.containers.read.filter((path) => write.includes(path))).toEqual([])
+    for (const name of commands.containers.names) {
+      for (const path of write) {
+        expect(
+          allow.filter(({ pattern }) => pattern.startsWith(`${name} ${path} `) || pattern === `${name} ${path}`),
+        ).toEqual([])
+      }
+    }
   })
 })
 
