@@ -62,6 +62,8 @@ export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions
     READONLY_GUARD_STORE: store,
     READONLY_GUARD_DATA: logDir,
   }
+  // The suite may run from a herdr pane: whether opencode sees herdr must not depend on where the tests are started.
+  for (const name of Object.keys(env)) if (name.startsWith("HERDR_")) delete env[name]
   if (!realHome) {
     for (const [name, sub] of [
       ["XDG_CONFIG_HOME", "config"],
