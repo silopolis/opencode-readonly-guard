@@ -537,6 +537,84 @@ describe("analyze", () => {
     }
   })
 
+  test("docker and podman: reads pass", () => {
+    for (const command of [
+      "docker ps -a --format '{{.Names}}'",
+      "docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}'",
+      "docker inspect --format '{{.State.Status}}' web",
+      "docker logs --tail 50 web",
+      "docker volume ls -q",
+      "docker network inspect bridge",
+      "docker system df",
+      "docker context ls",
+      "docker -H unix:///run/docker.sock ps",
+      "docker --context remote image ls",
+      "podman ps --all",
+      "podman images",
+      "podman pod ps",
+      "podman --remote ps",
+      "podman -c box volume ls",
+      "docker save image",
+      "docker save image -o /dev/null",
+      "docker exec web cat /etc/hostname",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("docker and podman: containers, images, volumes, networks, contexts and files are not changed", () => {
+    for (const command of [
+      "docker run --rm alpine ls",
+      "docker create alpine",
+      "docker start web",
+      "docker stop web",
+      "docker restart web",
+      "docker kill web",
+      "docker rm -f web",
+      "docker rmi alpine",
+      "docker cp web:/etc/hosts .",
+      "docker commit web snap",
+      "docker build -t x .",
+      "docker pull alpine",
+      "docker push x",
+      "docker tag x y",
+      "docker load -i x.tar",
+      "docker import x.tar",
+      "docker login",
+      "docker logout",
+      "docker container rm web",
+      "docker container prune -f",
+      "docker image prune -a",
+      "docker image rm alpine",
+      "docker volume rm data",
+      "docker volume create data",
+      "docker volume prune",
+      "docker network create n",
+      "docker network connect n web",
+      "docker system prune -af",
+      "docker context use remote",
+      "docker context create x --docker host=ssh://box",
+      "docker context export remote",
+      "docker save -o img.tar alpine",
+      "docker save alpine --output=img.tar",
+      "docker image save -o img.tar alpine",
+      "docker export -o fs.tar web",
+      "docker container export --output fs.tar web",
+      "docker -H tcp://box:2375 rm web",
+      "docker --context remote container prune",
+      "sudo docker rm web",
+      "podman rm web",
+      "podman pod rm p",
+      "podman system reset",
+      "podman --root /tmp/r rmi x",
+      "podman machine init",
+      "podman --out /tmp/out.txt ps",
+      "podman --out=/tmp/out.txt ps",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringMatching(/docker|podman/) })
+    }
+  })
+
   test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
     for (const command of [
       "journalctl --vacuum-time=1d",

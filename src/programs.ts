@@ -269,6 +269,86 @@ export function ipWrites(args: readonly string[], inner: (words: readonly string
   return resolved?.[1] ? `ip ${object} ${resolved[0]} changes the network configuration` : null
 }
 
+/** Global options of docker and podman that take a value (they come before the subcommand). */
+const CONTAINER_OPTIONS_WITH_VALUE = new Set([
+  // docker
+  "-c",
+  "--context",
+  "--config",
+  "-H",
+  "--host",
+  "-l",
+  "--log-level",
+  "--tlscacert",
+  "--tlscert",
+  "--tlskey",
+  // podman
+  "--cdi-spec-dir",
+  "--cgroup-manager",
+  "--conmon",
+  "--connection",
+  "--events-backend",
+  "--hooks-dir",
+  "--identity",
+  "--imagestore",
+  "--module",
+  "--network-cmd-path",
+  "--network-config-dir",
+  "--out",
+  "--root",
+  "--runroot",
+  "--runtime",
+  "--runtime-flag",
+  "--ssh",
+  "--storage-driver",
+  "--storage-opt",
+  "--tls-ca",
+  "--tls-cert",
+  "--tls-key",
+  "--tmpdir",
+  "--url",
+  "--volumepath",
+])
+const NULL_TARGETS = new Set(["-", "/dev/null", "/dev/stdout"])
+
+/** Where `-o FILE`, `-oFILE`, `--output FILE` or `--output=FILE` points, if anywhere. */
+function outputTarget(args: readonly string[]): string | undefined {
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "-o" || arg === "--output") return args[j + 1] ?? ""
+    if (arg.startsWith("--output=")) return arg.slice("--output=".length)
+    if (/^-o./.test(arg)) return arg.slice(2).replace(/^=/, "")
+  }
+  return undefined
+}
+
+/**
+ * docker and podman change containers, images, volumes, networks, contexts or files with the subcommand paths of
+ * `commands.json` → `containers.write` (one or two words after the global options), `save`/`export -o FILE`, and
+ * podman's global `--out FILE`.
+ */
+export function containerWrites(name: string, args: readonly string[], write: ReadonlySet<string>): string | null {
+  let j = 0
+  for (; j < args.length && args[j].startsWith("-"); j++) {
+    const [option, value] = args[j].split(/=(.*)/s)
+    if (option === "--out") {
+      const target = value ?? args[j + 1] ?? ""
+      if (!NULL_TARGETS.has(target)) return `${name} --out writes its output to a file`
+    }
+    if (value === undefined && CONTAINER_OPTIONS_WITH_VALUE.has(option)) j++
+  }
+  const [first, second] = [args[j], args[j + 1]]
+  if (!first) return null
+  const path = second && !second.startsWith("-") && write.has(`${first} ${second}`) ? `${first} ${second}` : first
+  if (write.has(path)) return `${name} ${path} changes containers, images, volumes, networks or files`
+  const rest = args.slice(j + 1)
+  if ((first === "save" || first === "export" || second === "save" || second === "export") && rest.length) {
+    const target = outputTarget(rest)
+    if (target !== undefined && !NULL_TARGETS.has(target)) return `${name} save/export -o writes a file`
+  }
+  return null
+}
+
 /** pacman's operations, long and short. */
 const PACMAN_OPERATIONS: Readonly<Record<string, string>> = {
   database: "D",

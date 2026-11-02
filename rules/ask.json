@@ -81,6 +81,66 @@
       "pattern": "journalctl *--va*",
       "reason": "journalctl --vacuum-* deletes journal files (any abbreviation; blocked by the guard)"
     },
+    {
+      "pattern": "podman *--cdi-spec-dir*",
+      "reason": "podman --cdi-spec-dir sets where podman reads device specs (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--cgroup-manager*",
+      "reason": "podman --cgroup-manager changes the engine configuration (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--conmon*",
+      "reason": "podman --conmon names the conmon program podman runs (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--events-backend*",
+      "reason": "podman --events-backend changes where podman writes events (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--hooks-dir*",
+      "reason": "podman --hooks-dir names OCI hook programs podman runs (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--imagestore*",
+      "reason": "podman --imagestore creates and uses another image store (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--network-cmd-path*",
+      "reason": "podman --network-cmd-path names the network program podman runs (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--network-config-dir*",
+      "reason": "podman --network-config-dir creates and uses another network configuration directory (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--root*",
+      "reason": "podman --root creates and uses another storage root (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--runroot*",
+      "reason": "podman --runroot creates and uses another state directory (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--runtime*",
+      "reason": "podman --runtime names the OCI runtime program podman runs (--runtime-flag passes it options) (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--storage-*",
+      "reason": "podman --storage changes the storage driver or its options (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--tmpdir*",
+      "reason": "podman --tmpdir creates and uses another temporary directory (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--transient-store*",
+      "reason": "podman --transient-store switches to a transient container store (it is accepted after the subcommand)"
+    },
+    {
+      "pattern": "podman *--volumepath*",
+      "reason": "podman --volumepath creates and uses another volume directory (it is accepted after the subcommand)"
+    },
     { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
     {
       "pattern": "herdr --machine *",

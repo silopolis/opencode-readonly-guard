@@ -1,5 +1,5 @@
 import { basename } from "node:path"
-import { ipWrites, journalctlWrites, mountLists, pacmanWrites, systemctlWrites } from "./programs.js"
+import { containerWrites, ipWrites, journalctlWrites, mountLists, pacmanWrites, systemctlWrites } from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
 
@@ -323,6 +323,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
   const packageWrite = new Set(commands.packageManagers.writeSubcommands)
   const gitWrite = new Set(commands.git.write)
   const herdrWrite = new Set(commands.herdr.write)
+  const containerNames = new Set(commands.containers.names)
+  const containerWrite = new Set(commands.containers.write)
 
   function analyzeCommand(command: string, depth = 0): Verdict {
     if (depth > MAX_DEPTH) return { block: true, reason: "command nesting too deep to analyze" }
@@ -357,6 +359,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (hardWrite.has(name) || name.startsWith("mkfs")) return `"${name}" modifies files or system state`
     if (name === "ip") return ipWrites(args, (inner) => commandWrites(inner, depth + 1))
     if (name === "pacman") return pacmanWrites(args)
+    if (containerNames.has(name)) return containerWrites(name, args, containerWrite)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null

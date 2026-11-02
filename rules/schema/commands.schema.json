@@ -9,6 +9,7 @@
     "packageManagers",
     "git",
     "herdr",
+    "containers",
     "subcommandHelp",
     "wildcardSafe",
     "rtkReadSubcommands"
@@ -16,6 +17,12 @@
   "additionalProperties": false,
   "$defs": {
     "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" } },
+    "paths": {
+      "description": "Subcommand paths of one or two words, e.g. `ps` or `image ls`.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*( [a-z][a-z0-9-]*)?$" }
+    },
     "herdrWords": {
       "description": "herdr options or subcommand paths of up to three words, e.g. `worktree create` or `plugin log list`.",
       "type": "array",
@@ -77,6 +84,23 @@
         "write": {
           "description": "herdr subcommands that write files, worktrees or the herdr installation: blocked in read-only agents.",
           "$ref": "#/$defs/herdrWords"
+        }
+      }
+    },
+    "containers": {
+      "description": "Container engines with the same command line (docker, podman), judged by subcommand path.",
+      "type": "object",
+      "required": ["names", "read", "write"],
+      "additionalProperties": false,
+      "properties": {
+        "names": { "$ref": "#/$defs/names" },
+        "read": {
+          "description": "Read-only subcommand paths: allow.json has `<name> <path> *` for each name. Global options must come before them, so a rule starting with the subcommand never covers -H/--host/--context.",
+          "$ref": "#/$defs/paths"
+        },
+        "write": {
+          "description": "Subcommand paths that change containers, images, volumes, networks, contexts or files: blocked in read-only agents (save and export only with -o/--output).",
+          "$ref": "#/$defs/paths"
         }
       }
     },
