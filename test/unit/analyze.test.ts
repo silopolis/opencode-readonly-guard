@@ -487,6 +487,56 @@ describe("analyze", () => {
     }
   })
 
+  test("pacman: queries pass, transactions and database changes are blocked", () => {
+    for (const command of [
+      "pacman -Q",
+      "pacman -Qqen",
+      "pacman -Qi openssh",
+      "pacman -Qo /usr/bin/ls",
+      "pacman -Qkk openssh",
+      "pacman --query --info openssh",
+      "pacman -Ss ripgrep",
+      "pacman -Si ripgrep",
+      "pacman -Sl core",
+      "pacman -Sg",
+      "pacman -Sp ripgrep",
+      "pacman -S --print-format %n ripgrep",
+      "pacman -T 'bash>=3.2'",
+      "pacman -Dk",
+      "pacman -Fl ripgrep",
+      "pacman -F /usr/bin/rg",
+      "pacman -V",
+      "pacman -Qi -b /tmp/db x",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "pacman -S ripgrep",
+      "pacman -Syu",
+      "pacman -Sy",
+      "pacman -Ssy ripgrep",
+      "pacman -Sc",
+      "pacman -Sw ripgrep",
+      "pacman --sync ripgrep",
+      "pacman --sync --refresh",
+      "pacman -S --needed base-devel",
+      "sudo pacman -Syu --noconfirm",
+      "pacman -R ripgrep",
+      "pacman -Rns ripgrep",
+      "pacman --remove ripgrep",
+      "pacman --rem ripgrep",
+      "pacman -U ./x.pkg.tar.zst",
+      "pacman --upgrade ./x.pkg.tar.zst",
+      "pacman -D --asdeps ripgrep",
+      "pacman -D --asexplicit ripgrep",
+      "pacman -Fy",
+      "pacman -F --refresh",
+      "pacman -Qi x -Rns y",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("pacman") })
+    }
+  })
+
   test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
     for (const command of [
       "journalctl --vacuum-time=1d",

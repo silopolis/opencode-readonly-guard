@@ -269,6 +269,128 @@ export function ipWrites(args: readonly string[], inner: (words: readonly string
   return resolved?.[1] ? `ip ${object} ${resolved[0]} changes the network configuration` : null
 }
 
+/** pacman's operations, long and short. */
+const PACMAN_OPERATIONS: Readonly<Record<string, string>> = {
+  database: "D",
+  query: "Q",
+  remove: "R",
+  sync: "S",
+  deptest: "T",
+  upgrade: "U",
+  files: "F",
+  version: "V",
+  help: "h",
+}
+/** The long options pacman 7 knows (pacman.8), to resolve getopt abbreviations, with their short letter if any. */
+const PACMAN_LONG: Readonly<Record<string, string>> = {
+  ...PACMAN_OPERATIONS,
+  dbpath: "b",
+  root: "r",
+  verbose: "v",
+  arch: "",
+  cachedir: "",
+  color: "",
+  config: "",
+  debug: "",
+  gpgdir: "",
+  hookdir: "",
+  logfile: "",
+  noconfirm: "",
+  confirm: "",
+  "disable-download-timeout": "",
+  sysroot: "",
+  "disable-sandbox": "",
+  "disable-sandbox-filesystem": "",
+  "disable-sandbox-syscalls": "",
+  nodeps: "d",
+  "assume-installed": "",
+  dbonly: "",
+  noprogressbar: "",
+  noscriptlet: "",
+  print: "p",
+  "print-format": "p",
+  downloadonly: "w",
+  asdeps: "",
+  asexplicit: "",
+  ignore: "",
+  ignoregroup: "",
+  needed: "",
+  overwrite: "",
+  changelog: "c",
+  deps: "d",
+  explicit: "e",
+  groups: "g",
+  info: "i",
+  check: "k",
+  list: "l",
+  foreign: "m",
+  native: "n",
+  owns: "o",
+  file: "p",
+  quiet: "q",
+  search: "s",
+  unrequired: "t",
+  upgrades: "u",
+  cascade: "c",
+  nosave: "n",
+  recursive: "s",
+  unneeded: "u",
+  clean: "c",
+  sysupgrade: "u",
+  refresh: "y",
+  regex: "x",
+  machinereadable: "",
+}
+
+/**
+ * pacman writes with -R, -U, -S unless it only searches or prints (-Ss, -Si, -Sl, -Sg, -Sp, and never with
+ * -y/-u/-c/-w), -D --asdeps/--asexplicit and -Fy. Long options may be abbreviated (`--rem`). pacman refuses two
+ * operations, but the guard still blocks if any of them writes.
+ */
+export function pacmanWrites(args: readonly string[]): string | null {
+  const operations = new Set<string>()
+  const flags = new Set<string>()
+  const longs = new Set<string>()
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") break
+    if (arg.startsWith("--")) {
+      const name = arg.slice(2).split("=")[0]
+      const known = Object.keys(PACMAN_LONG)
+      const candidates = known.includes(name) ? [name] : known.filter((option) => matches(name, option))
+      // an ambiguous abbreviation is an error, except that it may still name an operation: assume the worst
+      for (const option of candidates) {
+        longs.add(option)
+        const letter = PACMAN_LONG[option]
+        if (option in PACMAN_OPERATIONS) operations.add(letter)
+        else if (letter) flags.add(letter)
+      }
+    } else if (arg.length > 1 && arg.startsWith("-")) {
+      for (let c = 1; c < arg.length; c++) {
+        const letter = arg[c]
+        if (letter === "b" || letter === "r") {
+          if (c === arg.length - 1) j++ // --dbpath / --root take a value
+          break
+        }
+        if ("DQRSTUFV".includes(letter)) operations.add(letter)
+        else flags.add(letter)
+      }
+    }
+  }
+  if (operations.has("R")) return "pacman -R removes packages"
+  if (operations.has("U")) return "pacman -U installs packages"
+  if (operations.has("S")) {
+    const changes = ["y", "u", "c", "w"].some((flag) => flags.has(flag))
+    const readOnly = ["s", "i", "l", "g", "p"].some((flag) => flags.has(flag))
+    if (changes || !readOnly) return "pacman -S installs, upgrades, downloads or cleans packages"
+  }
+  if (operations.has("D") && (longs.has("asdeps") || longs.has("asexplicit"))) {
+    return "pacman -D --asdeps/--asexplicit changes the package database"
+  }
+  if (operations.has("F") && flags.has("y")) return "pacman -Fy downloads the file databases"
+  return null
+}
+
 /** Every long option of journalctl (systemd 262), to resolve getopt abbreviations. */
 const JOURNALCTL_LONG = [
   "after-cursor",

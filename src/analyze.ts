@@ -1,5 +1,5 @@
 import { basename } from "node:path"
-import { ipWrites, journalctlWrites, mountLists, systemctlWrites } from "./programs.js"
+import { ipWrites, journalctlWrites, mountLists, pacmanWrites, systemctlWrites } from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
 
@@ -356,6 +356,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (name === "mount" && mountLists(args)) return null
     if (hardWrite.has(name) || name.startsWith("mkfs")) return `"${name}" modifies files or system state`
     if (name === "ip") return ipWrites(args, (inner) => commandWrites(inner, depth + 1))
+    if (name === "pacman") return pacmanWrites(args)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null

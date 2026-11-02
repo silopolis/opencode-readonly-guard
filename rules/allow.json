@@ -373,6 +373,20 @@
     { "pattern": "ip -j link *", "reason": "ip -j link: a read unless the guard blocks the verb" },
     { "pattern": "ip -j route *", "reason": "ip -j route: a read unless the guard blocks the verb" },
     { "pattern": "ip -j neigh *", "reason": "ip -j neigh: a read unless the guard blocks the verb" },
+    {
+      "pattern": "pacman -Q*",
+      "reason": "query the local package database (pacman refuses a second operation; the guard blocks -S/-R/-U)"
+    },
+    { "pattern": "pacman --query *", "reason": "query the local package database" },
+    { "pattern": "flatpak list *", "reason": "list installed flatpaks" },
+    { "pattern": "flatpak info *", "reason": "show an installed flatpak" },
+    { "pattern": "flatpak remotes *", "reason": "list configured remotes" },
+    { "pattern": "flatpak ps *", "reason": "list running flatpak instances" },
+    { "pattern": "snap list *", "reason": "list installed snaps" },
+    { "pattern": "snap info *", "reason": "show a snap (queries the store)" },
+    { "pattern": "snap version", "reason": "print the snapd version" },
+    { "pattern": "snap services *", "reason": "list snap services" },
+    { "pattern": "snap connections *", "reason": "list interface connections" },
     { "pattern": "tee /dev/null", "reason": "exact match only: tee to the null device writes nothing" }
   ]
 }
