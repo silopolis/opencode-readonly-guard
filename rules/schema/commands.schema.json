@@ -50,9 +50,21 @@
     },
     "herdr": {
       "type": "object",
-      "required": ["write"],
+      "required": ["help", "read", "ui", "write"],
       "additionalProperties": false,
       "properties": {
+        "help": {
+          "description": "Options and command groups that only print help or the version when run exactly like this (or with --help): a rule may allow them as exact commands, never with a wildcard. Bare `herdr`, `herdr server`, `herdr update` are not help: they start something.",
+          "$ref": "#/$defs/herdrWords"
+        },
+        "read": {
+          "description": "Read-only herdr subcommands: a rule may allow them with any arguments, and a wildcard may follow them.",
+          "$ref": "#/$defs/herdrWords"
+        },
+        "ui": {
+          "description": "Subcommands that only change what herdr displays (a tab label, a notification). Opt-in: accepted when the user lists them in their store or in the plugin options, never part of the shared allowlist.",
+          "$ref": "#/$defs/herdrWords"
+        },
         "write": {
           "description": "herdr subcommands that write files, worktrees or the herdr installation: blocked in read-only agents.",
           "$ref": "#/$defs/herdrWords"

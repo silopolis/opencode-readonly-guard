@@ -44,6 +44,18 @@ describe("review", () => {
     expect(text).toContain('[REFUSED: wildcards are only allowed for known read-only commands; "npm" is not one')
   })
 
+  test("herdr: opencode's general `herdr *` is refused, the exact UI command is offered", () => {
+    const text = run([always("herdr tab rename w1:t1 plan ready", "herdr *")])
+    expect(text).toContain("[OK] exact: `herdr tab rename w1:t1 plan ready`")
+    expect(text).toContain("[REFUSED: herdr wildcards are only allowed after a read-only subcommand")
+  })
+
+  test("herdr: prompts are grouped by group and never turned into a suggested wildcard", () => {
+    const text = run(Array.from({ length: 4 }, () => answers("once", "herdr agent prompt reviewer hi")))
+    expect(text).toContain("- `herdr agent`: 4 / 0 / 0")
+    expect(text).not.toContain("Suggested additions")
+  })
+
   test("offers a directory-scoped option for paths", () => {
     const text = run([always("du -sh /var/log/syslog", "du *")])
     expect(text).toContain("[OK] directory: `du -sh /var/log/*`")
@@ -111,6 +123,7 @@ describe("helpers", () => {
     expect(headOf("git log --oneline")).toBe("git log")
     expect(headOf("npm --version")).toBe("npm")
     expect(headOf("rtk git status")).toBe("rtk git status")
+    expect(headOf("herdr agent list")).toBe("herdr agent")
     expect(headOf("whoami")).toBe("whoami")
     expect(headOf("")).toBe("")
   })

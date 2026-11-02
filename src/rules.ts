@@ -10,7 +10,7 @@ export interface Commands {
   hardWrite: string[]
   packageManagers: { names: string[]; writeSubcommands: string[] }
   git: { write: string[]; read: string[] }
-  herdr: { write: string[] }
+  herdr: { help: string[]; read: string[]; ui: string[]; write: string[] }
   wildcardSafe: string[]
   rtkReadSubcommands: string[]
 }
@@ -77,7 +77,12 @@ function commands(raw: unknown): Commands {
       write: stringList(raw.git.write, "commands.json git.write"),
       read: stringList(raw.git.read, "commands.json git.read"),
     },
-    herdr: { write: stringList(raw.herdr.write, "commands.json herdr.write") },
+    herdr: {
+      help: stringList(raw.herdr.help, "commands.json herdr.help"),
+      read: stringList(raw.herdr.read, "commands.json herdr.read"),
+      ui: stringList(raw.herdr.ui, "commands.json herdr.ui"),
+      write: stringList(raw.herdr.write, "commands.json herdr.write"),
+    },
     wildcardSafe: stringList(raw.wildcardSafe, "commands.json wildcardSafe"),
     rtkReadSubcommands: stringList(raw.rtkReadSubcommands, "commands.json rtkReadSubcommands"),
   }
