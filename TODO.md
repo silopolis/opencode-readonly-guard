@@ -18,7 +18,13 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
   - [ ] deciding in code (allow/ask/deny) instead of injecting glob rules, so `git -C <dir> status`, redirections
         on any pipeline stage and other things globs cannot express are handled exactly;
   - [ ] applying learned rules without a restart;
-  - [ ] answering prompts with the analyzer's verdict.
+  - [ ] answering prompts with the analyzer's verdict;
+  - [ ] allowing `--help` in code instead of the exact help layer. A general rule must not be `* --help`
+        (`python3 -c CODE --help` and `bash -c CODE --help` run CODE). It needs, per program: where the global options
+        and the subcommand path end, whether the program handles `--help` at that position before running anything
+        (git only for `git <cmd> --help`, which it turns into `git help <cmd>`; clap programs and npm anywhere), and
+        that no other argument runs or writes something. In practice an allowlist of programs with their help
+        semantics, checked by the analyzer.
 - [ ] Test against an installed opencode 2.x (the integration suite only knows 1.19.x).
 
 ## Policy and parser
@@ -43,7 +49,14 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [ ] Cover non-bash tools in read-only agents (MCP tools with side effects, `webfetch` to internal hosts).
 - [ ] Per-project allowlists (`.opencode/readonly-guard.json`) merged with the global one.
 - [ ] More rules: `docker ps/images/logs`, `kubectl get/describe`, `gh pr view`, `systemctl status`, `journalctl`,
-      `lsblk`, … each with its write flags in `ask.json` and cases in `cases.json`.
+      `lsblk`, … each with its write flags in `ask.json` and cases in `cases.json`. Seen in sessions and left for
+      later: `git grep` (`-O` runs a pager), `git check-ignore`, `git show-ref`, `git for-each-ref`,
+      `git hash-object` (`-w` writes), exact `<tool> --version`, absolute paths (`/usr/bin/ls`), and the `2>&1` form of
+      exact rules (opencode matches `herdr --help 2>&1` with its redirection).
+- [ ] `$(…)` inside arithmetic (`(( $(cmd) ))`, `$(( $(cmd) ))`) is not analyzed: the tokenizer skips the body.
+      opencode's own parser should still prompt for `cmd`, but the write guard does not see it.
+- [ ] Classification gaps found in the log: `git history` and `git backfill` are not in `git.write`;
+      `systemctl show-environment` and bare `mount` (both listings) are blocked.
 
 ## Sharing rules
 

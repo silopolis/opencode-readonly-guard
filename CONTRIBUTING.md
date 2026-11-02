@@ -26,18 +26,26 @@ the JSON Schemas in [`rules/schema/`](rules/schema) and checked by the unit test
 | `cases.json`    | expected verdicts for commands (`allow` / `ask` / `block`) and for patterns (`ok` true / false). |
 
 Pattern syntax is opencode's: `*` matches anything, `?` one character, and a trailing ` *` also matches the bare
-command. The **last matching rule wins**, which is why `ask.json` is applied after everything else.
+command. The **last matching rule wins**, which is why `ask.json` is applied after every allow rule (only the exact
+`--help` commands of the help layer follow it).
 
 ### Adding a command to the allowlist
 
 An allow rule must be safe in **every** use the pattern can match, not just the common one.
 
 1. Look for options that write files, delete, or run other programs (`--output`, `-o FILE`, `-exec`, `--pre`, `-x`,
-   `-i`, `--in-place`, `-delete`, …). If any exists, either do not allow the command, or add the dangerous option to
-   `ask.json` (a prompt) and, if it is unambiguous, to the analyzer in `src/analyze.ts` (a block).
+   `-i`, `--in-place`, `-delete`, …), and for operands that do (`uniq IN OUT`, `date MMDDhhmm`, `hostname NAME`). If
+   any exists, either do not allow the command, or add the dangerous option to `ask.json` (a prompt) and, if it is
+   unambiguous, to the analyzer in `src/analyze.ts` (a block). Remember that GNU tools and git accept any unambiguous
+   abbreviation of a long option (`sort --out=f`, `git branch --edit-desc`) and bundled short options (`-uo f`): the
+   analyzer must catch those, and an `ask.json` glob should start from the shortest accepted prefix
+   (`sort *--co*` for `--compress-program`).
 2. Add the pattern and a short `reason` to `allow.json`. Use `cmd *` for "any arguments", `cmd sub*` for a family of
-   subcommands, and the exact text for a single use.
-3. If the command is reached through the rtk plugin, add the `rtk …` form too.
+   subcommands, and the exact text for a single use. When the bare subcommand writes (`git branch NAME`,
+   `mise settings KEY VALUE`), allow only the exact listing and the forms that cannot write (`git branch -a *`), and
+   check the program's own behaviour: `git branch -v NAME` creates a branch, `git branch -a NAME` is refused.
+3. If the command is reached through the rtk plugin (`rtk rewrite '<command>'` shows it), add the `rtk …` form too; a
+   unit test checks this for the commands rtk rewrites.
 4. Add cases to `cases.json`: at least one `allow`, plus an `ask` or `block` case for each dangerous option.
 5. Run `mise run check`.
 
@@ -51,6 +59,11 @@ Other files:
   never in `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
   there is no catch-all, because a `herdr *` ask rule would also silence the allowed reads. Keep the four lists
   disjoint and `allow.json` in step with `help` and `read` (the unit tests check both).
+- **`commands.json` → `subcommandHelp`:** extra git subcommands, and npm and mise subcommand paths, whose exact
+  `<program> <subcommand> --help` is allowed by the help layer, after `ask.json` (git also gets `git.write` and
+  `git.read`, herdr its `read` and `write` paths and its `herdr <path> *` ask rules; git, npm and mise get the `rtk`
+  form). The write guard treats a sole trailing `--help` after the subcommand path as a help request. The unit tests
+  check that every derived command is allowed and that none matches an ask-listed flag.
 - **`commands.json` → `wildcardSafe`:** commands for which `/guard-review` may offer `cmd *`. Only add a command whose
   every read-only use is harmless and whose write options are covered by `ask.json` or the analyzer.
 
