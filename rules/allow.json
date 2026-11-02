@@ -301,6 +301,78 @@
       "pattern": "journalctl *",
       "reason": "read the journal (--vacuum-*, --rotate, --flush, --sync, --cursor-file, ... are in ask.json)"
     },
+    { "pattern": "lsblk *", "reason": "list block devices" },
+    { "pattern": "findmnt *", "reason": "list mounted file systems" },
+    { "pattern": "mount", "reason": "exact match only: list the mounts (the guard blocks every other mount)" },
+    { "pattern": "mount -l", "reason": "exact match only: list the mounts with their labels" },
+    {
+      "pattern": "ip a *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip addr *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip address *",
+      "reason": "show the address table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip l *",
+      "reason": "show the link table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip link *",
+      "reason": "show the link table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip r *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip ro *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip route *",
+      "reason": "show the route table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip n *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neigh *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neighbor *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    {
+      "pattern": "ip neighbour *",
+      "reason": "show the neighbour table (the guard blocks add/set/delete/flush/... in any abbreviation)"
+    },
+    { "pattern": "ip -br a *", "reason": "ip -br a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br addr *", "reason": "ip -br addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br link *", "reason": "ip -br link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br route *", "reason": "ip -br route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -br neigh *", "reason": "ip -br neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 a *", "reason": "ip -4 a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 addr *", "reason": "ip -4 addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 link *", "reason": "ip -4 link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 route *", "reason": "ip -4 route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -4 neigh *", "reason": "ip -4 neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 a *", "reason": "ip -6 a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 addr *", "reason": "ip -6 addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 link *", "reason": "ip -6 link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 route *", "reason": "ip -6 route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -6 neigh *", "reason": "ip -6 neigh: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j a *", "reason": "ip -j a: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j addr *", "reason": "ip -j addr: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j link *", "reason": "ip -j link: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j route *", "reason": "ip -j route: a read unless the guard blocks the verb" },
+    { "pattern": "ip -j neigh *", "reason": "ip -j neigh: a read unless the guard blocks the verb" },
     { "pattern": "tee /dev/null", "reason": "exact match only: tee to the null device writes nothing" }
   ]
 }

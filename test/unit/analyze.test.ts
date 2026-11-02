@@ -356,6 +356,137 @@ describe("analyze", () => {
     }
   })
 
+  test("mount: listing the mounts is a read, anything else still modifies", () => {
+    for (const command of ["mount", "mount -l", "mount -t ext4", "mount -l -t btrfs", "mount | grep fuse"]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "mount /dev/sdb1 /mnt",
+      "mount -a",
+      "mount -t ext4 /dev/x /m",
+      "mount -l /dev/x",
+      "mount -o remount,rw /",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("mount") })
+    }
+  })
+
+  test("ip: show, list and get pass, in every abbreviation iproute2 accepts", () => {
+    for (const command of [
+      "ip a",
+      "ip addr",
+      "ip address show dev eth0",
+      "ip a s",
+      "ip a sh dev lo",
+      "ip a l",
+      "ip a lst",
+      "ip addr save",
+      "ip addr showdump",
+      "ip add",
+      "ip -br addr",
+      "ip -br a",
+      "ip -4 -br a show up",
+      "ip -j -p addr",
+      "ip -s -s link",
+      "ip -d link show type bridge",
+      "ip l",
+      "ip link",
+      "ip link sh",
+      "ip link l",
+      "ip link xstats type bridge",
+      "ip link afstats",
+      "ip r",
+      "ip ro",
+      "ip route list table main",
+      "ip route get 1.1.1.1",
+      "ip r g 1.1.1.1",
+      "ip -6 route show",
+      "ip n",
+      "ip neigh",
+      "ip neighbour show dev eth0",
+      "ip neighbor get 10.0.0.1 dev eth0",
+      "ip -n blue addr",
+      "ip -netns blue link",
+      "ip -c -br link",
+      "ip -color=always -br a",
+      "ip netns list",
+      "ip vrf show",
+      "ip netns exec blue ip addr",
+      "ip vrf exec red ls",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ip: add, change, delete, set, flush, restore and the rest are blocked, abbreviated too", () => {
+    for (const command of [
+      "ip addr add 10.0.0.1/24 dev eth0",
+      "ip a a 10.0.0.1/24 dev eth0",
+      "ip a d 10.0.0.1/24 dev eth0",
+      "ip a del 10.0.0.1/24 dev eth0",
+      "ip a c 10.0.0.1/24 dev eth0",
+      "ip a chg 10.0.0.1/24 dev eth0",
+      "ip a r 10.0.0.1/24 dev eth0",
+      "ip a f dev eth0",
+      "ip address flush dev eth0",
+      "ip a restore",
+      "ip -4 -br addr flush dev eth0",
+      "ip -color=always addr add 10.0.0.1/24 dev eth0",
+      "ip -c=never l s eth0 up",
+      "ip link set eth0 down",
+      "ip link s eth0 down",
+      "ip l se eth0 up",
+      "ip link change eth0 mtu 1400",
+      "ip link add br0 type bridge",
+      "ip link del br0",
+      "ip link replace br0 type bridge",
+      "ip link property add dev eth0 altname x",
+      "ip link p add dev eth0 altname x",
+      "ip route add default via 10.0.0.1",
+      "ip r a default via 10.0.0.1",
+      "ip r p default via 10.0.0.1",
+      "ip r app default via 10.0.0.1",
+      "ip r t default via 10.0.0.1",
+      "ip r d default",
+      "ip r c default via 10.0.0.2",
+      "ip r f cache",
+      "ip route restore",
+      "ip -6 route replace ::/0 via fe80::1 dev eth0",
+      "ip neigh add 10.0.0.2 lladdr 00:11:22:33:44:55 dev eth0",
+      "ip n del 10.0.0.2 dev eth0",
+      "ip n f all",
+      "ip n r 10.0.0.2 dev eth0",
+      "ip -j neighbour change 10.0.0.2 dev eth0",
+      "ip netns add blue",
+      "ip netns delete blue",
+      "ip netns set blue 1",
+      "ip netns attach blue 1234",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("ip ") })
+    }
+  })
+
+  test("ip: -batch runs a file of commands, netns and vrf exec run one", () => {
+    for (const command of [
+      "ip -batch cmds.txt",
+      "ip -b cmds.txt",
+      "ip -ba -",
+      "ip -force -batch cmds.txt",
+      "ip -4 -b cmds.txt",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("-batch") })
+    }
+    for (const command of [
+      "ip netns exec blue rm -rf /x",
+      "ip netns e blue touch x",
+      "ip -br netns exec blue sh -c 'echo x > f'",
+      "ip vrf exec red rm x",
+      "ip vrf e red rm x",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("exec") })
+    }
+  })
+
   test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
     for (const command of [
       "journalctl --vacuum-time=1d",

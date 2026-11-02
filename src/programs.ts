@@ -82,6 +82,193 @@ export function systemctlWrites(args: readonly string[]): string | null {
   return verb && !SYSTEMCTL_READ.test(verb) ? `systemctl ${verb} changes system state` : null
 }
 
+/** `mount`, `mount -l`, `mount [-l] -t TYPE`: the listing forms of mount(8). Anything else mounts or remounts. */
+export function mountLists(args: readonly string[]): boolean {
+  const rest = args.filter((arg) => arg !== "-l")
+  if (rest.length === 0) return true
+  return rest.length === 2 && (rest[0] === "-t" || rest[0] === "--types") && !rest[1].startsWith("-")
+}
+
+/** iproute2's `matches()`: a non-empty prefix of the keyword. */
+const matches = (word: string, keyword: string): boolean => word.length > 0 && keyword.startsWith(word)
+
+/** ip's global options in the order ip.c tries them (each may be abbreviated), and whether they take a value. */
+const IP_OPTIONS: readonly (readonly [name: string, kind: "value" | "flag" | "exact" | "batch"])[] = [
+  ["-loops", "value"],
+  ["-family", "value"],
+  ["-4", "exact"],
+  ["-6", "exact"],
+  ["-0", "exact"],
+  ["-M", "exact"],
+  ["-B", "exact"],
+  ["-human-readable", "flag"],
+  ["-iec", "flag"],
+  ["-stats", "flag"],
+  ["-statistics", "flag"],
+  ["-details", "flag"],
+  ["-resolve", "flag"],
+  ["-oneline", "flag"],
+  ["-timestamp", "flag"],
+  ["-tshort", "flag"],
+  ["-Version", "flag"],
+  ["-force", "flag"],
+  ["-batch", "batch"],
+  ["-brief", "flag"],
+  ["-json", "flag"],
+  ["-pretty", "flag"],
+  ["-rcvbuf", "value"],
+  ["-color", "flag"],
+  ["-help", "flag"],
+  ["-netns", "value"],
+  ["-Numeric", "flag"],
+  ["-all", "flag"],
+  ["-echo", "exact"],
+]
+/** ip's objects in the order ip.c tries them: `ip a` is `address`, `ip l` is `link`, `ip r` is `route`. */
+const IP_OBJECTS = [
+  "address",
+  "addrlabel",
+  "maddress",
+  "route",
+  "rule",
+  "neighbor",
+  "neighbour",
+  "ntable",
+  "ntbl",
+  "link",
+  "l2tp",
+  "fou",
+  "ila",
+  "macsec",
+  "tunnel",
+  "tunl",
+  "tuntap",
+  "tap",
+  "token",
+  "tcpmetrics",
+  "tcp_metrics",
+  "monitor",
+  "xfrm",
+  "mroute",
+  "mrule",
+  "netns",
+  "netconf",
+  "vrf",
+  "sr",
+  "nexthop",
+  "mptcp",
+  "ioam",
+  "help",
+  "stats",
+]
+/**
+ * The verbs of the objects the allowlist names, in the order iproute2 tries them (ipaddress.c, iplink.c, iproute.c,
+ * ipneigh.c), and whether they write. `ip link s` is `set` and `ip a s` is `show` because of that order.
+ */
+const IP_VERBS: Readonly<Record<string, readonly (readonly [verb: string, writes: boolean])[]>> = {
+  address: [
+    ["add", true],
+    ["change", true],
+    ["replace", true],
+    ["delete", true],
+    ["list", false],
+    ["show", false],
+    ["lst", false],
+    ["flush", true],
+    ["save", false],
+    ["showdump", false],
+    ["restore", true],
+    ["help", false],
+  ],
+  link: [
+    ["add", true],
+    ["set", true],
+    ["change", true],
+    ["replace", true],
+    ["delete", true],
+    ["show", false],
+    ["lst", false],
+    ["list", false],
+    ["xstats", false],
+    ["afstats", false],
+    ["property", true],
+    ["help", false],
+  ],
+  route: [
+    ["add", true],
+    ["change", true],
+    ["replace", true],
+    ["prepend", true],
+    ["append", true],
+    ["test", true],
+    ["delete", true],
+    ["list", false],
+    ["show", false],
+    ["lst", false],
+    ["get", false],
+    ["flush", true],
+    ["save", false],
+    ["restore", true],
+    ["showdump", false],
+    ["help", false],
+  ],
+  neighbor: [
+    ["add", true],
+    ["change", true],
+    ["replace", true],
+    ["delete", true],
+    ["get", false],
+    ["show", false],
+    ["lst", false],
+    ["list", false],
+    ["flush", true],
+    ["help", false],
+  ],
+}
+/** `ip netns` verbs that change namespaces (any prefix: `a` is add or attach, both write). */
+const IP_NETNS_WRITES = ["add", "attach", "set", "delete"]
+
+/**
+ * ip (iproute2) writes with `add`, `set`, `delete`, `flush`, … after an object, which iproute2 lets the user
+ * abbreviate down to one letter, resolved in its own order. `-batch FILE` runs a file of commands, and
+ * `netns exec` / `vrf exec` run a command, judged by `inner`.
+ */
+export function ipWrites(args: readonly string[], inner: (words: readonly string[]) => string | null): string | null {
+  let j = 0
+  for (; j < args.length && args[j].startsWith("-"); j++) {
+    const arg = args[j]
+    if (arg === "--") {
+      j++
+      break
+    }
+    // only -color takes an attached value (`-color=always`, `-c=never`)
+    const color = arg.includes("=") && matches(arg.slice(0, arg.indexOf("=")), "-color")
+    const option = color
+      ? IP_OPTIONS.find(([name]) => name === "-color")
+      : IP_OPTIONS.find(([name, kind]) => (kind === "exact" ? arg === name : matches(arg, name)))
+    if (!option) return null // ip refuses an unknown option
+    if (option[1] === "batch") return "ip -batch runs the commands of a file, which the guard cannot see"
+    if (option[1] === "value") j++
+  }
+  const word = args[j]
+  if (!word) return null
+  const object = IP_OBJECTS.find((name) => matches(word, name))
+  const verb = args[j + 1] ?? ""
+  if (object === "netns" || object === "vrf") {
+    if (matches(verb, "exec")) {
+      const why = inner(args.slice(j + 3))
+      return why ? `ip ${object} exec: ${why}` : null
+    }
+    return object === "netns" && IP_NETNS_WRITES.some((name) => matches(verb, name))
+      ? `ip netns ${verb} changes network namespaces`
+      : null
+  }
+  const verbs = IP_VERBS[object === "neighbour" ? "neighbor" : (object ?? "")]
+  if (!verbs || !verb) return null
+  const resolved = verb === "chg" ? (["change", true] as const) : verbs.find(([name]) => matches(verb, name))
+  return resolved?.[1] ? `ip ${object} ${resolved[0]} changes the network configuration` : null
+}
+
 /** Every long option of journalctl (systemd 262), to resolve getopt abbreviations. */
 const JOURNALCTL_LONG = [
   "after-cursor",

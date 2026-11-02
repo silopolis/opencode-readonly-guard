@@ -369,6 +369,7 @@
     "paste",
     "sort",
     "lsblk",
+    "findmnt",
     "lscpu",
     "lsusb",
     "lspci",
