@@ -24,6 +24,7 @@ const MULTI_WORD = new Set([
   "uv",
   "mise",
   "opencode",
+  "herdr",
 ])
 
 export function headOf(command: string): string {

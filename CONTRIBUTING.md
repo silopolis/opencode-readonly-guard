@@ -46,6 +46,11 @@ Other files:
 - **`commands.json` → `hardWrite`:** commands that modify files whatever their arguments. They are blocked.
 - **`commands.json` → `packageManagers`, `git`:** which subcommands write, and which git subcommands may get a
   wildcard rule from `/guard-review`.
+- **`commands.json` → `herdr`:** `help` (printed help, allowed only as exact commands), `read` (read-only
+  subcommands, a wildcard may follow), `ui` (opt-in, accepted from the user's store or options but never in
+  `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
+  there is no catch-all, because a `herdr *` ask rule would also silence the allowed reads. Keep the four lists
+  disjoint and `allow.json` in step with `help` and `read` (the unit tests check both).
 - **`commands.json` → `wildcardSafe`:** commands for which `/guard-review` may offer `cmd *`. Only add a command whose
   every read-only use is harmless and whose write options are covered by `ask.json` or the analyzer.
 

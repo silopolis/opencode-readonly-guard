@@ -113,6 +113,80 @@ describe("analyze", () => {
     expect(reason("perl -pi -e s/a/b/ f")).toContain("perl -i")
   })
 
+  test("herdr: subcommands that write files or the installation are blocked", () => {
+    for (const [command, why] of [
+      ["herdr update", "herdr update"],
+      ["herdr update --handoff", "herdr update"],
+      ["herdr config reset-keys", "herdr config reset-keys"],
+      ["herdr worktree create --branch x", "herdr worktree create"],
+      ["herdr worktree remove --path p", "herdr worktree remove"],
+      ["herdr integration install opencode", "herdr integration install"],
+      ["herdr integration uninstall opencode", "herdr integration uninstall"],
+      ["herdr session delete old", "herdr session delete"],
+      ["herdr plugin install owner/repo --yes", "herdr plugin install"],
+      ["herdr plugin update", "herdr plugin update"],
+    ] as const) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining(why) })
+    }
+  })
+
+  test("herdr: global options and wrappers do not hide a write", () => {
+    for (const command of [
+      "herdr --machine box worktree create",
+      "herdr --session work --machine=box worktree remove",
+      "herdr --remote me@host --remote-keybindings local update",
+      "sudo herdr update",
+      "env A=1 herdr config reset-keys",
+      "/home/me/.local/bin/herdr update",
+    ]) {
+      expect({ command, blocked: analyze(command).block }).toEqual({ command, blocked: true })
+    }
+  })
+
+  test("herdr: reads, UI and the other mutating subcommands are not blocked", () => {
+    for (const command of [
+      "herdr agent list",
+      "herdr worktree list",
+      "herdr integration status",
+      "herdr plugin list --json",
+      "herdr session list",
+      "herdr tab rename w1:t1 plan ready",
+      "herdr notification show hi",
+      "herdr agent prompt reviewer 'update the docs'",
+      "herdr pane send-text w1:p2 update",
+      "herdr pane read w1:p1 --source recent --lines 5",
+      "herdr --version",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("herdr: `api schema --output` writes a file, plain `api schema` does not", () => {
+    expect(reason("herdr api schema --output /tmp/schema.json")).toContain("herdr api schema --output")
+    expect(reason("herdr api schema --output=/tmp/schema.json")).toContain("herdr api schema --output")
+    expect(analyze("herdr api schema --json")).toEqual({ block: false })
+    expect(analyze("herdr api snapshot")).toEqual({ block: false })
+  })
+
+  test("herdr: `pane run` is blocked when what it types would be", () => {
+    for (const command of [
+      "herdr pane run w1:p2 rm -rf build",
+      "herdr pane run w1:p2 'rm -rf build'",
+      "herdr pane run w1:p2 'echo hi > notes.txt'",
+      "herdr pane run w1:p2 git commit -m x",
+      "herdr --machine box pane run w1:p2 npm install",
+      "herdr pane run w1:p2 bash -c 'cat a > b'",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({
+        command,
+        reason: expect.stringContaining("herdr pane run"),
+      })
+    }
+    // a read-only command in the pane is left to the permission rules (it asks)
+    expect(analyze("herdr pane run w1:p2 ls -la")).toEqual({ block: false })
+    expect(analyze("herdr pane run w1:p2 'git log --oneline | head'")).toEqual({ block: false })
+  })
+
   test("unparsable input is blocked rather than guessed at", () => {
     expect(reason("echo 'oops")).toContain("could not parse")
   })

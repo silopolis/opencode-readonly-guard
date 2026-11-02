@@ -3,10 +3,16 @@
   "$id": "https://github.com/silopolis/opencode-readonly-guard/rules/schema/commands.schema.json",
   "title": "readonly-guard command classification",
   "type": "object",
-  "required": ["version", "hardWrite", "packageManagers", "git", "wildcardSafe", "rtkReadSubcommands"],
+  "required": ["version", "hardWrite", "packageManagers", "git", "herdr", "wildcardSafe", "rtkReadSubcommands"],
   "additionalProperties": false,
   "$defs": {
-    "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" } }
+    "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]+$" } },
+    "herdrWords": {
+      "description": "herdr options or subcommand paths of up to three words, e.g. `worktree create` or `plugin log list`.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(-{1,2})?[A-Za-z][A-Za-z0-9-]*( [a-z][a-z0-9-]*){0,2}$" }
+    }
   },
   "properties": {
     "$schema": { "type": "string" },
@@ -39,6 +45,29 @@
         "read": {
           "description": "git subcommands for which a learned wildcard rule may be offered.",
           "$ref": "#/$defs/names"
+        }
+      }
+    },
+    "herdr": {
+      "type": "object",
+      "required": ["help", "read", "ui", "write"],
+      "additionalProperties": false,
+      "properties": {
+        "help": {
+          "description": "Options and command groups that only print help or the version when run exactly like this (or with --help): a rule may allow them as exact commands, never with a wildcard. Bare `herdr`, `herdr server`, `herdr update` are not help: they start something.",
+          "$ref": "#/$defs/herdrWords"
+        },
+        "read": {
+          "description": "Read-only herdr subcommands: a rule may allow them with any arguments, and a wildcard may follow them.",
+          "$ref": "#/$defs/herdrWords"
+        },
+        "ui": {
+          "description": "Subcommands that only change what herdr displays (a tab label, a notification). Opt-in: accepted when the user lists them in their store or in the plugin options, never part of the shared allowlist.",
+          "$ref": "#/$defs/herdrWords"
+        },
+        "write": {
+          "description": "herdr subcommands that write files, worktrees or the herdr installation: blocked in read-only agents.",
+          "$ref": "#/$defs/herdrWords"
         }
       }
     },

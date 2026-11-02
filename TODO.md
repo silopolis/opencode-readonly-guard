@@ -32,6 +32,13 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       Normalize the command in the analyzer and decide there once the v2 hook is available.
 - [ ] Build tools that write by design (`make`, `cargo build`, `go build`, `docker build`): decide whether to
       classify them as writes (block) instead of prompting.
+- [ ] Review an alternative path: wrap the commands our workflows strictly need (for example the few `herdr` and
+      `git` forms an agent really uses) in our own thin, explicit commands, and allow those instead of the raw
+      third-party CLIs. The allowlist(s) then name exactly what is permitted, rather than being derived from
+      patterns, subcommand lists and "ask" overrides over a CLI we do not control (herdr and git add subcommands and
+      flags with every release). Possible side benefits: it completes the CLI surface of the fleet's tools, and the
+      same wrappers could later be exposed through MCP. Compare against the current rules on maintenance cost, on how
+      much of the policy moves out of globs, and on what the agent loses by not typing the real command.
 - [ ] Windows/PowerShell: nothing is parsed or tested.
 - [ ] Cover non-bash tools in read-only agents (MCP tools with side effects, `webfetch` to internal hosts).
 - [ ] Per-project allowlists (`.opencode/readonly-guard.json`) merged with the global one.
@@ -68,6 +75,13 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       instance wins: if a global instance is already loaded and the project config also lists the plugin, the
       project's options should take effect (re-run the config injection with the project's options, replacing the
       global instance's rules) rather than being ignored. Cover it with an integration test that loads both.
+- [ ] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
+      a `node_modules` (bundle it, or drop the value import of `tool`). Today `dist/tools.js` imports it at runtime,
+      so a checkout without `node_modules` (a restore that skips it, a fresh clone) is dropped by opencode without a
+      word.
+- [ ] Detect and report a plugin that fails to load instead of being dropped silently (for example a startup
+      self-check, or documented `doctor` output). opencode logs nothing about it, even at `DEBUG`.
+- [ ] Add an integration test that loads the built plugin from a directory without `node_modules`.
 
 ## Repository
 

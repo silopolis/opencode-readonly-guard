@@ -68,6 +68,8 @@ const KEYWORDS = new Set([
   "[[",
   "]]",
 ])
+/** herdr's global options that take a value (`--session NAME`, `--machine LABEL`, ...). */
+const HERDR_OPTIONS_WITH_ARGUMENT = new Set(["--session", "--machine", "--remote", "--remote-keybindings"])
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "fish"])
 const COMPRESSORS = new Set(["gzip", "gunzip", "bzip2", "bunzip2", "xz", "unxz", "zstd", "unzstd", "lz4"])
 const MAX_DEPTH = 5
@@ -179,6 +181,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
   const packageManagers = new Set(commands.packageManagers.names)
   const packageWrite = new Set(commands.packageManagers.writeSubcommands)
   const gitWrite = new Set(commands.git.write)
+  const herdrWrite = new Set(commands.herdr.write)
 
   function analyzeCommand(command: string, depth = 0): Verdict {
     if (depth > MAX_DEPTH) return { block: true, reason: "command nesting too deep to analyze" }
@@ -285,6 +288,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       return "journalctl maintenance flags modify journals"
     }
     if (name === "git") return gitWrites(args)
+    if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {
       if (firstArg && packageWrite.has(firstArg)) return `${name} ${firstArg} modifies dependencies or files`
       if (name === "go" && firstArg === "mod") {
@@ -307,6 +311,42 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       const why = commandWrites(inner, depth + 1)
       if (why) return `find ${args[j]}: ${why}`
       j = e
+    }
+    return null
+  }
+
+  /**
+   * herdr commands that write files or run a program: the ones listed in `commands.herdr.write`, `api schema
+   * --output`, and `pane run` when the command it types into the pane would itself be blocked. The rest of the
+   * mutating herdr commands are not blocked but always ask (rules/ask.json).
+   */
+  function herdrWrites(args: readonly string[], depth: number): string | null {
+    let j = 0
+    while (j < args.length && args[j].startsWith("-")) {
+      if (HERDR_OPTIONS_WITH_ARGUMENT.has(args[j++])) j++
+    }
+    const rest = args.slice(j)
+    const words: string[] = []
+    for (const word of rest) {
+      if (word.startsWith("-") || words.length === 3) break
+      words.push(word)
+    }
+    for (let n = 1; n <= words.length; n++) {
+      const path = words.slice(0, n).join(" ")
+      if (herdrWrite.has(path)) return `herdr ${path} changes files, worktrees or the herdr installation`
+    }
+    const path = words.slice(0, 2).join(" ")
+    if (path === "api schema" && rest.some((arg) => arg === "--output" || arg.startsWith("--output="))) {
+      return "herdr api schema --output writes a file"
+    }
+    if (path === "pane run") {
+      const afterRun = rest.slice(2)
+      const pane = afterRun.findIndex((arg) => !arg.startsWith("-"))
+      const inner = pane < 0 ? "" : afterRun.slice(pane + 1).join(" ")
+      if (inner) {
+        const verdict = analyzeCommand(inner, depth + 1)
+        if (verdict.block) return `herdr pane run: ${verdict.reason}`
+      }
     }
     return null
   }

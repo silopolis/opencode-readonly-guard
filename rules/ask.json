@@ -15,6 +15,160 @@
     { "pattern": "fd *-x*", "reason": "fd -x/--exec run a program per result" },
     { "pattern": "fd *-X*", "reason": "fd -X/--exec-batch run a program on all results" },
     { "pattern": "file *-C*", "reason": "file -C compiles a magic file" },
-    { "pattern": "sort *-o*", "reason": "sort -o FILE writes a file" }
+    { "pattern": "sort *-o*", "reason": "sort -o FILE writes a file" },
+    { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
+    {
+      "pattern": "herdr --machine *",
+      "reason": "--machine sends the command to another machine or session, which is not vetted here"
+    },
+    {
+      "pattern": "herdr --session *",
+      "reason": "--session sends the command to another machine or session, which is not vetted here"
+    },
+    {
+      "pattern": "herdr --remote *",
+      "reason": "--remote sends the command to another machine or session, which is not vetted here"
+    },
+    {
+      "pattern": "herdr --remote-keybindings *",
+      "reason": "--remote-keybindings sends the command to another machine or session, which is not vetted here"
+    },
+    { "pattern": "herdr --handoff *", "reason": "live handoff replaces the running herdr" },
+    { "pattern": "*--trust-repository*", "reason": "herdr --trust-repository grants Git trust to a repository" },
+    {
+      "pattern": "herdr agent prompt *",
+      "reason": "sends instructions to another agent: a read-only agent must not do that"
+    },
+    { "pattern": "herdr agent send-keys *", "reason": "types into another agent's terminal" },
+    { "pattern": "herdr agent start *", "reason": "starts a program in a pane" },
+    { "pattern": "herdr agent attach *", "reason": "attaches to an agent's terminal" },
+    { "pattern": "herdr agent rename *", "reason": "changes herdr state" },
+    { "pattern": "herdr agent focus *", "reason": "changes herdr state (focus and seen state)" },
+    { "pattern": "herdr pane focus *", "reason": "herdr pane focus changes the layout or the panes" },
+    { "pattern": "herdr pane resize *", "reason": "herdr pane resize changes the layout or the panes" },
+    { "pattern": "herdr pane zoom *", "reason": "herdr pane zoom changes the layout or the panes" },
+    { "pattern": "herdr pane rename *", "reason": "herdr pane rename changes the layout or the panes" },
+    { "pattern": "herdr pane input *", "reason": "herdr pane input changes the layout or the panes" },
+    { "pattern": "herdr pane split *", "reason": "herdr pane split changes the layout or the panes" },
+    { "pattern": "herdr pane swap *", "reason": "herdr pane swap changes the layout or the panes" },
+    { "pattern": "herdr pane move *", "reason": "herdr pane move changes the layout or the panes" },
+    { "pattern": "herdr pane close *", "reason": "herdr pane close changes the layout or the panes" },
+    { "pattern": "herdr pane send-text *", "reason": "types text into another pane" },
+    { "pattern": "herdr pane send-keys *", "reason": "types keys into another pane" },
+    {
+      "pattern": "herdr pane run *",
+      "reason": "runs a command in another pane (blocked by the guard when the command writes)"
+    },
+    { "pattern": "herdr pane report-*", "reason": "reports agent state or metadata to herdr" },
+    { "pattern": "herdr pane release-agent *", "reason": "changes which program owns a pane's agent state" },
+    { "pattern": "herdr tab create *", "reason": "herdr tab create changes the tabs" },
+    { "pattern": "herdr tab focus *", "reason": "herdr tab focus changes the tabs" },
+    { "pattern": "herdr tab close *", "reason": "herdr tab close changes the tabs" },
+    { "pattern": "herdr workspace create *", "reason": "herdr workspace create changes the workspaces" },
+    { "pattern": "herdr workspace focus *", "reason": "herdr workspace focus changes the workspaces" },
+    { "pattern": "herdr workspace rename *", "reason": "herdr workspace rename changes the workspaces" },
+    {
+      "pattern": "herdr workspace report-metadata *",
+      "reason": "herdr workspace report-metadata changes the workspaces"
+    },
+    { "pattern": "herdr workspace close *", "reason": "herdr workspace close changes the workspaces" },
+    {
+      "pattern": "herdr worktree open *",
+      "reason": "herdr worktree open changes worktrees (create and remove are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr worktree create *",
+      "reason": "herdr worktree create changes worktrees (create and remove are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr worktree remove *",
+      "reason": "herdr worktree remove changes worktrees (create and remove are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr session attach *",
+      "reason": "herdr session attach changes sessions (delete is blocked by the guard)"
+    },
+    {
+      "pattern": "herdr session stop *",
+      "reason": "herdr session stop changes sessions (delete is blocked by the guard)"
+    },
+    {
+      "pattern": "herdr session delete *",
+      "reason": "herdr session delete changes sessions (delete is blocked by the guard)"
+    },
+    { "pattern": "herdr server", "reason": "bare herdr server starts a headless server" },
+    { "pattern": "herdr server stop *", "reason": "herdr server stop changes the running server" },
+    { "pattern": "herdr server reload-config *", "reason": "herdr server reload-config changes the running server" },
+    {
+      "pattern": "herdr server update-agent-manifests *",
+      "reason": "herdr server update-agent-manifests changes the running server"
+    },
+    {
+      "pattern": "herdr server reload-agent-manifests *",
+      "reason": "herdr server reload-agent-manifests changes the running server"
+    },
+    {
+      "pattern": "herdr machine reconnect *",
+      "reason": "herdr machine reconnect changes saved machines or connects to one"
+    },
+    { "pattern": "herdr machine add *", "reason": "herdr machine add changes saved machines or connects to one" },
+    { "pattern": "herdr machine rename *", "reason": "herdr machine rename changes saved machines or connects to one" },
+    { "pattern": "herdr machine remove *", "reason": "herdr machine remove changes saved machines or connects to one" },
+    { "pattern": "herdr machine enable *", "reason": "herdr machine enable changes saved machines or connects to one" },
+    {
+      "pattern": "herdr machine disable *",
+      "reason": "herdr machine disable changes saved machines or connects to one"
+    },
+    { "pattern": "herdr config reset-keys *", "reason": "rewrites config.toml (blocked by the guard)" },
+    { "pattern": "herdr channel set *", "reason": "changes the update channel" },
+    { "pattern": "herdr update *", "reason": "installs a new herdr (blocked by the guard)" },
+    { "pattern": "herdr integration install *", "reason": "installs an agent integration (blocked by the guard)" },
+    { "pattern": "herdr integration uninstall *", "reason": "removes an agent integration (blocked by the guard)" },
+    {
+      "pattern": "herdr terminal attach *",
+      "reason": "herdr terminal attach attaches to a terminal stream or changes the outer title"
+    },
+    {
+      "pattern": "herdr terminal session *",
+      "reason": "herdr terminal session attaches to a terminal stream or changes the outer title"
+    },
+    {
+      "pattern": "herdr terminal title *",
+      "reason": "herdr terminal title attaches to a terminal stream or changes the outer title"
+    },
+    {
+      "pattern": "herdr plugin install *",
+      "reason": "herdr plugin install changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin update *",
+      "reason": "herdr plugin update changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin uninstall *",
+      "reason": "herdr plugin uninstall changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin link *",
+      "reason": "herdr plugin link changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin unlink *",
+      "reason": "herdr plugin unlink changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin enable *",
+      "reason": "herdr plugin enable changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin disable *",
+      "reason": "herdr plugin disable changes plugins (install and update are blocked by the guard)"
+    },
+    {
+      "pattern": "herdr plugin config-dir *",
+      "reason": "herdr plugin config-dir changes plugins (install and update are blocked by the guard)"
+    },
+    { "pattern": "herdr plugin pane *", "reason": "opens, focuses or closes plugin panes" },
+    { "pattern": "herdr plugin action invoke *", "reason": "runs a plugin action" }
   ]
 }
