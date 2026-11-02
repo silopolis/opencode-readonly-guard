@@ -22,7 +22,7 @@ Tool versions are pinned in `mise.toml` (bun, node, hk, actionlint, shellcheck, 
 | `mise run fmt`              | `prettier --write .`; `fmt:check` only checks (Markdown and JSON included)         |
 | `mise run typecheck`        | `tsc --noEmit` over `src/` and `test/`                                             |
 | `mise run test`             | unit tests (`bun test test/unit`); one file: `bun test test/unit/analyze.test.ts`  |
-| `mise run build`            | compile `src/` to `dist/` (read the hazards first)                                 |
+| `mise run build`            | bundle `src/` into `dist/` (plugin and CLI, zod included; read the hazards first)  |
 | `mise run test:integration` | build, then drive the real opencode without a model and install the packed tarball |
 | `mise run test:e2e`         | build, then drive a real model with your credentials; costs money, only when asked |
 

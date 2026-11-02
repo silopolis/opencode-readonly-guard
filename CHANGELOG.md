@@ -70,5 +70,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - `/guard-review` proposed already allowed stages of compound commands: every candidate was offered the general
   patterns of all the stages, and the prompt statistics counted allowed commands. Only the stages the current rules
   still ask about count now, each with its own general pattern.
+- The plugin needed `@opencode-ai/plugin` in a `node_modules` at runtime: loaded from a path without one (a checkout
+  restored without `node_modules`, a copy of `dist/` and `rules/`), it failed to import and opencode dropped it without a
+  message, leaving read-only agents unguarded. `dist/index.js` and `dist/cli.js` are now bundles that only import Node
+  built-ins (zod is included, its licence is in `dist/zod.LICENSE`).
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main

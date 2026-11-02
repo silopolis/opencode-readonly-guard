@@ -18,10 +18,12 @@ description = "Install dependencies and git hooks"
 run = ["bun install --frozen-lockfile", "hk install --mise"]
 
 [tasks.build]
-description = "Compile TypeScript to dist/"
-sources = ["src/**/*.ts", "tsconfig*.json", "package.json"]
+description = "Bundle src/ into dist/ (plugin and CLI), with type declarations"
+sources = ["src/**/*.ts", "tsconfig*.json", "bun.lock", "package.json"]
 outputs = ["dist/**/*"]
-run = "rm -rf dist && tsc -p tsconfig.build.json"
+# The "build" script in package.json (also run by `npm pack`). It bundles zod into dist/, so that a checkout loaded as
+# `file://…` needs no node_modules: opencode drops a plugin that fails to import without a word.
+run = "bun run build"
 
 [tasks.typecheck]
 description = "Type-check sources and tests"
