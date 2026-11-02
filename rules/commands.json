@@ -231,6 +231,21 @@
       "plugin update"
     ]
   },
+  "environment": {
+    "exportSafe": [
+      "LANG",
+      "LANGUAGE",
+      "LC_*",
+      "TZ",
+      "TERM",
+      "COLUMNS",
+      "LINES",
+      "NO_COLOR",
+      "GIT_OPTIONAL_LOCKS",
+      "PYTHONDONTWRITEBYTECODE"
+    ],
+    "alwaysExported": ["PATH", "HOME", "path"]
+  },
   "containers": {
     "names": ["docker", "podman"],
     "read": [

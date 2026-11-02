@@ -11,6 +11,8 @@ export interface Commands {
   packageManagers: { names: string[]; writeSubcommands: string[] }
   git: { write: string[]; read: string[] }
   herdr: { help: string[]; read: string[]; ui: string[]; write: string[] }
+  /** Variables that may be exported to later commands, and those treated as always exported (see environment.ts). */
+  environment: { exportSafe: string[]; alwaysExported: string[] }
   /** docker and podman: read-only and writing subcommand paths. */
   containers: { names: string[]; read: string[]; write: string[] }
   /** Subcommands whose exact `<program> <subcommand> --help` is allowed after the ask flags (see `helpCommands`). */
@@ -66,6 +68,7 @@ function commands(raw: unknown): Commands {
     !isRecord(raw.git) ||
     !isRecord(raw.herdr) ||
     !isRecord(raw.containers) ||
+    !isRecord(raw.environment) ||
     !isRecord(raw.subcommandHelp)
   ) {
     throw new Error("readonly-guard: commands.json has an unexpected shape")
@@ -88,6 +91,10 @@ function commands(raw: unknown): Commands {
       read: stringList(raw.herdr.read, "commands.json herdr.read"),
       ui: stringList(raw.herdr.ui, "commands.json herdr.ui"),
       write: stringList(raw.herdr.write, "commands.json herdr.write"),
+    },
+    environment: {
+      exportSafe: stringList(raw.environment.exportSafe, "commands.json environment.exportSafe"),
+      alwaysExported: stringList(raw.environment.alwaysExported, "commands.json environment.alwaysExported"),
     },
     containers: {
       names: stringList(raw.containers.names, "commands.json containers.names"),

@@ -59,6 +59,11 @@ Other files:
   never in `allow.json`) and `write` (blocked). Any other herdr subcommand must be added to `ask.json` as `herdr <sub> *`;
   there is no catch-all, because a `herdr *` ask rule would also silence the allowed reads. Keep the four lists
   disjoint and `allow.json` in step with `help` and `read` (the unit tests check both).
+- **`commands.json` → `environment`:** `exportSafe`, the variables that may be exported or assigned because they only
+  select a language, a format or turn a behaviour off, whatever their value (`LC_*` is a prefix); and `alwaysExported`,
+  the variables the guard treats as exported even when the plugin's own environment lacks them. opencode never prompts
+  for `export`, `declare` or a bare `NAME=value`, so only add a variable to `exportSafe` if no value of it can make a
+  later command run or write something.
 - **`commands.json` → `containers`:** the docker and podman `read` paths (`allow.json` must have
   `<engine> <path> *` for each, the unit tests check it) and the `write` paths the guard blocks. Allow rules start
   with the subcommand, so global options that pick another daemon (`-H`, `--context`) never match them.

@@ -346,6 +346,8 @@
     { "command": "mise ls -y", "verdict": "ask" },
     { "command": "mise ls --yes", "verdict": "ask" },
     { "command": "curl https://x", "verdict": "ask" },
+    { "command": "PATH=/opt/bin ls", "verdict": "ask" },
+    { "command": "LC_ALL=C sort f", "verdict": "ask" },
     { "command": "node --version --require ./x.js", "verdict": "ask" },
     { "command": "python3 --version -c 'print(1)'", "verdict": "ask" },
     { "command": "node -v", "verdict": "ask" },
@@ -413,6 +415,19 @@
     { "command": "git branch newb", "verdict": "block", "reason": "git branch" },
     { "command": "git diff --output=f", "verdict": "block", "reason": "--output" },
     { "command": "npm install", "verdict": "block", "reason": "npm install" },
+    { "command": "export RG_DEMO=1; git status", "verdict": "block", "reason": "exporting RG_DEMO" },
+    { "command": "RG_DEMO=1; export RG_DEMO; git diff", "verdict": "block", "reason": "exporting RG_DEMO" },
+    { "command": "declare -x RG_DEMO=1; git log", "verdict": "block", "reason": "exporting RG_DEMO" },
+    { "command": "typeset -gx RG_DEMO=1; ls", "verdict": "block", "reason": "exporting RG_DEMO" },
+    { "command": "set -a; RG_DEMO=1; git diff", "verdict": "block", "reason": "set -a" },
+    { "command": "set -o allexport; ls", "verdict": "block", "reason": "set -o allexport" },
+    { "command": "setopt allexport; ls", "verdict": "block", "reason": "setopt allexport" },
+    { "command": "declare -n ref=PATH", "verdict": "block", "reason": "-n creates a reference" },
+    { "command": "PATH=/opt/bin:$PATH; ls", "verdict": "block", "reason": "a new value for PATH" },
+    { "command": "path=(/opt/bin $path); ls", "verdict": "block", "reason": "a new value for path" },
+    { "command": "for PATH in /opt/bin; do ls; done", "verdict": "block", "reason": "a new value for PATH" },
+    { "command": "printf -v PATH %s /opt/bin; ls", "verdict": "block", "reason": "a new value for PATH" },
+    { "command": "HOME=/tmp/h; git status", "verdict": "block", "reason": "a new value for HOME" },
     { "command": "git grep -nO foo", "verdict": "block", "reason": "git grep -O in a bundle" },
     { "command": "git grep -Orm foo", "verdict": "block", "reason": "git grep -O runs a pager command" },
     {
@@ -613,6 +628,9 @@
     { "pattern": "herdr worktree list --trust-repository", "ok": false, "reason": "--trust-repository" },
     { "pattern": "herdr update", "ok": false, "reason": "herdr update" },
     { "pattern": "herdr pane run w1:p2 rm x", "ok": false, "reason": "herdr pane run" },
+    { "pattern": "export RG_DEMO=*", "ok": false, "reason": "later commands" },
+    { "pattern": "set -a", "ok": false, "reason": "later commands" },
+    { "pattern": "set -euo pipefail", "ok": true },
     { "pattern": "", "ok": false, "reason": "empty" }
   ]
 }

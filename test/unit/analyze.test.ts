@@ -846,6 +846,160 @@ describe("analyze", () => {
   })
 })
 
+const blockedFor = (commands: readonly string[], analyzer = createAnalyzer()) => {
+  for (const command of commands) {
+    const verdict = analyzer.analyze(command)
+    expect({ command, reason: verdict.block ? verdict.reason : undefined }).toEqual({
+      command,
+      reason: expect.stringContaining("later commands"),
+    })
+  }
+}
+const passesFor = (commands: readonly string[], analyzer = createAnalyzer()) => {
+  for (const command of commands) {
+    expect({ command, verdict: analyzer.analyze(command) }).toEqual({ command, verdict: { block: false } })
+  }
+}
+
+// opencode builds no permission pattern for `export`, `declare`, `local`, `readonly` or a bare `NAME=value`, so these
+// statements never prompt: the guard is the only check on what they hand to the commands that follow.
+describe("statements that export variables to later commands", () => {
+  test("export, declare -x and their relatives are blocked for variables outside the harmless list", () => {
+    blockedFor([
+      "export RG_DEMO=1; git status",
+      "export RG_DEMO",
+      "RG_DEMO=1; export RG_DEMO; git diff",
+      "export PATH=/opt/bin:$PATH",
+      "export LC_ALL=C RG_DEMO=1",
+      "export -- RG_DEMO=1",
+      "builtin export RG_DEMO=1",
+      "command export RG_DEMO=1",
+      "declare -x RG_DEMO=1",
+      "declare -rx RG_DEMO=1",
+      "typeset -x RG_DEMO",
+      "typeset -gx RG_DEMO=1",
+      "local -x RG_DEMO=1",
+      "readonly -x RG_DEMO=1",
+      "integer -x RG_DEMO=1",
+      "export -f ls",
+      "export -T RG_DEMO rg_demo",
+      "if true; then export RG_DEMO=1; fi; git log",
+      "(export RG_DEMO=1; git diff)",
+      "eval 'export RG_DEMO=1'",
+      "bash -c 'export RG_DEMO=1; git diff'",
+    ])
+  })
+
+  test("harmless variables, listing and un-exporting pass", () => {
+    passesFor([
+      "export GIT_OPTIONAL_LOCKS=0; git status",
+      "export LC_ALL=C",
+      "export LANG=C.UTF-8 TZ=UTC LC_COLLATE=C",
+      "export NO_COLOR=1 TERM=dumb COLUMNS=200",
+      "export PYTHONDONTWRITEBYTECODE=1",
+      "export",
+      "export -p",
+      "export -n RG_DEMO",
+      "declare -p RG_DEMO",
+      "declare -f",
+      "declare +x RG_DEMO",
+      "declare -a list=(a b)",
+      "local line=x",
+      "readonly limit=5",
+    ])
+  })
+
+  test("allexport and keyword mode are blocked", () => {
+    blockedFor([
+      "set -a",
+      "set -ea; git diff",
+      "set -euao pipefail",
+      "set -o allexport",
+      "set -eo allexport",
+      "set -o ALL_EXPORT",
+      "set -k",
+      "set -o keyword",
+      "setopt allexport",
+      "setopt ALL_EXPORT",
+      "setopt all_export",
+      "setopt -a",
+      "setopt -m '*export*'",
+      "setopt keyword",
+      "unsetopt noallexport",
+      "set -A path /opt/bin",
+    ])
+    passesFor([
+      "set -e",
+      "set -euo pipefail",
+      "set -euxo pipefail",
+      "set +a",
+      "set -o pipefail",
+      "set --",
+      "set -- -a b",
+      "set foo -a",
+      "setopt noallexport",
+      "setopt extendedglob",
+      "unsetopt allexport",
+    ])
+  })
+
+  test("namerefs are blocked", () => {
+    blockedFor(["declare -n ref=PATH", "typeset -n ref", "local -n ref=HOME", "declare -rn ref=x"])
+  })
+
+  test("a new value for PATH, HOME or zsh's path array is blocked, however it is assigned", () => {
+    blockedFor([
+      "PATH=/opt/bin:$PATH; ls",
+      "PATH+=:/opt/bin; ls",
+      "PATH[0]=/opt/bin",
+      "HOME=/tmp/h; git status",
+      "path=(/opt/bin $path); ls",
+      "path+=(/opt/bin)",
+      "for PATH in /opt/bin; do ls; done",
+      "select HOME in /tmp/h; do ls; done",
+      "readonly PATH=/opt/bin",
+      "local PATH=/opt/bin",
+      "declare HOME=/tmp/h",
+      "printf -v PATH %s /opt/bin; ls",
+      "printf -vPATH %s /opt/bin",
+      "read PATH",
+      "read -r -a PATH",
+      "mapfile -t PATH",
+      "readarray PATH",
+      "getopts ab PATH",
+      "PATH=/opt/bin :",
+      "HOME=/tmp/h eval true",
+    ])
+  })
+
+  test("assignments to unexported names, and one-command prefixes, pass", () => {
+    passesFor([
+      "B=/opt/x; strings -n 200 $B",
+      "r=$(dirname a); echo $r",
+      "for f in a b; do cat $f; done",
+      "x=1 y=2",
+      "list=(a b c)",
+      "printf -v line %s x",
+      "read -r n c",
+      "PATH=/opt/bin ls",
+      "HOME=/tmp/h git status",
+      "LC_ALL=C; sort",
+      "LANG=C; TERM=dumb",
+    ])
+  })
+
+  test("an assignment to a variable that is already exported is blocked", () => {
+    const analyzer = createAnalyzer(loadRules().commands, { exported: (name) => name === "RG_EXPORTED" })
+    blockedFor(
+      ["RG_EXPORTED=/tmp/x; git log", "printf -v RG_EXPORTED %s x", "for RG_EXPORTED in a; do ls; done"],
+      analyzer,
+    )
+    passesFor(["RG_OTHER=/tmp/x; git log", "RG_EXPORTED=/tmp/x git log"], analyzer)
+    // the harmless list wins over the environment
+    passesFor(["LC_ALL=C; sort"], createAnalyzer(loadRules().commands, { exported: () => true }))
+  })
+})
+
 describe("createAnalyzer", () => {
   test("uses the supplied command classification", () => {
     const commands = { ...loadRules().commands, hardWrite: ["whoami"] }

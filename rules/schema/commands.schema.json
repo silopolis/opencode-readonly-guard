@@ -9,6 +9,7 @@
     "packageManagers",
     "git",
     "herdr",
+    "environment",
     "containers",
     "subcommandHelp",
     "wildcardSafe",
@@ -84,6 +85,26 @@
         "write": {
           "description": "herdr subcommands that write files, worktrees or the herdr installation: blocked in read-only agents.",
           "$ref": "#/$defs/herdrWords"
+        }
+      }
+    },
+    "environment": {
+      "description": "Variables handed to later commands. opencode never prompts for `export`, `declare` or a bare `NAME=value`, so the write guard blocks those that export a variable outside exportSafe, or give a new value to a variable that is exported.",
+      "type": "object",
+      "required": ["exportSafe", "alwaysExported"],
+      "additionalProperties": false,
+      "properties": {
+        "exportSafe": {
+          "description": "Variables that only select a language, a format or turn a behaviour off, whatever their value: they may be exported or assigned. A trailing `*` matches a prefix (`LC_*`).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\*?$" }
+        },
+        "alwaysExported": {
+          "description": "Variables treated as exported even when the plugin's own environment lacks them: a new value always reaches later commands (zsh's `path` array is tied to PATH).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
         }
       }
     },

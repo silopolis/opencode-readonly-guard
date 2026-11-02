@@ -1,4 +1,5 @@
 import { basename } from "node:path"
+import { createEnvironmentCheck, processEnvironment, type Environment } from "./environment.js"
 import {
   containerWrites,
   ipWrites,
@@ -321,9 +322,12 @@ export interface Analyzer {
 
 const analyzers = new WeakMap<Commands, Analyzer>()
 
-/** Build (and cache) an analyzer for a command classification. */
-export function createAnalyzer(commands: Commands = loadRules().commands): Analyzer {
-  const existing = analyzers.get(commands)
+/**
+ * Build an analyzer for a command classification. The default one, which reads the plugin's own environment to know
+ * which variables are exported, is cached per classification; one built for another environment is not.
+ */
+export function createAnalyzer(commands: Commands = loadRules().commands, environment?: Environment): Analyzer {
+  const existing = environment ? undefined : analyzers.get(commands)
   if (existing) return existing
 
   const hardWrite = new Set(commands.hardWrite)
@@ -333,6 +337,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
   const herdrWrite = new Set(commands.herdr.write)
   const containerNames = new Set(commands.containers.names)
   const containerWrite = new Set(commands.containers.write)
+  const environmentWrites = createEnvironmentCheck(commands.environment, environment ?? processEnvironment)
 
   function analyzeCommand(command: string, depth = 0): Verdict {
     if (depth > MAX_DEPTH) return { block: true, reason: "command nesting too deep to analyze" }
@@ -357,6 +362,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
 
   function commandWrites(words: readonly string[], depth = 0): string | null {
     const k = commandStart(words)
+    const exported = environmentWrites(words, k, KEYWORDS)
+    if (exported) return exported
     if (k >= words.length) return null
     const name = basename(words[k])
     const args = words.slice(k + 1)
@@ -644,7 +651,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
   }
 
   const analyzer: Analyzer = { analyze: analyzeCommand, commandWrites }
-  analyzers.set(commands, analyzer)
+  if (!environment) analyzers.set(commands, analyzer)
   return analyzer
 }
 
