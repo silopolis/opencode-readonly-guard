@@ -48,15 +48,16 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [ ] Windows/PowerShell: nothing is parsed or tested.
 - [ ] Cover non-bash tools in read-only agents (MCP tools with side effects, `webfetch` to internal hosts).
 - [ ] Per-project allowlists (`.opencode/readonly-guard.json`) merged with the global one.
-- [ ] More rules: `docker ps/images/logs`, `kubectl get/describe`, `gh pr view`, `systemctl status`, `journalctl`,
-      `lsblk`, … each with its write flags in `ask.json` and cases in `cases.json`. Seen in sessions and left for
-      later: `git grep` (`-O` runs a pager), `git check-ignore`, `git show-ref`, `git for-each-ref`,
-      `git hash-object` (`-w` writes), exact `<tool> --version`, absolute paths (`/usr/bin/ls`), and the `2>&1` form of
-      exact rules (opencode matches `herdr --help 2>&1` with its redirection).
+- [ ] More rules: `kubectl get/describe`, `gh pr view`, `docker compose ps|config`, … each with its write flags in
+      `ask.json` and cases in `cases.json`. Seen in sessions and left for later: absolute paths (`/usr/bin/ls`), and
+      the `2>&1` form of exact rules (opencode matches `herdr --help 2>&1` with its redirection; see the env-prefix
+      design note).
 - [ ] `$(…)` inside arithmetic (`(( $(cmd) ))`, `$(( $(cmd) ))`) is not analyzed: the tokenizer skips the body.
       opencode's own parser should still prompt for `cmd`, but the write guard does not see it.
-- [ ] Classification gaps found in the log: `git history` and `git backfill` are not in `git.write`;
-      `systemctl show-environment` and bare `mount` (both listings) are blocked.
+- [ ] Classification gaps found in the log: `git history` and `git backfill` are not in `git.write`.
+- [ ] Bundled short options that carry a remote target slip past glob ask rules. The guard blocks them where it
+      matters (`systemctl -aH`), but a general approach (normalizing option bundles before matching) waits for the
+      2.x permission hook.
 
 ## Sharing rules
 

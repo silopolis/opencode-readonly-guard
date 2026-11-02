@@ -36,6 +36,23 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `git ls-remote --upload-pack`, `npm view --cache/--logs-dir`, `mise -y`) and the write guard blocks
   `uniq IN OUT`, `date -s`/`date MMDDhhmm`, `hostname NAME`, `sort --compress-program=<writer>`,
   `git ls-remote --upload-pack=<writer>` and `mise set` / `npm set`.
+- Sysadmin reads: `systemctl [--user]` read verbs (`status`, `show`, `cat`, `is-*`, `list-*`, `show-environment`,
+  `get-default`), `journalctl`, `lsblk`, `findmnt`, `mount` / `mount -l`, `ip` address, link, route and neighbour
+  tables, `pacman -Q`, `flatpak list|info|remotes|ps`, `snap list|info|services|connections`, the docker and podman
+  listings and inspections (`ps`, `images`, `inspect`, `logs`, `volume|network ls|inspect`, …), `virsh` listings on the
+  default, `qemu:///system` and `qemu:///session` connections, `VBoxManage list`, `vagrant box list`, `git grep`,
+  `git check-ignore|show-ref|for-each-ref|hash-object`, the exact `--version` of common tools (node, python3, git, gh,
+  opencode, docker, …), `mise version|which|where`. Options that reach another host or run a program ask
+  (`systemctl -H/-M`, podman's `--runtime`/`--conmon`/`--root`/…, `git grep -O`, `git hash-object -w`, journalctl's
+  maintenance options); docker and podman global options such as `-H`/`--context` come before the subcommand, so
+  they ask too.
+- The write guard blocks: journalctl's maintenance options in any abbreviation and `--cursor-file`; ip writes in
+  every abbreviation iproute2 accepts (`ip link s` is `set`), `ip -batch`, `netns|vrf exec` of a writing command;
+  pacman `-S` installs and upgrades, `-R`, `-U`, `-D --asdeps`, `-Fy`; the docker and podman subcommands that change
+  containers, images, volumes, networks or contexts (listed in `commands.json` → `containers.write`), `save -o`,
+  `export -o` and podman `--out`; `virsh 'A; B'` (one string runs every command in it) and `virsh -l FILE`;
+  `git grep -O` in a bundle or with a writing pager; `git hash-object -w` in a bundle; `systemctl -H/-M` in a bundle
+  or abbreviated, where the ask rules cannot see it.
 - Exact `<program> <subcommand> --help` commands for git, herdr, npm and mise are allowed, after the always-ask flags
   (`git commit --help`, `herdr worktree create --help`); `opencode-readonly-guard rules` reports them.
 
@@ -47,6 +64,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
   `git tag --sort|--format NAME` (these flags do not list), abbreviated or bundled git branch and tag write options
   (`git branch -a --edit-desc`, `-rd`), `sort --out=FILE`, and `uniq - OUT` / `uniq IN 5`. It blocked
   `git tag -n1 NAME`, which lists.
+- The write guard blocked listings: bare `mount`, `systemctl show-environment|get-default`, and systemctl read verbs
+  after an option that takes a value (`systemctl -t service list-units`). It missed journalctl's maintenance options
+  when abbreviated (`--rot`, `--vac=1d`).
 - `/guard-review` proposed already allowed stages of compound commands: every candidate was offered the general
   patterns of all the stages, and the prompt statistics counted allowed commands. Only the stages the current rules
   still ask about count now, each with its own general pattern.

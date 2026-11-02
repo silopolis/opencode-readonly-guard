@@ -46,6 +46,8 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
   write guard), `event` (log prompts and answers), `chat.params` (which agent owns a session).
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
+  `programs.ts`: its argument parsers for system tools (systemctl, journalctl, ip, mount, pacman, docker/podman,
+  virsh), which follow each program's own option rules (abbreviations, bundles, values).
 - `wildcard.ts`: opencode's pattern matching, last match wins. `decide.ts`: allow, ask or block for a command line.
 - `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list, ending with the help layer (exact
   `<program> <subcommand> --help` commands). `inject.ts`: finds the read-only agents and writes their rules into

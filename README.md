@@ -10,7 +10,8 @@ shell command, so a model that ignores the reminder can still `rm`, `sed -i` or 
   `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). The model gets an
   error that tells it to return the data in its reply instead.
 - **Shared allowlist.** Read-only agents ask before running anything except a vetted list of read-only commands
-  (`ls`, `cat`, `rg`, `sort`, `echo`, `git log`, `git branch -a`, `herdr agent list`, …). The list lives in
+  (`ls`, `cat`, `rg`, `sort`, `echo`, `git log`, `git branch -a`, `systemctl status`, `docker ps`, `ip addr`,
+  `herdr agent list`, …). The list lives in
   [`rules/`](rules) as plain JSON that anyone can extend.
 - **Reviewed learning.** An "always" answer in a read-only agent is only logged as a candidate. `/guard-review` shows
   candidates with safe pattern options, and a rule is added only after you confirm the exact pattern.
@@ -100,8 +101,10 @@ Because the flags come after every allow rule, a broad learned rule such as `fin
 
 Some commands are only allowed in their read-only forms, because the bare subcommand writes: `git branch` lists, but
 `git branch NAME` creates a branch, so the allowlist has `git branch`, `git branch -a *`, `git branch --contains*`, …
-and the write guard blocks the creating forms. `git config KEY`, `git -C DIR …` and commands behind an environment
-prefix (`LC_ALL=C sort`) still ask.
+and the write guard blocks the creating forms. System tools follow the same idea: `ip addr *` is allowed because the
+guard resolves every verb abbreviation iproute2 accepts and blocks `add`, `set`, `flush`, …; `docker ps *` because
+docker only takes `-H`/`--context` before the subcommand, where no rule matches. `git config KEY`, `git -C DIR …`
+and commands behind an environment prefix (`LC_ALL=C sort`) still ask.
 
 Read-only agents are `plan`, `explore`, every agent whose `permission.edit` is `deny` (or `tools.edit: false`), plus
 `agents.include`, minus `agents.exclude`. `plan` additionally asks before delegating to a subagent that is not
