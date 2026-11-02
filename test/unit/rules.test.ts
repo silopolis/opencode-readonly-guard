@@ -56,7 +56,7 @@ describe("shared rule files", () => {
     const patterns = loadRules().allow.map(({ pattern }) => pattern)
     // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff
     const rewritten = patterns.filter((pattern) =>
-      /^(git (status|log|diff|show|branch|worktree)\b|(du|df|diff) |systemctl status |docker (ps|images|logs) )/.test(
+      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff) |systemctl status |docker (ps|images|logs) )/.test(
         pattern,
       ),
     )

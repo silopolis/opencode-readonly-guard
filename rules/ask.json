@@ -141,6 +141,15 @@
       "pattern": "podman *--volumepath*",
       "reason": "podman --volumepath creates and uses another volume directory (it is accepted after the subcommand)"
     },
+    { "pattern": "git grep *-O*", "reason": "git grep -O[PAGER] opens the files in a pager command" },
+    {
+      "pattern": "git grep *--op*",
+      "reason": "git grep --open-files-in-pager[=PAGER] (any abbreviation) opens the files in a pager command"
+    },
+    {
+      "pattern": "git hash-object *-w*",
+      "reason": "git hash-object -w writes the object into the repository (blocked by the guard)"
+    },
     { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
     {
       "pattern": "herdr --machine *",

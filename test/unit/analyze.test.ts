@@ -226,6 +226,49 @@ describe("analyze", () => {
     }
   })
 
+  test("git grep: -O runs a pager command; in a bundle the ask rules cannot see it", () => {
+    for (const command of [
+      "git grep -Orm foo",
+      "git grep '-Orm -rf' foo",
+      "git grep --open-files-in-pager='touch x' foo",
+      "git grep --open='rm -rf x' foo",
+      "git grep --op=rm foo",
+      "git grep -nO foo",
+      "git grep -nOless foo",
+      "git grep -iOpython3 foo",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("git grep") })
+    }
+    for (const command of [
+      "git grep -n -i herdr -- docs",
+      "git grep -O foo",
+      "git grep -Oless foo",
+      "git grep --open-files-in-pager foo",
+      "git grep -e -O foo",
+      "git grep -eO foo",
+      "git grep -A3 -B 2 TODO",
+      "git grep -C1 -O",
+      "git grep --no-open-files-in-pager foo",
+      "git grep -l foo -- '*.ts'",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("git hash-object: -w writes the object, in a bundle too", () => {
+    for (const command of ["git hash-object -w f", "git hash-object -wt blob f", "git hash-object --stdin -w"]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("hash-object") })
+    }
+    for (const command of [
+      "git hash-object f",
+      "git hash-object -t blob f",
+      "git hash-object -tw f",
+      "git hash-object --stdin",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git ls-remote: --upload-pack and --exec run a command", () => {
     for (const command of [
       "git ls-remote --upload-pack='touch /tmp/x' .",

@@ -517,6 +517,45 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     return null
   }
 
+  /**
+   * `git grep -O[PAGER]` / `--open-files-in-pager[=PAGER]` runs PAGER through the shell on the matching files. The
+   * ask rules see `-O` written apart; in a bundle (`-nO`) they cannot, so it is blocked. A PAGER that writes is
+   * blocked too.
+   */
+  function grepPager(args: readonly string[], depth: number): string | null {
+    const pager = (command: string) => {
+      const verdict = analyzeCommand(command, depth + 1)
+      return verdict.block ? `git grep -O runs a pager command: ${verdict.reason}` : null
+    }
+    for (let j = 0; j < args.length; j++) {
+      const arg = args[j]
+      if (arg === "--") break
+      if (arg.startsWith("--")) {
+        const [name, value] = arg.slice(2).split(/=(.*)/s)
+        if (name.length >= 2 && "open-files-in-pager".startsWith(name) && value) {
+          const why = pager(value)
+          if (why) return why
+        }
+        continue
+      }
+      for (let c = 1; c < arg.length; c++) {
+        const letter = arg[c]
+        if (letter === "O") {
+          if (c > 1) return "git grep -O in a bundle: write -O apart so it asks"
+          const why = arg.length > 2 ? pager(arg.slice(2)) : null
+          if (why) return why
+          break
+        }
+        if ("ABCefm".includes(letter)) {
+          if (c === arg.length - 1) j++ // the value is the next word
+          break
+        }
+        if (/\d/.test(letter)) break // -3: context lines
+      }
+    }
+    return null
+  }
+
   function gitWrites(args: readonly string[], depth: number): string | null {
     let j = 0
     while (j < args.length && args[j].startsWith("-")) {
@@ -595,7 +634,10 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       case "symbolic-ref":
         return has("-d", "--delete") || positional.length >= 2 ? "git symbolic-ref modifies refs" : null
       case "hash-object":
-        return has("-w") ? "git hash-object -w writes objects" : null
+        // -t takes a value: `-tw` is type "w", `-wt blob` writes
+        return rest.some((arg) => /^-[^-t]*w/.test(arg)) ? "git hash-object -w writes objects" : null
+      case "grep":
+        return grepPager(rest, depth)
       default:
         return null
     }
