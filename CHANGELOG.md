@@ -58,6 +58,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The write guard blocks commands that export environment variables to later commands (opencode does not prompt for
+  them), except variables that only select a language or a format (`LANG`, `LC_*`, `TZ`, `GIT_OPTIONAL_LOCKS`, …,
+  listed in `commands.json` → `environment`).
 - The write guard blocked a sole trailing `--help` (`herdr worktree create --help`, `npm install --help`) like the
   subcommand itself.
 - The write guard missed writes: `git remote -v add|rename|remove`, `git branch -v|--sort|--format NAME` and

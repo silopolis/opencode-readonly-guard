@@ -7,7 +7,8 @@ shell command, so a model that ignores the reminder can still `rm`, `sed -i` or 
 
 - **Write guard.** Before opencode evaluates any permission rule, the full command line is parsed and refused if it
   writes: redirections in any position, `tee` to a file, `rm`/`cp`/`mv`/…, `sed -i`, `git commit`, `npm install`,
-  `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). The model gets an
+  `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). It also refuses
+  to export environment variables to the commands that follow, which opencode never prompts for. The model gets an
   error that tells it to return the data in its reply instead.
 - **Shared allowlist.** Read-only agents ask before running anything except a vetted list of read-only commands
   (`ls`, `cat`, `rg`, `sort`, `echo`, `git log`, `git branch -a`, `systemctl status`, `docker ps`, `ip addr`,

@@ -54,6 +54,9 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       design note).
 - [ ] `$(…)` inside arithmetic (`(( $(cmd) ))`, `$(( $(cmd) ))`) is not analyzed: the tokenizer skips the body.
       opencode's own parser should still prompt for `cmd`, but the write guard does not see it.
+- [ ] `trap`, `alias`, `hash -p NAME PATH` and function definitions change what later commands run. They prompt
+      today (opencode builds a pattern for them, and none is allowed); if one is ever allowed, the guard must look
+      into it first, as it does for `export`.
 - [ ] Classification gaps found in the log: `git history` and `git backfill` are not in `git.write`.
 - [ ] Bundled short options that carry a remote target slip past glob ask rules. The guard blocks them where it
       matters (`systemctl -aH`), but a general approach (normalizing option bundles before matching) waits for the
