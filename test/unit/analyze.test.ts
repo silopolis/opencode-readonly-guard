@@ -369,7 +369,7 @@ describe("analyze", () => {
       "systemctl -at service list-units",
       "systemctl -n 20 status sshd",
       "systemctl --user list-unit-files --state=enabled --no-pager",
-      "systemctl --user list-units 'omalap-*' --no-pager --no-legend",
+      "systemctl --user list-units 'backup-*' --no-pager --no-legend",
       "systemctl status sshd -H host",
       "systemctl status sshd --host=host",
     ]) {
@@ -708,7 +708,7 @@ describe("analyze", () => {
     }
     for (const command of [
       "journalctl -u sshd --since today",
-      "journalctl --user -u omalap-sync -n 50 --no-pager",
+      "journalctl --user -u backup-sync -n 50 --no-pager",
       "journalctl -b -1 -p err",
       "journalctl --cursor=s=abc",
       "journalctl --since=-1h --until now",
