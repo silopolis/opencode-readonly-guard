@@ -27,10 +27,10 @@ describe("review", () => {
   })
 
   test("lists a candidate with vetted options", () => {
-    const text = run([always("whoami", "whoami *")])
-    expect(text).toContain("1. `whoami`: 1×, agents: plan, opencode remembered: `whoami *`")
-    expect(text).toContain("[OK] exact: `whoami`")
-    expect(text).toContain("[OK] general: `whoami *`")
+    const text = run([always("uptime", "uptime *")])
+    expect(text).toContain("1. `uptime`: 1×, agents: plan, opencode remembered: `uptime *`")
+    expect(text).toContain("[OK] exact: `uptime`")
+    expect(text).toContain("[OK] general: `uptime *`")
   })
 
   test("refuses unsafe options and explains why", () => {
@@ -68,15 +68,15 @@ describe("review", () => {
   })
 
   test("offers a directory-scoped option for paths", () => {
-    const text = run([always("du -sh /var/log/syslog", "du *")])
-    expect(text).toContain("[OK] directory: `du -sh /var/log/*`")
+    const text = run([always("md5sum /var/log/syslog", "md5sum *")])
+    expect(text).toContain("[OK] directory: `md5sum /var/log/*`")
   })
 
   test("skips candidates that are already allowed or dismissed", () => {
-    const events = [always("ls /tmp", "ls *"), always("whoami", "whoami *"), always("id -un", "id *")]
-    const store: StoreData = { ...emptyStore(), allow: ["whoami *"], dismissed: ["id -un"] }
+    const events = [always("ls /tmp", "ls *"), always("uptime", "uptime *"), always("id -un", "id *")]
+    const store: StoreData = { ...emptyStore(), allow: ["uptime *"], dismissed: ["id -un"] }
     const text = run(events, store)
-    expect(text).not.toMatch(/^\d+\. `(ls \/tmp|whoami|id -un)`/m)
+    expect(text).not.toMatch(/^\d+\. `(ls \/tmp|uptime|id -un)`/m)
     expect(text).toContain('### Candidates from "always" answers (0)')
   })
 
@@ -90,24 +90,24 @@ describe("review", () => {
 
   test("summarizes prompt answers by command and suggests frequent approved ones", () => {
     const events = [
-      answers("once", "whoami"),
-      answers("once", "whoami"),
-      answers("always", "whoami"),
+      answers("once", "uptime"),
+      answers("once", "uptime"),
+      answers("always", "uptime"),
       answers("reject", "git push"),
       answers("once", "git log --oneline"),
     ]
     const text = run(events)
-    expect(text).toContain("- `whoami`: 2 / 1 / 0")
+    expect(text).toContain("- `uptime`: 2 / 1 / 0")
     expect(text).toContain("- `git push`: 0 / 0 / 1")
     expect(text).toContain("### Suggested additions")
-    expect(text).toContain("[OK] general: `whoami *`")
+    expect(text).toContain("[OK] general: `uptime *`")
     expect(text).not.toContain("general: `git push *`")
   })
 
   test("never suggests a head that was ever rejected or is unsafe", () => {
     const events = [
-      ...Array.from({ length: 3 }, () => answers("once", "whoami")),
-      answers("reject", "whoami"),
+      ...Array.from({ length: 3 }, () => answers("once", "uptime")),
+      answers("reject", "uptime"),
       ...Array.from({ length: 3 }, () => answers("once", "make test")),
     ]
     expect(run(events)).not.toContain("### Suggested additions")
@@ -119,8 +119,8 @@ describe("review", () => {
   })
 
   test("flags learned rules that would be ignored at startup", () => {
-    const text = run([], { ...emptyStore(), allow: ["whoami *", "rm *"] })
-    expect(text).toContain("- `whoami *`\n")
+    const text = run([], { ...emptyStore(), allow: ["uptime *", "rm *"] })
+    expect(text).toContain("- `uptime *`\n")
     expect(text).toContain('- `rm *` [IGNORED at startup: "rm" modifies files or system state]')
   })
 
@@ -135,7 +135,7 @@ describe("helpers", () => {
     expect(headOf("npm --version")).toBe("npm")
     expect(headOf("rtk git status")).toBe("rtk git status")
     expect(headOf("herdr agent list")).toBe("herdr agent")
-    expect(headOf("whoami")).toBe("whoami")
+    expect(headOf("uptime")).toBe("uptime")
     expect(headOf("")).toBe("")
   })
 

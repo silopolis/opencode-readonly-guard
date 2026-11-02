@@ -102,6 +102,55 @@ describe("analyze", () => {
     }
   })
 
+  test("date: -s/--set and a MMDDhhmm operand set the clock", () => {
+    for (const command of [
+      "date -s 10:00",
+      "date --set=10:00",
+      "date --set 10:00",
+      "date --se=10:00",
+      "date -us 10:00",
+      "date 010112002026",
+      "date -u 0101",
+      "date -- 0101",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("date") })
+    }
+    for (const command of [
+      "date",
+      "date +%F",
+      "date -u +%T",
+      "date '+%Y-%m-%d %H:%M:%S %z'",
+      "date -d tomorrow",
+      "date -d 'next monday' +%F",
+      "date --date 2026-01-01 +%s",
+      "date --date=@0 -u",
+      "date -ud @0",
+      "date -Iseconds",
+      "date -R",
+      "date --rfc-3339=seconds",
+      "date --rfc-3339 ns",
+      "date -r package.json",
+      "date --debug -d now",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("hostname: a NAME operand, -F/--file and -b set the host name", () => {
+    for (const command of [
+      "hostname box",
+      "hostname -F /etc/hostname",
+      "hostname --file f",
+      "hostname -b",
+      "hostname -b x",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("hostname") })
+    }
+    for (const command of ["hostname", "hostname -f", "hostname -s", "hostname -I", "hostname --fqdn"]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("command -v is a lookup, not an execution", () => {
     expect(analyze("command -v rm")).toEqual({ block: false })
   })

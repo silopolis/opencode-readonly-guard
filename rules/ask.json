@@ -21,6 +21,7 @@
       "reason": "sort --compress-program=PROG runs PROG on the data (any abbreviation from --co)"
     },
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
+    { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
     { "pattern": "sort *--t*", "reason": "sort --temporary-directory=DIR writes temporary files into DIR" },
     { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
     {

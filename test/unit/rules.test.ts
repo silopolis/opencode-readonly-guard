@@ -228,8 +228,8 @@ describe("buildBashRules", () => {
   })
 
   test("learned rules allow more", () => {
-    expect(evaluate("whoami", buildBashRules(rules))).toBe("ask")
-    expect(evaluate("whoami", buildBashRules(rules, ["whoami *"]))).toBe("allow")
+    expect(evaluate("uptime", buildBashRules(rules))).toBe("ask")
+    expect(evaluate("uptime", buildBashRules(rules, ["uptime *"]))).toBe("allow")
   })
 
   test("an agent's own rule is moved after the shared ones", () => {

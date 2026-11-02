@@ -180,6 +180,63 @@ function uniqOutput(args: readonly string[]): string | undefined {
   return operands[1]
 }
 
+/** GNU date's options. Long options may be abbreviated to any unambiguous prefix (`--se` is `--set`). */
+const DATE_LONG = [
+  "date",
+  "debug",
+  "file",
+  "iso-8601",
+  "resolution",
+  "rfc-email",
+  "rfc-3339",
+  "reference",
+  "set",
+  "utc",
+  "universal",
+  "help",
+  "version",
+]
+const DATE_LONG_WITH_VALUE = new Set(["date", "file", "reference", "rfc-3339", "set"])
+const DATE_SHORT_WITH_VALUE = new Set(["d", "f", "r", "s"])
+
+/** Does `date` set the clock: `-s`/`--set`, or an operand that is not a `+FORMAT` (`date MMDDhhmm`)? */
+function dateSets(args: readonly string[]): boolean {
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") return args.slice(j + 1).some((operand) => !operand.startsWith("+"))
+    if (arg === "-" || !arg.startsWith("-")) {
+      if (!arg.startsWith("+")) return true
+    } else if (arg.startsWith("--")) {
+      const [name, value] = arg.slice(2).split(/=(.*)/s)
+      const matches = DATE_LONG.filter((option) => option.startsWith(name))
+      const option = DATE_LONG.includes(name) ? name : matches.length === 1 ? matches[0] : undefined
+      if (option === "set") return true
+      if (option && value === undefined && DATE_LONG_WITH_VALUE.has(option)) j++
+    } else {
+      for (let c = 1; c < arg.length; c++) {
+        const letter = arg[c]
+        if (letter === "s") return true
+        if (letter === "I") break // -I[FMT]: an optional value, attached
+        if (DATE_SHORT_WITH_VALUE.has(letter)) {
+          if (c === arg.length - 1) j++
+          break
+        }
+      }
+    }
+  }
+  return false
+}
+
+/** `hostname NAME`, `-F FILE`/`--file FILE` and `-b`/`--boot` set the host name; the other options print it. */
+function hostnameSets(args: readonly string[]): boolean {
+  return args.some((arg) => {
+    if (!arg.startsWith("-")) return true
+    if (!arg.startsWith("--")) return /[Fb]/.test(arg.slice(1))
+    const name = arg.slice(2).split("=")[0]
+    return (name.length >= 2 && "file".startsWith(name)) || (name.length >= 1 && "boot".startsWith(name))
+  })
+}
+
 function curlWrites(args: readonly string[]): string | null {
   for (let j = 0; j < args.length; j++) {
     const arg = args[j]
@@ -280,6 +337,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     }
     if (name === "tree" && has("-o")) return "tree -o writes a file"
     if (name === "sort") return sortWrites(args, depth)
+    if (name === "date" && dateSets(args)) return "date -s/--set or a MMDDhhmm operand sets the system clock"
+    if (name === "hostname" && hostnameSets(args)) return "hostname NAME, -F or -b sets the host name"
     if (name === "uniq") {
       const output = uniqOutput(args)
       if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "uniq INPUT OUTPUT writes a file"

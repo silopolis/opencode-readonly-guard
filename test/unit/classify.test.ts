@@ -25,9 +25,12 @@ describe("classifyPattern", () => {
     expect(classifyPattern("rtk read *").ok).toBe(true)
   })
 
-  test("accepts every shared allow pattern as an exact command", () => {
+  test("accepts every shared allow pattern, as written or as an exact command", () => {
     for (const { pattern } of loadRules().allow) {
-      const verdict = classifyPattern(pattern.replace(/\*$/, "x"))
+      // `date x` sets the clock, but `date *` is fine; `npm view *` is not wildcard-safe, but `npm view x` is
+      const verdict = classifyPattern(pattern).ok
+        ? classifyPattern(pattern)
+        : classifyPattern(pattern.replace(/\*$/, "x"))
       expect({ pattern, ok: verdict.ok, reason: verdict.reason }).toEqual({ pattern, ok: true, reason: undefined })
     }
   })

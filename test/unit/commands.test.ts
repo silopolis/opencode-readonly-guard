@@ -63,8 +63,8 @@ describe("check", () => {
     expect(cli("check", "ls -la")).toBe(EXIT.allow)
     expect(stdout).toBe("allow\n")
     stdout = ""
-    expect(cli("check", "whoami")).toBe(EXIT.ask)
-    expect(stdout).toBe("ask    needs approval: whoami\n")
+    expect(cli("check", "uptime")).toBe(EXIT.ask)
+    expect(stdout).toBe("ask    needs approval: uptime\n")
     stdout = ""
     expect(cli("check", "ls", ">", "f")).toBe(EXIT.block)
     expect(stdout).toBe('block  write redirection "> f"\n')
@@ -76,9 +76,9 @@ describe("check", () => {
   })
 
   test("learned rules from the store are taken into account, unless --no-store", () => {
-    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["whoami *"] }))
-    expect(cli("check", "whoami")).toBe(EXIT.allow)
-    expect(cli("check", "--no-store", "whoami")).toBe(EXIT.ask)
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["uptime *"] }))
+    expect(cli("check", "uptime")).toBe(EXIT.allow)
+    expect(cli("check", "--no-store", "uptime")).toBe(EXIT.ask)
   })
 
   test("inside herdr the UI commands are allowed, anywhere else they ask", () => {
@@ -120,7 +120,7 @@ describe("check", () => {
 
 describe("vet", () => {
   test("accepts and refuses patterns", () => {
-    expect(cli("vet", "whoami", "*")).toBe(0)
+    expect(cli("vet", "uptime", "*")).toBe(0)
     expect(stdout).toContain("ok")
     expect(cli("vet", "rm *")).toBe(1)
     expect(stdout).toContain("refused")
@@ -157,11 +157,11 @@ describe("review", () => {
       reply: "always",
       permission: "bash",
       agent: "plan",
-      patterns: ["whoami"],
-      always: ["whoami *"],
+      patterns: ["uptime"],
+      always: ["uptime *"],
     })
     expect(cli("review")).toBe(0)
-    expect(stdout).toContain("1. `whoami`")
+    expect(stdout).toContain("1. `uptime`")
   })
 
   test("--store and --log-dir override the environment", () => {
