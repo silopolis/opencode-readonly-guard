@@ -314,6 +314,89 @@ describe("analyze", () => {
     expect(reason("systemctl restart sshd")).toContain("systemctl restart")
   })
 
+  test("systemctl: read verbs pass, also after options that take a value", () => {
+    for (const command of [
+      "systemctl show-environment",
+      "systemctl --user show-environment",
+      "systemctl get-default",
+      "systemctl is-system-running",
+      "systemctl -t service list-units",
+      "systemctl --type service --state failed list-units",
+      "systemctl -p Id -p ActiveState show sshd",
+      "systemctl -at service list-units",
+      "systemctl -n 20 status sshd",
+      "systemctl --user list-unit-files --state=enabled --no-pager",
+      "systemctl --user list-units 'omalap-*' --no-pager --no-legend",
+      "systemctl status sshd -H host",
+      "systemctl status sshd --host=host",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    for (const command of [
+      "systemctl -t service restart sshd",
+      "systemctl -p Id stop sshd",
+      "systemctl --user --no-pager daemon-reload",
+      "systemctl set-environment A=1",
+      "systemctl edit sshd",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("systemctl") })
+    }
+  })
+
+  test("systemctl: -H and -M only as separate options, so that the ask rules see them", () => {
+    for (const command of [
+      "systemctl status -aH host sshd",
+      "systemctl status -lHhost sshd",
+      "systemctl -qM box status",
+      "systemctl status --ho=host sshd",
+      "systemctl status --hos host sshd",
+      "systemctl status --mach=box sshd",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("separate") })
+    }
+  })
+
+  test("journalctl: maintenance and write flags are blocked, abbreviated too", () => {
+    for (const command of [
+      "journalctl --vacuum-time=1d",
+      "journalctl --vac=1d",
+      "journalctl --vacuum-s 1G",
+      "journalctl --rotate",
+      "journalctl --rot",
+      "journalctl --flush",
+      "journalctl --fl",
+      "journalctl --sync",
+      "journalctl -f --synchronize-on-exit=yes",
+      "journalctl --relinquish-var",
+      "journalctl --smart-relinquish-var",
+      "journalctl --sm",
+      "journalctl --setup-keys",
+      "journalctl --se",
+      "journalctl --update-catalog",
+      "journalctl --up",
+      "journalctl -u sshd --cursor-file=/tmp/cursor",
+      "journalctl -u sshd --cursor-f /tmp/cursor",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("journalctl") })
+    }
+    for (const command of [
+      "journalctl -u sshd --since today",
+      "journalctl --user -u omalap-sync -n 50 --no-pager",
+      "journalctl -b -1 -p err",
+      "journalctl --cursor=s=abc",
+      "journalctl --since=-1h --until now",
+      "journalctl --list-boots",
+      "journalctl --disk-usage",
+      "journalctl --verify",
+      "journalctl -o json --output-fields=MESSAGE",
+      "journalctl --root /mnt -k",
+      "journalctl -g 'rotate' --system",
+      "journalctl -- --rotate",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("sed -i and perl -i edit in place", () => {
     expect(analyze("sed -n 1p f")).toEqual({ block: false })
     expect(reason("sed -i s/a/b/ f")).toContain("sed -i")

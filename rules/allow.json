@@ -233,6 +233,74 @@
     { "pattern": "herdr agent read *", "reason": "read an agent's terminal output" },
     { "pattern": "herdr agent wait *", "reason": "wait for an agent state (pass --timeout)" },
     { "pattern": "herdr agent explain *", "reason": "explain agent detection state" },
+    {
+      "pattern": "systemctl status *",
+      "reason": "show the runtime status of units (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl show *", "reason": "show unit properties (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl cat *",
+      "reason": "print unit files and drop-ins (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-active *",
+      "reason": "check whether units are active (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-enabled *",
+      "reason": "check whether unit files are enabled (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-failed *",
+      "reason": "check whether units have failed (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl is-system-running *",
+      "reason": "check whether the system is fully running (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-units *", "reason": "list loaded units (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl list-unit-files *",
+      "reason": "list installed unit files (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-timers *", "reason": "list timers (-H/-M ask; the other verbs are blocked)" },
+    { "pattern": "systemctl list-sockets *", "reason": "list socket units (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl list-dependencies *",
+      "reason": "list the dependencies of a unit (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl list-jobs *", "reason": "list queued jobs (-H/-M ask; the other verbs are blocked)" },
+    {
+      "pattern": "systemctl show-environment *",
+      "reason": "print the manager's environment (-H/-M ask; the other verbs are blocked)"
+    },
+    {
+      "pattern": "systemctl get-default *",
+      "reason": "print the default target (-H/-M ask; the other verbs are blocked)"
+    },
+    { "pattern": "systemctl --user status *", "reason": "show the runtime status of units, user manager" },
+    { "pattern": "systemctl --user show *", "reason": "show unit properties, user manager" },
+    { "pattern": "systemctl --user cat *", "reason": "print unit files and drop-ins, user manager" },
+    { "pattern": "systemctl --user is-active *", "reason": "check whether units are active, user manager" },
+    { "pattern": "systemctl --user is-enabled *", "reason": "check whether unit files are enabled, user manager" },
+    { "pattern": "systemctl --user is-failed *", "reason": "check whether units have failed, user manager" },
+    {
+      "pattern": "systemctl --user is-system-running *",
+      "reason": "check whether the system is fully running, user manager"
+    },
+    { "pattern": "systemctl --user list-units *", "reason": "list loaded units, user manager" },
+    { "pattern": "systemctl --user list-unit-files *", "reason": "list installed unit files, user manager" },
+    { "pattern": "systemctl --user list-timers *", "reason": "list timers, user manager" },
+    { "pattern": "systemctl --user list-sockets *", "reason": "list socket units, user manager" },
+    { "pattern": "systemctl --user list-dependencies *", "reason": "list the dependencies of a unit, user manager" },
+    { "pattern": "systemctl --user list-jobs *", "reason": "list queued jobs, user manager" },
+    { "pattern": "systemctl --user show-environment *", "reason": "print the manager's environment, user manager" },
+    { "pattern": "systemctl --user get-default *", "reason": "print the default target, user manager" },
+    { "pattern": "rtk systemctl status *", "reason": "`systemctl status` after the rtk plugin rewrites it" },
+    {
+      "pattern": "journalctl *",
+      "reason": "read the journal (--vacuum-*, --rotate, --flush, --sync, --cursor-file, ... are in ask.json)"
+    },
     { "pattern": "tee /dev/null", "reason": "exact match only: tee to the null device writes nothing" }
   ]
 }

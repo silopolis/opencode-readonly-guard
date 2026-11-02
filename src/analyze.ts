@@ -1,4 +1,5 @@
 import { basename } from "node:path"
+import { journalctlWrites, systemctlWrites } from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
 
@@ -418,15 +419,8 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       return safe ? null : "wget downloads to a file (use -O - to print instead)"
     }
     if (name === "crontab" && !has("-l")) return "crontab modifies the crontab"
-    if (name === "systemctl") {
-      if (firstArg && !/^(status|show|cat|help|list-.*|is-.*)$/.test(firstArg)) {
-        return `systemctl ${firstArg} changes system state`
-      }
-      return null
-    }
-    if (name === "journalctl" && args.some((arg) => /^--(vacuum|rotate|flush|sync|relinquish)/.test(arg))) {
-      return "journalctl maintenance flags modify journals"
-    }
+    if (name === "systemctl") return systemctlWrites(args)
+    if (name === "journalctl") return journalctlWrites(args)
     if (name === "git") return gitWrites(args, depth)
     if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {

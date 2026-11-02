@@ -37,6 +37,50 @@
       "pattern": "mise *-y*",
       "reason": "mise -y/--yes answers yes to every prompt, such as trusting a config file"
     },
+    { "pattern": "systemctl * -H*", "reason": "systemctl -H HOST operates on another host over ssh" },
+    { "pattern": "systemctl *--host*", "reason": "systemctl --host operates on another host over ssh" },
+    { "pattern": "systemctl * -M*", "reason": "systemctl -M CONTAINER operates on a local container" },
+    { "pattern": "systemctl *--machine*", "reason": "systemctl --machine operates on a local container" },
+    { "pattern": "rtk systemctl * -H*", "reason": "systemctl -H HOST operates on another host over ssh" },
+    { "pattern": "rtk systemctl *--host*", "reason": "systemctl --host operates on another host over ssh" },
+    { "pattern": "rtk systemctl * -M*", "reason": "systemctl -M CONTAINER operates on a local container" },
+    { "pattern": "rtk systemctl *--machine*", "reason": "systemctl --machine operates on a local container" },
+    {
+      "pattern": "journalctl *--cursor-*",
+      "reason": "journalctl --cursor-file=FILE writes the cursor to FILE (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--fl*",
+      "reason": "journalctl --flush moves the runtime journal to disk (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--rel*",
+      "reason": "journalctl --relinquish-var moves journald back to /run (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--rot*",
+      "reason": "journalctl --rotate rotates the journal files (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--se*",
+      "reason": "journalctl --setup-keys writes sealing keys (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--sm*",
+      "reason": "journalctl --smart-relinquish-var moves journald back to /run (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--syn*",
+      "reason": "journalctl --sync / --synchronize-on-exit make journald write to disk (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--up*",
+      "reason": "journalctl --update-catalog writes the message catalog (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "journalctl *--va*",
+      "reason": "journalctl --vacuum-* deletes journal files (any abbreviation; blocked by the guard)"
+    },
     { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
     {
       "pattern": "herdr --machine *",
