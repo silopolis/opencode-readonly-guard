@@ -109,6 +109,9 @@
     { "command": "herdr worktree list --trust-repository", "verdict": "ask" },
     { "command": "herdr agent list && herdr agent prompt reviewer hi", "verdict": "ask" },
     { "command": "rtk herdr agent prompt reviewer hi", "verdict": "ask" },
+    { "command": "git commit --help", "verdict": "ask" },
+    { "command": "herdr worktree create --help", "verdict": "ask" },
+    { "command": "npm install --help", "verdict": "ask" },
     { "command": "rtk read /etc/hostname > /tmp/opencode/g1", "verdict": "block", "reason": "write redirection" },
     { "command": "ls | cat > /tmp/opencode/g2", "verdict": "block", "reason": "write redirection" },
     { "command": "{ cat /etc/hostname; } > /tmp/opencode/g3", "verdict": "block", "reason": "write redirection" },
@@ -174,6 +177,13 @@
     { "command": "herdr update", "verdict": "block", "reason": "herdr update" },
     { "command": "herdr config reset-keys", "verdict": "block", "reason": "herdr config reset-keys" },
     { "command": "herdr worktree create --branch x", "verdict": "block", "reason": "herdr worktree create" },
+    {
+      "command": "herdr worktree create --branch x --help",
+      "verdict": "block",
+      "reason": "herdr worktree create"
+    },
+    { "command": "git commit -m x --help", "verdict": "block", "reason": "git commit" },
+    { "command": "npm install left-pad --help", "verdict": "block", "reason": "npm install" },
     {
       "command": "herdr --machine box worktree remove --path p",
       "verdict": "block",

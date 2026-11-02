@@ -210,6 +210,37 @@ describe("analyze", () => {
     expect(analyze("herdr pane run w1:p2 'git log --oneline | head'")).toEqual({ block: false })
   })
 
+  test("a sole --help after a git, herdr, npm or mise subcommand only prints help", () => {
+    for (const command of [
+      "git commit --help",
+      "git push --help",
+      "git -C repo commit --help",
+      "rtk git commit --help",
+      "herdr worktree create --help",
+      "herdr update --help",
+      "herdr plugin install --help",
+      "npm install --help",
+      "npm ci --help",
+      "mise use --help",
+      "mise install --help",
+      "mise generate task-docs --help",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+    // anything else next to it is judged as usual, and -h is not special
+    for (const command of [
+      "git commit -m x --help",
+      "git commit --help -m x",
+      "git commit -h",
+      "herdr worktree create --branch x --help",
+      "npm install left-pad --help",
+      "npm install -h",
+      "mise use -g node --help",
+    ]) {
+      expect({ command, blocked: analyze(command).block }).toEqual({ command, blocked: true })
+    }
+  })
+
   test("unparsable input is blocked rather than guessed at", () => {
     expect(reason("echo 'oops")).toContain("could not parse")
   })

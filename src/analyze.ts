@@ -74,6 +74,17 @@ const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh", "fish"])
 const COMPRESSORS = new Set(["gzip", "gunzip", "bzip2", "bunzip2", "xz", "unxz", "zstd", "unzstd", "lz4"])
 const MAX_DEPTH = 5
 
+/**
+ * `<subcommand path> --help` and nothing else: git (which turns it into `git help <subcommand>`), herdr, npm and
+ * mise print the help and run nothing, so it is not the subcommand's write. Only a sole trailing `--help` after at
+ * most `maxWords` plain words counts; `-h` and `--help` next to other options are judged as usual.
+ */
+const helpRequest = (args: readonly string[], maxWords: number): boolean =>
+  args.length >= 2 &&
+  args.length <= maxWords + 1 &&
+  args.at(-1) === "--help" &&
+  args.slice(0, -1).every((arg) => !arg.startsWith("-"))
+
 function redirectionWrites({ op, target }: Redirection): string | null {
   const base = op.replace(/^(\d+|\{[^}]*\})/, "")
   if (base === "<" || base === "<<<" || base === "<&") return null
@@ -290,6 +301,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (name === "git") return gitWrites(args)
     if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {
+      if ((name === "npm" && helpRequest(args, 1)) || (name === "mise" && helpRequest(args, 2))) return null
       if (firstArg && packageWrite.has(firstArg)) return `${name} ${firstArg} modifies dependencies or files`
       if (name === "go" && firstArg === "mod") {
         const sub = args[args.indexOf("mod") + 1] ?? ""
@@ -326,6 +338,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       if (HERDR_OPTIONS_WITH_ARGUMENT.has(args[j++])) j++
     }
     const rest = args.slice(j)
+    if (helpRequest(rest, 3)) return null
     const words: string[] = []
     for (const word of rest) {
       if (word.startsWith("-") || words.length === 3) break
@@ -359,7 +372,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     }
     const sub = args[j]
     const rest = args.slice(j + 1)
-    if (!sub) return null
+    if (!sub || helpRequest(args.slice(j), 1)) return null
     const has = (...flags: string[]) => rest.some((arg) => flags.includes(arg))
     const positional = rest.filter((arg) => !arg.startsWith("-"))
     const startsWithAny = (...prefixes: string[]) =>
