@@ -237,6 +237,9 @@ upstream issue (they are in [TODO.md](TODO.md)).
 - opencode treats every export of a plugin module as a plugin and calls it. Export only the default definition.
 - A package is loaded from `exports["./server"]`, else `main`. A default export `{ id, server }` is supported since
   1.18.29. `engines.opencode` is enforced. Peer dependencies such as `@opencode-ai/plugin` are installed for you.
+- That install only happens for npm packages. A plugin loaded from a path (`file://…`) resolves its imports from that
+  path, and if one fails (no `node_modules` there) opencode drops the plugin without a log line, even at `DEBUG`, while
+  `opencode debug config` still lists it. This is why `dist/` is a bundle that only imports Node built-ins.
 - opencode 2.x plugins are `Plugin.define({ id, setup })`, V1 plugins do not run there, and V2 has a real
   `permission.hook("evaluate")` that would remove most of these workarounds.
 

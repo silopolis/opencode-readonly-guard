@@ -88,13 +88,13 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       instance wins: if a global instance is already loaded and the project config also lists the plugin, the
       project's options should take effect (re-run the config injection with the project's options, replacing the
       global instance's rules) rather than being ignored. Cover it with an integration test that loads both.
-- [ ] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
-      a `node_modules` (bundle it, or drop the value import of `tool`). Today `dist/tools.js` imports it at runtime,
-      so a checkout without `node_modules` (a restore that skips it, a fresh clone) is dropped by opencode without a
-      word.
+- [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
+      a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
+      tool arguments, is a legacy path that makes every argument required and validates none.
 - [ ] Detect and report a plugin that fails to load instead of being dropped silently (for example a startup
       self-check, or documented `doctor` output). opencode logs nothing about it, even at `DEBUG`.
-- [ ] Add an integration test that loads the built plugin from a directory without `node_modules`.
+- [x] Add an integration test that loads the built plugin from a directory without `node_modules` (the packed
+      tarball, unpacked as is).
 
 ## Repository
 
