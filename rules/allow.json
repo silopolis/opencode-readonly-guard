@@ -126,6 +126,39 @@
       "reason": "show registry information about a package (--cache/--logs-dir are in ask.json)"
     },
     { "pattern": "mise --version", "reason": "print the mise version" },
+    {
+      "pattern": "node --version",
+      "reason": "print the Node.js version (exact: node with any other argument runs code)"
+    },
+    {
+      "pattern": "python3 --version",
+      "reason": "print the Python version (exact: python3 with any other argument runs code)"
+    },
+    { "pattern": "bun --version", "reason": "print the Bun version" },
+    { "pattern": "npm --version", "reason": "print the npm version" },
+    { "pattern": "git --version", "reason": "print the git version" },
+    {
+      "pattern": "gh --version",
+      "reason": "print the gh version (gh writes its own device id under ~/.local/state on first run)"
+    },
+    { "pattern": "opencode --version", "reason": "print the opencode version (opencode writes its own log file)" },
+    { "pattern": "hk --version", "reason": "print the hk version" },
+    { "pattern": "docker --version", "reason": "print the docker client version" },
+    { "pattern": "podman --version", "reason": "print the podman version" },
+    { "pattern": "VBoxManage --version", "reason": "print the VirtualBox version" },
+    { "pattern": "vagrant --version", "reason": "print the vagrant version (it does not evaluate the Vagrantfile)" },
+    { "pattern": "chezmoi --version", "reason": "print the chezmoi version" },
+    { "pattern": "flatpak --version", "reason": "print the flatpak version" },
+    { "pattern": "virsh --version", "reason": "print the virsh version" },
+    {
+      "pattern": "mise version",
+      "reason": "exact match only: print the mise version (mise keeps its own state and version-check cache)"
+    },
+    { "pattern": "mise which *", "reason": "print the path of the executable mise would run" },
+    {
+      "pattern": "mise where *",
+      "reason": "print the install directory of an installed tool version (it fails rather than installs)"
+    },
     { "pattern": "mise ls *", "reason": "list installed and requested tool versions" },
     { "pattern": "mise ls-remote *", "reason": "list the versions a tool can be installed in" },
     { "pattern": "mise tasks", "reason": "exact match only: list tasks (mise tasks add/edit/run change or run tasks)" },
