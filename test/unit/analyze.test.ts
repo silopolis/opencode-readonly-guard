@@ -279,6 +279,18 @@ describe("analyze", () => {
     expect(analyze("cargo tree")).toEqual({ block: false })
   })
 
+  test("package managers: `set` writes configuration (`mise set K=V` edits mise.toml)", () => {
+    for (const command of [
+      "mise set FOO=1",
+      "mise set --global FOO=1",
+      "npm set fund false",
+      "yarn set version stable",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining(" set ") })
+    }
+    expect(analyze("mise set --help")).toEqual({ block: false })
+  })
+
   test("curl and wget", () => {
     expect(analyze("curl -s https://x")).toEqual({ block: false })
     expect(analyze("curl -o /dev/null https://x")).toEqual({ block: false })

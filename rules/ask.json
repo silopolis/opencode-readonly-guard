@@ -31,6 +31,12 @@
       "reason": "git ls-remote --exec=CMD runs CMD (any abbreviation; blocked when CMD writes)"
     },
     { "pattern": "sort *--t*", "reason": "sort --temporary-directory=DIR writes temporary files into DIR" },
+    { "pattern": "npm view *--cach*", "reason": "npm --cache=DIR writes the package cache into DIR" },
+    { "pattern": "npm view *--logs-d*", "reason": "npm --logs-dir=DIR writes debug logs into DIR" },
+    {
+      "pattern": "mise *-y*",
+      "reason": "mise -y/--yes answers yes to every prompt, such as trusting a config file"
+    },
     { "pattern": "herdr", "reason": "bare herdr launches or attaches the terminal UI" },
     {
       "pattern": "herdr --machine *",

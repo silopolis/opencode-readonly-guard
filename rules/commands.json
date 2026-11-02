@@ -82,6 +82,7 @@
       "unlink",
       "sync",
       "get",
+      "set",
       "dedupe",
       "prune",
       "rebuild",
