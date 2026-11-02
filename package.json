@@ -47,7 +47,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && bun build src/index.ts src/cli.ts --outdir dist --target node && cp node_modules/zod/LICENSE dist/zod.LICENSE",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --deny-warnings",
     "fmt": "prettier --write .",

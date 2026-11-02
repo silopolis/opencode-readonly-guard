@@ -62,6 +62,7 @@ describe("npm package", () => {
         "dist/index.js",
         "dist/index.d.ts",
         "dist/cli.js",
+        "dist/zod.LICENSE", // zod is bundled into dist/index.js
         "rules/allow.json",
         "rules/cases.json",
         "LICENSE",
