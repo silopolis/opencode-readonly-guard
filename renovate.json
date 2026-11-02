@@ -33,6 +33,11 @@
       "allowedVersions": "<2"
     },
     {
+      "description": "Node.js stays on 24.x, the version pinned in mise.toml (and so in CI); @types/node follows the runtime",
+      "matchPackageNames": ["node", "@types/node"],
+      "allowedVersions": "<25"
+    },
+    {
       "description": "Renovate does not read aqua's version_filter for opencode: apply it here (plain vX.Y.Z tags, not vscode-v*)",
       "matchDepNames": ["aqua:anomalyco/opencode"],
       "extractVersion": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
