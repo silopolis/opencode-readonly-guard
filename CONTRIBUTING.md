@@ -78,6 +78,17 @@ opt-in because they use a real model.
 - The pre-commit hook (hk) runs prettier, oxlint, tsc, actionlint and whitespace checks; CI runs the same plus the
   tests. Please run `mise run check` before pushing.
 
+## Dependency updates
+
+[Renovate](https://docs.renovatebot.com) (`renovate.json`) opens the update pull requests once a week: npm packages
+with `bun.lock`, the tools in `mise.toml`, the hk version in `hk.pkl`, and the GitHub Actions, pinned to commit SHAs.
+Minor and patch updates are grouped into one pull request, majors come one by one, Actions have their own group, and
+commits are `build(deps): …` or `ci(deps): …`. The supported ranges (`peerDependencies`, `engines`) are left alone.
+
+opencode (`aqua:anomalyco/opencode` in `mise.toml`) and `@opencode-ai/plugin` come together in an "opencode" pull
+request and stay below 2.0. CI runs the integration tests against the new version; run `mise run test:integration`
+locally as well before merging, and update "Tested with opencode …" in the README once it passes.
+
 ## Reporting a bypass
 
 If a command writes from a read-only agent without being blocked or asked about, open an issue with the command, the

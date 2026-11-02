@@ -85,15 +85,16 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 
 ## Repository
 
-- [ ] opencode project config for contributors: `opencode.json` and `.opencode/` in this repository (an `AGENTS.md`
-      with the commands and conventions, the repository's own plugin loaded from `dist/` for dogfooding, a
-      `permission` setup that allows the mise tasks, and project commands such as `/check` and `/add-rule`). Keep the
-      plugin out of it when the contributor already has it globally (see "Loading").
-- [ ] Automated dependency updates: a Renovate or Dependabot config covering npm (bun lockfile), GitHub Actions
-      (pinned to SHAs) and the mise tool versions in `mise.toml`, with grouped minor/patch updates and the
-      conventional-commit prefix (`build(deps):`, `ci(deps):`). Renovate handles `mise.toml` and bun; Dependabot does
-      not, so Renovate is likely the better fit. Also bump the pinned opencode version and run the integration suite
-      against it.
+- [x] opencode project config for contributors: an `AGENTS.md` with the commands and conventions, `opencode.json`
+      with a `permission` setup that allows the check tasks and read-only `git`/`gh`, and the project commands
+      `/check` and `/add-rule` in `.opencode/commands/`.
+  - [ ] Load the repository's own plugin from `dist/` for dogfooding. Waits for "Loading": a contributor who already
+        has the plugin globally would load it twice.
+- [x] Automated dependency updates: Renovate (`renovate.json`; Dependabot handles neither `mise.toml` nor bun) for
+      npm and `bun.lock`, `mise.toml` (opencode included), `hk.pkl` and the GitHub Actions (pinned to SHAs), with
+      grouped minor/patch updates and `build(deps):` / `ci(deps):` commits.
+  - [ ] Enable the Renovate GitHub app on the repository, then merge its first "opencode" pull request (the pinned
+        opencode bump) once `mise run test:integration` passes against it.
 
 ## Testing
 
