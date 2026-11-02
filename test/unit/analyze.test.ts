@@ -171,6 +171,79 @@ describe("analyze", () => {
     }
   })
 
+  test("git branch and tag: only real listing flags list; anything else with a name creates a ref", () => {
+    // checked against git 2.53: these flags do not switch to list mode, so a name creates a branch or tag
+    for (const command of [
+      "git branch -v newb",
+      "git branch -vv newb",
+      "git branch --verbose newb",
+      "git branch --sort=-committerdate newb",
+      "git branch --format='%(refname)' newb",
+      "git branch --color newb",
+      "git tag --sort=refname v9",
+      "git tag --format=x v9",
+      "git tag -i v9",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("creates a") })
+    }
+    // write options, abbreviated (git accepts any unambiguous prefix) or bundled
+    for (const command of [
+      "git branch -a --edit-desc",
+      "git branch --edit-description",
+      "git branch --unset-up",
+      "git branch --set-upstream-t=origin/main",
+      "git branch -uorigin/main",
+      "git branch -l --del x",
+      "git branch -rd origin/x",
+      "git tag -l --del v1",
+      "git tag -am x v1",
+      "git tag --annot v1",
+    ]) {
+      expect({ command, blocked: analyze(command).block }).toEqual({ command, blocked: true })
+    }
+    for (const command of [
+      "git branch",
+      "git branch -v",
+      "git branch -vv",
+      "git branch -a -v",
+      "git branch --sort=-committerdate",
+      "git branch --format='%(refname:short)'",
+      "git branch --show-current",
+      "git branch --contains=HEAD",
+      "git branch --contains task",
+      "git branch -r --merged main",
+      "git branch -l 'feat/*'",
+      "git tag",
+      "git tag -n1 v0.1.0",
+      "git tag -n20 v0.2.0",
+      "git tag -l -n5 v0.2.0 v0.1.0",
+      "git tag --sort=-v:refname",
+      "git tag -l --format='%(refname)'",
+      "git tag --contains=HEAD",
+      "git tag -v v1",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("git ls-remote: --upload-pack and --exec run a command", () => {
+    for (const command of [
+      "git ls-remote --upload-pack='touch /tmp/x' .",
+      "git ls-remote --upload-pack 'rm -rf x' .",
+      "git ls-remote --upl='rm x' .",
+      "git ls-remote --exec='touch /tmp/x' .",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("ls-remote") })
+    }
+    for (const command of [
+      "git ls-remote origin",
+      "git ls-remote --heads --tags origin",
+      "git ls-remote --upload-pack=git-upload-pack .",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git remote: only listing, show and get-url are reads, whatever options come first", () => {
     for (const command of [
       "git remote -v add o https://x",

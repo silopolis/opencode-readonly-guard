@@ -149,6 +149,7 @@
       "grep",
       "cat-file",
       "rev-list",
+      "ls-remote",
       "for-each-ref",
       "show-ref",
       "name-rev",

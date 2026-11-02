@@ -153,6 +153,51 @@ function commandStart(words: readonly string[]): number {
   return k
 }
 
+/** Is `arg` one of the long options `names`, possibly abbreviated (`--edit-desc`), possibly with `=value`? */
+function isLongOption(arg: string, names: readonly string[]): boolean {
+  if (!arg.startsWith("--")) return false
+  const name = arg.slice(2).split("=")[0]
+  return name.length > 0 && names.some((full) => full.startsWith(name))
+}
+
+/** Is there a write option: a short one in a bundle (`-rd`), or a long one, abbreviated or not? */
+function writesWith(args: readonly string[], shortLetters: string, longNames: readonly string[]): boolean {
+  return args.some(
+    (arg) =>
+      (/^-[^-]/.test(arg) && Array.from(arg.slice(1)).some((letter) => shortLetters.includes(letter))) ||
+      isLongOption(arg, longNames),
+  )
+}
+
+const BRANCH_WRITE = [
+  "delete",
+  "move",
+  "copy",
+  "force",
+  "set-upstream-to",
+  "set-upstream",
+  "unset-upstream",
+  "edit-description",
+  "track",
+  "no-track",
+  "create-reflog",
+  "recurse-submodules",
+]
+const TAG_WRITE = [
+  "delete",
+  "annotate",
+  "sign",
+  "no-sign",
+  "local-user",
+  "force",
+  "message",
+  "file",
+  "edit",
+  "cleanup",
+  "create-reflog",
+  "trailer",
+]
+
 /** uniq's options that take a value: `-f N`, `-s N`, `-w N` and their long forms (abbreviations included). */
 const UNIQ_SHORT_WITH_VALUE = new Set(["f", "s", "w"])
 const UNIQ_LONG_WITH_VALUE = ["skip-fields", "skip-chars", "check-chars"]
@@ -382,7 +427,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     if (name === "journalctl" && args.some((arg) => /^--(vacuum|rotate|flush|sync|relinquish)/.test(arg))) {
       return "journalctl maintenance flags modify journals"
     }
-    if (name === "git") return gitWrites(args)
+    if (name === "git") return gitWrites(args, depth)
     if (name === "herdr") return herdrWrites(args, depth)
     if (packageManagers.has(name)) {
       if ((name === "npm" && helpRequest(args, 1)) || (name === "mise" && helpRequest(args, 2))) return null
@@ -463,7 +508,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     return null
   }
 
-  function gitWrites(args: readonly string[]): string | null {
+  function gitWrites(args: readonly string[], depth: number): string | null {
     let j = 0
     while (j < args.length && args[j].startsWith("-")) {
       const option = args[j++]
@@ -486,33 +531,33 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
     switch (sub) {
       case "stash":
         return rest[0] && ["list", "show"].includes(rest[0]) ? null : "git stash modifies the working tree"
+      // Only the flags below switch to list mode (or make git refuse a name). -v, --sort, --format, --color, …
+      // do not: `git branch -v NAME` and `git tag --sort=x NAME` create a ref. Write options count in any
+      // abbreviation git accepts (`--edit-desc`) and in bundles (`-rd`, `-uorigin/main`).
       case "branch": {
-        if (
-          has("-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "-f", "--force", "-u") ||
-          has("--unset-upstream", "--edit-description", "-t", "--track") ||
-          startsWithAny("--set-upstream-to")
-        ) {
-          return "git branch modifies branches"
-        }
+        if (writesWith(rest, "dDmMcCfut", BRANCH_WRITE)) return "git branch modifies branches"
         const listing =
-          has("-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose", "--contains") ||
-          has("--no-contains", "--merged", "--no-merged", "--points-at", "--show-current") ||
-          startsWithAny("--format", "--sort")
+          has("-l", "--list", "-a", "--all", "-r", "--remotes", "--show-current") ||
+          startsWithAny("--contains", "--no-contains", "--merged", "--no-merged", "--points-at")
         return positional.length && !listing ? "git branch <name> creates a branch" : null
       }
       case "tag": {
-        if (
-          has("-d", "--delete", "-a", "--annotate", "-s", "--sign", "-u", "--local-user", "-f", "--force") ||
-          has("-m", "--message", "-F", "--file", "-e", "--edit")
-        ) {
-          return "git tag modifies tags"
-        }
+        if (writesWith(rest, "dasufmFe", TAG_WRITE)) return "git tag modifies tags"
         const listing =
-          has("-l", "--list", "-n", "--contains", "--no-contains", "--merged", "--no-merged", "--points-at") ||
-          has("-v", "--verify") ||
-          startsWithAny("--format", "--sort")
+          has("-l", "--list", "-v", "--verify") ||
+          rest.some((arg) => /^-n\d*$/.test(arg)) ||
+          startsWithAny("--contains", "--no-contains", "--merged", "--no-merged", "--points-at")
         return positional.length && !listing ? "git tag <name> creates a tag" : null
       }
+      case "ls-remote":
+        for (let k = 0; k < rest.length; k++) {
+          if (!isLongOption(rest[k], ["upload-pack", "exec"])) continue
+          const arg = rest[k]
+          const program = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : (rest[k + 1] ?? "")
+          const verdict = analyzeCommand(program, depth + 1)
+          if (verdict.block) return `git ls-remote --upload-pack runs a command: ${verdict.reason}`
+        }
+        return null
       case "remote": {
         // `-v` may come before the subcommand (`git remote -v add …` adds a remote)
         const action = rest.find((arg) => !arg.startsWith("-"))
