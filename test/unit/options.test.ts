@@ -42,10 +42,27 @@ describe("resolveOptions", () => {
     })
   })
 
+  test("reads presets, and whether opencode runs inside herdr", () => {
+    expect(resolveOptions({ presets: { "herdr-ui": false } }, {})).toMatchObject({
+      presets: { "herdr-ui": false },
+      insideHerdr: false,
+    })
+    expect(resolveOptions({}, { HERDR_ENV: "1" })).toMatchObject({ presets: {}, insideHerdr: true })
+    expect(resolveOptions({}, { HERDR_ENV: "0" }).insideHerdr).toBe(false)
+    expect(resolveOptions({}, { HERDR_ENV: "true" }).insideHerdr).toBe(false)
+  })
+
   test("ignores wrongly typed values and says so", () => {
-    const options = resolveOptions({ allow: "whoami", toast: "no", store: 3, command: 5 })
-    expect(options).toMatchObject({ allow: [], toast: true, command: "guard-review" })
-    expect(options.warnings).toHaveLength(4)
+    const options = resolveOptions({
+      allow: "whoami",
+      toast: "no",
+      store: 3,
+      command: 5,
+      presets: { "herdr-ui": "off" },
+    })
+    expect(options).toMatchObject({ allow: [], toast: true, command: "guard-review", presets: {} })
+    expect(options.warnings).toHaveLength(5)
+    expect(resolveOptions({ presets: ["herdr-ui"] }).warnings).toHaveLength(1)
   })
 
   test("tolerates non-object options", () => {

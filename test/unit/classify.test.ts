@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { classifyPattern, normalizePattern } from "../../src/classify.js"
+import { classifyPattern, isHerdrUiPattern, normalizePattern } from "../../src/classify.js"
 import { loadRules } from "../../src/rules.js"
 
 describe("normalizePattern", () => {
@@ -151,6 +151,28 @@ describe("classifyPattern: herdr", () => {
     expect(refused("herdr worktree create *")).toContain("herdr worktree create")
     expect(refused("herdr api schema --output f")).toContain("--output")
     expect(refused("herdr pane run w1:p2 rm x")).toContain("herdr pane run")
+  })
+
+  test("isHerdrUiPattern recognises the UI subcommands, and only them", () => {
+    const { commands } = loadRules()
+    for (const pattern of [
+      "herdr tab rename *",
+      "herdr notification show *",
+      "herdr tab rename w1:t1 x",
+      "rtk herdr tab rename *",
+    ]) {
+      expect({ pattern, ui: isHerdrUiPattern(pattern, commands) }).toEqual({ pattern, ui: true })
+    }
+    for (const pattern of [
+      "herdr tab *",
+      "herdr tab list *",
+      "herdr tab rename*",
+      "herdr agent list *",
+      "tab rename *",
+      "ls *",
+    ]) {
+      expect({ pattern, ui: isHerdrUiPattern(pattern, commands) }).toEqual({ pattern, ui: false })
+    }
   })
 
   test("the four lists do not overlap", () => {

@@ -18,6 +18,23 @@ const isOption = (word: string): boolean => word.startsWith("-")
 
 const UI_NOTE = "opt-in UI command: it only changes what herdr displays, and is never part of the shared allowlist"
 
+/** The leading words of herdr's arguments up to the first wildcard: the subcommand path and literal arguments. */
+const literalWords = (rest: readonly string[]): readonly string[] => {
+  const firstWildcard = rest.findIndex(hasWildcard)
+  return firstWildcard < 0 ? rest : rest.slice(0, firstWildcard)
+}
+
+/** Does `literal` start with one of `subcommands` (herdr subcommand paths of one to three words)? */
+const startsWithPath = (literal: readonly string[], subcommands: readonly string[]): boolean =>
+  [1, 2, 3].some((n) => literal.length >= n && subcommands.includes(literal.slice(0, n).join(" ")))
+
+/** Is this a pattern for one of herdr's opt-in UI subcommands (`herdr tab rename *`, `herdr notification show *`)? */
+export function isHerdrUiPattern(raw: string, { herdr }: Commands): boolean {
+  const words = normalizePattern(raw).split(" ")
+  const at = words[0] === "rtk" ? 1 : 0
+  return words[at] === "herdr" && startsWithPath(literalWords(words.slice(at + 1)), herdr.ui)
+}
+
 /**
  * herdr patterns are judged by subcommand, as for git. Only help, version and the read-only subcommands may be
  * allowed (with a wildcard after a read-only subcommand), plus the opt-in UI subcommands the user lists themselves.
@@ -35,13 +52,9 @@ function classifyHerdr(rest: readonly string[], { herdr }: Commands): PatternVer
     )
   }
 
-  // the leading words without a wildcard: the subcommand path, plus any literal arguments
-  const firstWildcard = rest.findIndex(hasWildcard)
-  const literal = firstWildcard < 0 ? rest : rest.slice(0, firstWildcard)
-  const within = (subcommands: readonly string[]) =>
-    [1, 2, 3].some((n) => literal.length >= n && subcommands.includes(literal.slice(0, n).join(" ")))
-  if (within(herdr.ui)) return { ok: true, note: UI_NOTE }
-  if (within(herdr.read)) return { ok: true }
+  const literal = literalWords(rest)
+  if (startsWithPath(literal, herdr.ui)) return { ok: true, note: UI_NOTE }
+  if (startsWithPath(literal, herdr.read)) return { ok: true }
 
   if (literal.length < 2 && rest.some(hasWildcard)) {
     return refuse("herdr wildcards are only allowed after a read-only subcommand (agent list, pane read, …)")

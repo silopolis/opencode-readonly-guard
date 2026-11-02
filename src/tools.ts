@@ -4,6 +4,7 @@ import { PERMISSION_CONFIRM, TOOL_REVIEW, TOOL_UPDATE } from "./constants.js"
 import type { GuardLog } from "./log.js"
 import type { RuleSet } from "./rules.js"
 import { review } from "./review.js"
+import type { EffectiveInput } from "./sources.js"
 import { loadStore, saveStore } from "./store.js"
 
 export interface ToolDependencies {
@@ -12,6 +13,8 @@ export interface ToolDependencies {
   log: GuardLog
   storeFile: string
   project: string
+  /** What the plugin was started with, for the presets in the review. Default: none, outside herdr. */
+  options?: EffectiveInput["options"]
 }
 
 /**
@@ -24,6 +27,7 @@ export function createTools({
   log,
   storeFile,
   project,
+  options,
 }: ToolDependencies): NonNullable<Hooks["tool"]> {
   return {
     [TOOL_REVIEW]: tool({
@@ -34,7 +38,7 @@ export function createTools({
       },
       async execute(args, context) {
         if (readOnly.has(context.agent)) throw new Error(`${TOOL_REVIEW} is not available in read-only agents`)
-        return review({ store: loadStore(storeFile), events: log.read(), rules, limit: args.limit ?? 10 })
+        return review({ store: loadStore(storeFile), events: log.read(), rules, limit: args.limit ?? 10, options })
       },
     }),
 

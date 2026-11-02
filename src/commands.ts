@@ -7,6 +7,7 @@ import { createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { review } from "./review.js"
 import { buildBashRules, loadRules } from "./rules.js"
+import { effectiveRules } from "./sources.js"
 import { loadStore } from "./store.js"
 
 export interface CliIo {
@@ -23,7 +24,9 @@ const HELP = `Usage: opencode-readonly-guard <command>
 
 Commands:
   check [--json] [--no-store] <command>   Explain what a read-only agent gets for a shell command.
-                                          Exit status: 0 allow, 1 ask, 2 block.
+                                          Exit status: 0 allow, 1 ask, 2 block. --no-store: shared rules only
+                                          (no store, no presets). Inside herdr (HERDR_ENV=1) the herdr-ui
+                                          preset applies.
   vet <pattern>                           Say whether a bash pattern may be added to the allowlist.
   rules [--json]                          Print the shared allowlist and the always-ask flags.
   review [--limit N] [--store F] [--log-dir D]
@@ -68,9 +71,11 @@ function check(args: string[], io: CliIo): number {
   }
   const rules = loadRules()
   const options = resolveOptions({}, io.env)
+  // --no-store means the shared rules only: no store, and no presets either
   const learned = noStore
     ? []
-    : loadStore(options.storeFile, () => undefined).allow.filter((p) => classifyPattern(p).ok)
+    : effectiveRules({ commands: rules.commands, store: loadStore(options.storeFile, () => undefined), options })
+        .patterns
   const decision = decide(command, buildBashRules(rules, learned))
   if (json) io.out(`${JSON.stringify({ command, ...decision })}\n`)
   else if (decision.verdict === "block") io.out(`block  ${decision.reason}\n`)
@@ -111,7 +116,7 @@ function printReview(args: string[], io: CliIo): number {
   }
   const options = resolveOptions({ store: takeValue(args, "--store"), logDir: takeValue(args, "--log-dir") }, io.env)
   io.out(
-    `${review({ store: loadStore(options.storeFile), events: createLog(options.logDir).read(), rules: loadRules(), limit })}\n`,
+    `${review({ store: loadStore(options.storeFile), events: createLog(options.logDir).read(), rules: loadRules(), limit, options })}\n`,
   )
   return 0
 }

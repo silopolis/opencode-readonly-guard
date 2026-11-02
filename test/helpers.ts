@@ -41,6 +41,8 @@ export interface SandboxOptions {
   plugin?: string | [string, Record<string, unknown>]
   /** Use the real opencode home (credentials, models) instead of an empty one. Needed for e2e tests only. */
   realHome?: boolean
+  /** Run opencode as if started from a herdr pane (`HERDR_ENV=1`). Default: never, whatever the caller's environment. */
+  herdr?: boolean
 }
 
 /** The package must be built first: opencode loads `dist/`. */
@@ -49,7 +51,7 @@ export function requireBuild(): void {
 }
 
 /** A throwaway project with the plugin configured, and an environment that keeps opencode away from the user's. */
-export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions = {}): Sandbox {
+export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }: SandboxOptions = {}): Sandbox {
   const dir = mkdtempSync(join(tmpdir(), "rg-sandbox-"))
   const project = join(dir, "project")
   const store = join(dir, "store.json")
@@ -64,6 +66,7 @@ export function sandbox({ plugin = pluginUrl, realHome = false }: SandboxOptions
   }
   // The suite may run from a herdr pane: whether opencode sees herdr must not depend on where the tests are started.
   for (const name of Object.keys(env)) if (name.startsWith("HERDR_")) delete env[name]
+  if (herdr) env.HERDR_ENV = "1"
   if (!realHome) {
     for (const [name, sub] of [
       ["XDG_CONFIG_HOME", "config"],

@@ -17,16 +17,43 @@ describe("store", () => {
 
   test("round-trips and creates parent directories", () => {
     const file = join(dir, "a", "b", "store.json")
-    const data = { allow: ["whoami *"], dismissed: ["x"], agents: { include: ["review"], exclude: [] } }
+    const data = {
+      allow: ["whoami *"],
+      dismissed: ["x"],
+      agents: { include: ["review"], exclude: [] },
+      presets: { "herdr-ui": false },
+    }
     saveStore(file, data)
     expect(loadStore(file)).toEqual(data)
     expect(JSON.parse(readFileSync(file, "utf8")).$comment).toContain("readonly-guard")
   })
 
+  test("a store without presets is written without a presets key", () => {
+    const file = join(dir, "store.json")
+    saveStore(file, { ...emptyStore(), allow: ["whoami *"] })
+    expect(Object.keys(JSON.parse(readFileSync(file, "utf8")))).toEqual(["$comment", "allow", "dismissed", "agents"])
+    expect(loadStore(file).presets).toEqual({})
+  })
+
   test("ignores wrongly typed entries", () => {
     const file = join(dir, "store.json")
-    writeFileSync(file, JSON.stringify({ allow: ["ok", 3, null], dismissed: "no", agents: { include: [1] } }))
-    expect(loadStore(file)).toEqual({ allow: ["ok"], dismissed: [], agents: { include: [], exclude: [] } })
+    writeFileSync(
+      file,
+      JSON.stringify({
+        allow: ["ok", 3, null],
+        dismissed: "no",
+        agents: { include: [1] },
+        presets: { "herdr-ui": false, other: "yes", third: 1 },
+      }),
+    )
+    expect(loadStore(file)).toEqual({
+      allow: ["ok"],
+      dismissed: [],
+      agents: { include: [], exclude: [] },
+      presets: { "herdr-ui": false },
+    })
+    writeFileSync(file, JSON.stringify({ presets: ["herdr-ui"] }))
+    expect(loadStore(file).presets).toEqual({})
   })
 
   test("a corrupt file throws, or is reported when a handler is given", () => {

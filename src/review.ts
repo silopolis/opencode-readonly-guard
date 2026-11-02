@@ -3,6 +3,7 @@ import { classifyPattern, normalizePattern } from "./classify.js"
 import { TOOL_UPDATE } from "./constants.js"
 import { clip, type LogEvent } from "./log.js"
 import { buildBashRules, type RuleSet } from "./rules.js"
+import { effectiveRules, type EffectiveInput } from "./sources.js"
 import type { StoreData } from "./store.js"
 import { evaluate } from "./wildcard.js"
 
@@ -61,6 +62,8 @@ export interface ReviewInput {
   rules: RuleSet
   /** Maximum number of candidates to list. */
   limit?: number
+  /** What the plugin was started with; decides which presets are on. Default: no options, outside herdr. */
+  options?: EffectiveInput["options"]
 }
 
 /**
@@ -68,15 +71,22 @@ export interface ReviewInput {
  * prompt statistics, suggestions, blocked commands and the learned rules. The report is addressed to the model that
  * runs the review command; it only ever offers patterns marked [OK].
  */
-export function review({ store, events, rules, limit = 10 }: ReviewInput): string {
-  const learned = store.allow.filter((pattern) => classifyPattern(pattern, rules.commands).ok)
-  const bash = buildBashRules(rules, learned)
+export function review({
+  store,
+  events,
+  rules,
+  limit = 10,
+  options = { allow: [], presets: {}, insideHerdr: false },
+}: ReviewInput): string {
+  const effective = effectiveRules({ commands: rules.commands, store, options })
+  const bash = buildBashRules(rules, effective.patterns)
   const vet = (pattern: string) => classifyPattern(pattern, rules.commands)
   const out: string[] = []
   out.push("## readonly-guard review")
   out.push(
-    `Log: ${events.length} events since ${events[0]?.ts ?? "-"} · learned allow rules: ${learned.length} · dismissed: ${store.dismissed.length}`,
+    `Log: ${events.length} events since ${events[0]?.ts ?? "-"} · learned allow rules: ${effective.learned.length} · dismissed: ${store.dismissed.length}`,
   )
+  if (effective.presets.length) out.push(`Presets in effect: ${effective.presets.join(", ")}`)
 
   // Candidates: "always" answers for bash in read-only agents
   const candidates = new Map<string, Candidate>()
@@ -110,12 +120,12 @@ export function review({ store, events, rules, limit = 10 }: ReviewInput): strin
     out.push(
       `${index + 1}. \`${candidate.pattern}\`: ${candidate.count}×, agents: ${[...candidate.agents].join(", ")}, opencode remembered: ${remembered}`,
     )
-    const options = [{ kind: "exact", pattern: candidate.pattern }]
+    const choices = [{ kind: "exact", pattern: candidate.pattern }]
     const scoped = scopeToDirectory(candidate.pattern)
-    if (scoped) options.push({ kind: "directory", pattern: scoped })
-    for (const always of candidate.always) options.push({ kind: "general", pattern: normalizePattern(always) })
+    if (scoped) choices.push({ kind: "directory", pattern: scoped })
+    for (const always of candidate.always) choices.push({ kind: "general", pattern: normalizePattern(always) })
     const seen = new Set<string>()
-    for (const option of options) {
+    for (const option of choices) {
       if (seen.has(option.pattern)) continue
       seen.add(option.pattern)
       const verdict = vet(option.pattern)

@@ -75,19 +75,56 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
     expect(box.events().some((event) => event.type === "error" && String(event.error).includes("rm"))).toBe(true)
   })
 
-  test("herdr: the UI commands are allowed once the user lists them, the others are refused even then", () => {
-    box.writeStore({ allow: ["herdr tab rename *", "herdr notification show *", "herdr pane send-text *"] })
+  test("herdr: outside a herdr pane the UI commands ask, even when the user lists them", () => {
+    box.writeStore({ allow: ["herdr tab rename *", "herdr notification show *", "whoami *"] })
+    const rules = bash(agentRules(box, "plan"))
+    expect(rules.some((rule) => rule.pattern.startsWith("herdr tab rename") && rule.action === "allow")).toBe(false)
+    expect(rules.some((rule) => rule.pattern.startsWith("herdr notification show") && rule.action === "allow")).toBe(
+      false,
+    )
+    expect(rules).toContainEqual({ permission: "bash", pattern: "whoami *", action: "allow" })
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ learned: 1, presets: [] })
+  })
+
+  test("herdr: inside a herdr pane the herdr-ui preset allows the UI commands and nothing next to them", () => {
+    box.cleanup()
+    box = sandbox({ herdr: true })
     const rules = bash(agentRules(box, "plan"))
     for (const pattern of ["herdr tab rename *", "herdr notification show *"]) {
       expect(rules).toContainEqual({ permission: "bash", pattern, action: "allow" })
     }
+    for (const pattern of ["herdr agent prompt *", "herdr pane send-text *", "herdr tab close *"]) {
+      expect(rules.findLast((rule) => rule.pattern === pattern)?.action).toBe("ask")
+    }
+    expect(rules).toContainEqual({ permission: "bash", pattern: "herdr agent list *", action: "allow" })
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ learned: 0, presets: ["herdr-ui"] })
+  })
+
+  test("herdr: the preset can be switched off in the store or the plugin options, and one command listed instead", () => {
+    box.cleanup()
+    box = sandbox({ herdr: true })
+    box.writeStore({
+      presets: { "herdr-ui": false },
+      allow: ["herdr tab rename *", "herdr pane send-text *"],
+    })
+    const rules = bash(agentRules(box, "plan"))
+    expect(rules).toContainEqual({ permission: "bash", pattern: "herdr tab rename *", action: "allow" })
+    expect(rules.some((rule) => rule.pattern.startsWith("herdr notification show") && rule.action === "allow")).toBe(
+      false,
+    )
+    // refused even when listed: it can never be learned
     expect(rules.some((rule) => rule.pattern === "herdr pane send-text *" && rule.action === "allow")).toBe(false)
     expect(rules.findLast((rule) => rule.pattern === "herdr pane send-text *")?.action).toBe("ask")
     expect(
       box.events().some((event) => event.type === "error" && String(event.error).includes("herdr pane send-text")),
     ).toBe(true)
-    const init = box.events().find((event) => event.type === "init")
-    expect(init?.learned).toBe(2)
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ learned: 1, presets: [] })
+
+    box.cleanup()
+    box = sandbox({ herdr: true, plugin: [pluginUrl, { presets: { "herdr-ui": false } }] })
+    const off = bash(agentRules(box, "plan"))
+    expect(off.some((rule) => rule.pattern.startsWith("herdr tab rename") && rule.action === "allow")).toBe(false)
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ presets: [] })
   })
 
   test("startup is logged with the read-only agents", () => {
