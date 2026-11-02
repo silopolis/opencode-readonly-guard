@@ -163,6 +163,7 @@
     { "command": "git config user.name bob", "verdict": "block", "reason": "git config" },
     { "command": "git tag v1", "verdict": "block", "reason": "git tag" },
     { "command": "git worktree add ../x", "verdict": "block", "reason": "git worktree" },
+    { "command": "git remote -v add o https://example.invalid/x", "verdict": "block", "reason": "git remote add" },
     { "command": "tar xzf a.tgz", "verdict": "block", "reason": "tar" },
     { "command": "rtk git commit -m x", "verdict": "block", "reason": "git commit" },
     { "command": "cat <<EOF > out.txt\nhi\nEOF", "verdict": "block", "reason": "write redirection" },

@@ -401,11 +401,11 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
           startsWithAny("--format", "--sort")
         return positional.length && !listing ? "git tag <name> creates a tag" : null
       }
-      case "remote":
-        return rest[0] &&
-          ["add", "remove", "rm", "rename", "set-url", "set-head", "set-branches", "prune", "update"].includes(rest[0])
-          ? `git remote ${rest[0]} modifies remotes`
-          : null
+      case "remote": {
+        // `-v` may come before the subcommand (`git remote -v add …` adds a remote)
+        const action = rest.find((arg) => !arg.startsWith("-"))
+        return action && !["show", "get-url"].includes(action) ? `git remote ${action} modifies remotes` : null
+      }
       case "config": {
         const writing =
           has("--unset", "--unset-all", "--add", "--replace-all", "--rename-section", "--remove-section", "-e") ||

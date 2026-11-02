@@ -72,6 +72,29 @@ describe("analyze", () => {
     }
   })
 
+  test("git remote: only listing, show and get-url are reads, whatever options come first", () => {
+    for (const command of [
+      "git remote -v add o https://x",
+      "git remote --verbose rename a b",
+      "git remote -v remove o",
+      "git remote -v set-url o https://y",
+      "git remote -v update",
+      "git remote prune origin",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("git remote") })
+    }
+    for (const command of [
+      "git remote",
+      "git remote -v",
+      "git remote show origin",
+      "git remote -v show origin",
+      "git remote get-url origin",
+      "git remote get-url --push origin",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git global options before the subcommand are skipped", () => {
     expect(reason("git -C repo push")).toContain("git push")
     expect(analyze("git -C repo log")).toEqual({ block: false })
