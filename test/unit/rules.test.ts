@@ -52,6 +52,16 @@ describe("shared rule files", () => {
     }
   })
 
+  test("commands the rtk plugin rewrites have their rtk form too", () => {
+    const patterns = loadRules().allow.map(({ pattern }) => pattern)
+    // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff
+    const rewritten = patterns.filter((pattern) =>
+      /^(git (status|log|diff|show|branch|worktree)\b|(du|df|diff) )/.test(pattern),
+    )
+    expect(rewritten.length).toBeGreaterThan(20)
+    for (const pattern of rewritten) expect(patterns).toContain(`rtk ${pattern}`)
+  })
+
   test("the schema rejects shell operators in patterns", () => {
     const validate = validatorFor("schema/patterns.schema.json")
     expect(validate({ version: 1, rules: [{ pattern: "cat * > x", reason: "nope" }] })).toBe(false)
