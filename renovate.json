@@ -1,0 +1,61 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "schedule:weekly",
+    "group:allNonMajor",
+    "helpers:pinGitHubActionDigests",
+    "security:minimumReleaseAgeNpm"
+  ],
+  "ignorePresets": [":semanticPrefixFixDepsChoreOthers"],
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "prConcurrentLimit": 4,
+  "prHourlyLimit": 2,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 0-3 1 * *"]
+  },
+  "packageRules": [
+    {
+      "description": "One PR for every GitHub Actions update, committed as ci(deps)",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "semanticCommitType": "ci"
+    },
+    {
+      "description": "opencode and its plugin API move together and stay on 1.x: the plugin does not support opencode 2 yet. Run `mise run test:integration` before merging.",
+      "matchPackageNames": ["anomalyco/opencode", "@opencode-ai/plugin"],
+      "groupName": "opencode",
+      "groupSlug": "opencode",
+      "allowedVersions": "<2"
+    },
+    {
+      "description": "Renovate does not read aqua's version_filter for opencode: apply it here (plain vX.Y.Z tags, not vscode-v*)",
+      "matchDepNames": ["aqua:anomalyco/opencode"],
+      "extractVersion": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
+    },
+    {
+      "description": "The supported ranges are a policy decision, not a dependency update",
+      "matchDepTypes": ["peerDependencies", "engines"],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "hk.pkl loads the Pkl package of the hk release pinned in mise.toml: keep both on the same version",
+      "managerFilePatterns": ["/(^|/)hk\\.pkl$/"],
+      "matchStrings": [
+        "/releases/download/v(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
+        "/hk@(?<currentValue>\\d+\\.\\d+\\.\\d+)#"
+      ],
+      "depNameTemplate": "hk",
+      "packageNameTemplate": "jdx/hk",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ]
+}

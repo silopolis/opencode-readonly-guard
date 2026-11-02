@@ -85,6 +85,12 @@ change and its cases in `rules/cases.json` go in the same commit. `/add-rule <co
 - The plugin itself is not loaded from this config yet: two copies (a global install plus a project entry) both
   inject rules and log every event twice, see TODO.md "Loading". Dogfooding waits for that fix.
 
+## Dependency updates
+
+Renovate (`renovate.json`) opens grouped weekly pull requests for npm and `bun.lock`, `mise.toml` (opencode included),
+`hk.pkl` and the GitHub Actions; see "Dependency updates" in CONTRIBUTING.md. A pull request that bumps opencode or
+`@opencode-ai/plugin` is ready only when `mise run test:integration` passes.
+
 ## Commits
 
 - [Conventional Commits](https://www.conventionalcommits.org), checked by hk's `commit-msg` hook; follow the format by
