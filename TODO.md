@@ -32,6 +32,13 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       Normalize the command in the analyzer and decide there once the v2 hook is available.
 - [ ] Build tools that write by design (`make`, `cargo build`, `go build`, `docker build`): decide whether to
       classify them as writes (block) instead of prompting.
+- [ ] Review an alternative path: wrap the commands our workflows strictly need (for example the few `herdr` and
+      `git` forms an agent really uses) in our own thin, explicit commands, and allow those instead of the raw
+      third-party CLIs. The allowlist(s) then name exactly what is permitted, rather than being derived from
+      patterns, subcommand lists and "ask" overrides over a CLI we do not control (herdr and git add subcommands and
+      flags with every release). Possible side benefits: it completes the CLI surface of the fleet's tools, and the
+      same wrappers could later be exposed through MCP. Compare against the current rules on maintenance cost, on how
+      much of the policy moves out of globs, and on what the agent loses by not typing the real command.
 - [ ] Windows/PowerShell: nothing is parsed or tested.
 - [ ] Cover non-bash tools in read-only agents (MCP tools with side effects, `webfetch` to internal hosts).
 - [ ] Per-project allowlists (`.opencode/readonly-guard.json`) merged with the global one.
