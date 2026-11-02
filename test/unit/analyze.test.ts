@@ -52,6 +52,56 @@ describe("analyze", () => {
     }
   })
 
+  test("uniq: a second operand is an output file, whatever it looks like", () => {
+    for (const command of [
+      "uniq in out",
+      "uniq - out.txt",
+      "uniq in 5",
+      "uniq -c in out",
+      "uniq -f 1 in out",
+      "uniq -cf 1 in out",
+      "uniq -f1 in out",
+      "uniq --skip-fields 2 in out",
+      "uniq --skip-fields=2 in out",
+      "uniq -- -in out",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("uniq") })
+    }
+    for (const command of [
+      "uniq",
+      "uniq -c",
+      "uniq -c in",
+      "uniq -f 1 in",
+      "uniq -cf 1 in",
+      "uniq -w 3 -s 2 in",
+      "uniq --skip-fields 2 in",
+      "uniq --all-repeated=separate in",
+      "uniq in -",
+      "uniq in /dev/null",
+      "uniq -2 in",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("sort: -o and --output (abbreviated too) write a file, --compress-program runs one", () => {
+    for (const command of [
+      "sort -o out f",
+      "sort -uo out f",
+      "sort --output=out f",
+      "sort --out=out f",
+      "sort --o out f",
+      "sort --compress-program=rm f",
+      "sort --compress-program rm f",
+      "sort --com=rm f",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("sort") })
+    }
+    for (const command of ["sort -rn f", "sort -t: -k2 f", "sort --compress-program=gzip f", "sort -T /tmp f"]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("command -v is a lookup, not an execution", () => {
     expect(analyze("command -v rm")).toEqual({ block: false })
   })

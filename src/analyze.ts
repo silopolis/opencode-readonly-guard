@@ -153,6 +153,33 @@ function commandStart(words: readonly string[]): number {
   return k
 }
 
+/** uniq's options that take a value: `-f N`, `-s N`, `-w N` and their long forms (abbreviations included). */
+const UNIQ_SHORT_WITH_VALUE = new Set(["f", "s", "w"])
+const UNIQ_LONG_WITH_VALUE = ["skip-fields", "skip-chars", "check-chars"]
+
+/** The OUTPUT operand of `uniq [OPTION]... [INPUT [OUTPUT]]`, if any. `-` and numbers are operands too. */
+function uniqOutput(args: readonly string[]): string | undefined {
+  const operands: string[] = []
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") {
+      operands.push(...args.slice(j + 1))
+      break
+    }
+    if (arg === "-" || !arg.startsWith("-")) {
+      operands.push(arg)
+    } else if (arg.startsWith("--")) {
+      const name = arg.slice(2)
+      if (!name.includes("=") && UNIQ_LONG_WITH_VALUE.some((option) => option.startsWith(name))) j++
+    } else {
+      // a cluster of short options (`-cf 1`, `-f1`): the first one that takes a value ends it
+      const at = Array.from(arg.slice(1)).findIndex((letter) => UNIQ_SHORT_WITH_VALUE.has(letter))
+      if (at === arg.length - 2) j++
+    }
+  }
+  return operands[1]
+}
+
 function curlWrites(args: readonly string[]): string | null {
   for (let j = 0; j < args.length; j++) {
     const arg = args[j]
@@ -252,12 +279,10 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
       return why ? `fd ${args[j]}: ${why}` : null
     }
     if (name === "tree" && has("-o")) return "tree -o writes a file"
-    if (name === "sort" && args.some((arg) => arg.startsWith("--output") || /^-[a-zA-Z]*o/.test(arg))) {
-      return "sort -o writes a file"
-    }
+    if (name === "sort") return sortWrites(args, depth)
     if (name === "uniq") {
-      const positional = args.filter((arg) => !arg.startsWith("-") && !/^\d+$/.test(arg))
-      if (positional.length >= 2) return "uniq INPUT OUTPUT writes a file"
+      const output = uniqOutput(args)
+      if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "uniq INPUT OUTPUT writes a file"
     }
     if (name === "tar") {
       const first = args[0] ?? ""
@@ -308,6 +333,21 @@ export function createAnalyzer(commands: Commands = loadRules().commands): Analy
         if (["tidy", "edit", "vendor", "init", "download"].includes(sub)) return "go mod modifies module files"
       }
       if (name === "go" && firstArg === "build") return "go build writes binaries"
+    }
+    return null
+  }
+
+  /** `-o FILE` / `--output=FILE` (any abbreviation: `--o`, `--out`) write; `--compress-program=PROG` runs PROG. */
+  function sortWrites(args: readonly string[], depth: number): string | null {
+    for (let j = 0; j < args.length && args[j] !== "--"; j++) {
+      const arg = args[j]
+      if (arg.startsWith("--o") || /^-[a-zA-Z]*o/.test(arg)) return "sort -o writes a file"
+      if (arg.startsWith("--co")) {
+        const program = arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : args[j + 1]
+        // sort pipes its data through PROG and `PROG -d` without operands: a compressor only filters
+        const why = program && !COMPRESSORS.has(basename(program)) ? commandWrites([program], depth + 1) : null
+        if (why) return `sort --compress-program: ${why}`
+      }
     }
     return null
   }
