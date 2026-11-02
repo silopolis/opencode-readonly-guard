@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { spawn, spawnSync } from "node:child_process"
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -38,9 +38,13 @@ export interface Sandbox {
   cleanup(): void
 }
 
+type PluginSpec = string | [string, Record<string, unknown>]
+
 export interface SandboxOptions {
   /** Plugin spec for the project config. Default: this repository (its built `dist/`). */
-  plugin?: string | [string, Record<string, unknown>]
+  plugin?: PluginSpec
+  /** Plugin spec for the sandbox's global config (`$XDG_CONFIG_HOME/opencode/opencode.json`). Default: none. */
+  globalPlugin?: PluginSpec
   /** Use the real opencode home (credentials, models) instead of an empty one. Needed for e2e tests only. */
   realHome?: boolean
   /** Run opencode as if started from a herdr pane (`HERDR_ENV=1`). Default: never, whatever the caller's environment. */
@@ -52,8 +56,29 @@ export function requireBuild(): void {
   if (!existsSync(join(repoRoot, "dist", "index.js"))) throw new Error("dist/ is missing: run `mise run build` first")
 }
 
+const configWith = (spec: PluginSpec) =>
+  `${JSON.stringify({ $schema: "https://opencode.ai/config.json", plugin: [spec] }, null, 2)}\n`
+
+/**
+ * Copy the built plugin (`dist/`, `rules/`, `package.json`, no `node_modules`) to `target` and return its spec, so
+ * that opencode can load a second copy from another path.
+ */
+export function copyPlugin(target: string): string {
+  requireBuild()
+  for (const name of ["dist", "rules", "package.json"])
+    cpSync(join(repoRoot, name), join(target, name), { recursive: true })
+  return pathToFileURL(target).href
+}
+
 /** A throwaway project with the plugin configured, and an environment that keeps opencode away from the user's. */
-export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }: SandboxOptions = {}): Sandbox {
+export function sandbox({
+  plugin = pluginUrl,
+  globalPlugin,
+  realHome = false,
+  herdr = false,
+}: SandboxOptions = {}): Sandbox {
+  // the real home's config is the user's: never write to it
+  if (globalPlugin && realHome) throw new Error("sandbox: globalPlugin needs the sandbox's own config directory")
   const dir = mkdtempSync(join(tmpdir(), "rg-sandbox-"))
   const project = join(dir, "project")
   const store = join(dir, "store.json")
@@ -96,10 +121,12 @@ export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }:
       cwd: project,
     },
   )
-  write(
-    "opencode.json",
-    `${JSON.stringify({ $schema: "https://opencode.ai/config.json", plugin: [plugin] }, null, 2)}\n`,
-  )
+  write("opencode.json", configWith(plugin))
+  if (globalPlugin) {
+    const global = join(env.XDG_CONFIG_HOME!, "opencode")
+    mkdirSync(global, { recursive: true })
+    writeFileSync(join(global, "opencode.json"), configWith(globalPlugin))
+  }
   return {
     dir,
     project,
@@ -130,6 +157,39 @@ interface Rule {
   permission: string
   pattern: string
   action: string
+}
+
+/**
+ * The ids of the tools opencode registers, one per registration (duplicates included): `opencode serve` in the
+ * project, then `GET /experimental/tool/ids`. No debug command lists them; `debug agent` merges duplicates.
+ */
+export async function registeredToolIds(box: Sandbox, timeout = 120_000): Promise<string[]> {
+  // port 0: opencode takes its default port if it is free, another one otherwise, and prints the address
+  const child = spawn("opencode", ["serve", "--port", "0", "--hostname", "127.0.0.1"], {
+    cwd: box.project,
+    env: box.env,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+  const timer = setTimeout(() => child.kill("SIGKILL"), timeout)
+  try {
+    let output = ""
+    const url = await new Promise<string>((resolve, reject) => {
+      const read = (chunk: Buffer) => {
+        output += chunk.toString()
+        const address = /listening on (http:\/\/\S+)/.exec(output)?.[1]
+        if (address) resolve(address)
+      }
+      child.stdout.on("data", read)
+      child.stderr.on("data", read)
+      child.on("exit", (status) => reject(new Error(`opencode serve exited (${status}): ${output}`)))
+    })
+    const response = await fetch(`${url}/experimental/tool/ids`, { headers: { "x-opencode-directory": box.project } })
+    if (!response.ok) throw new Error(`GET /experimental/tool/ids: ${response.status} ${await response.text()}`)
+    return (await response.json()) as string[]
+  } finally {
+    clearTimeout(timer)
+    child.kill("SIGTERM")
+  }
 }
 
 /** The resolved permission rules of an agent, as `opencode debug agent <name>` prints them. */
