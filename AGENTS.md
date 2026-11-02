@@ -73,7 +73,17 @@ describes each file). They ship in the npm package and are read at runtime.
 ## Changing the rules
 
 Follow "Adding a command to the allowlist" in [CONTRIBUTING.md](CONTRIBUTING.md); do not work from memory. A rule
-change and its cases in `rules/cases.json` go in the same commit.
+change and its cases in `rules/cases.json` go in the same commit. `/add-rule <command>` walks through it.
+
+## opencode in this repository
+
+- `opencode.json` lets agents run the check tasks (`mise run check|lint|fmt|fmt:check|typecheck|test`, `bun test`),
+  the read-only CLI subcommands and read-only `git` and `gh` commands without a prompt, plus their `rtk …` forms for
+  the rtk plugin. Everything else asks, including `mise run build`, `setup`, the integration and e2e tests, `:::` task
+  lists and `--output`. Widen it in your own config, not here.
+- `.opencode/commands/`: `/check` (run `mise run check`, fix or report) and `/add-rule <command>`.
+- The plugin itself is not loaded from this config yet: two copies (a global install plus a project entry) both
+  inject rules and log every event twice, see TODO.md "Loading". Dogfooding waits for that fix.
 
 ## Commits
 
