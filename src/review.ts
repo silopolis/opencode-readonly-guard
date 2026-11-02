@@ -3,7 +3,7 @@ import { classifyPattern, normalizePattern } from "./classify.js"
 import { TOOL_UPDATE } from "./constants.js"
 import { clip, type LogEvent } from "./log.js"
 import { buildBashRules, type RuleSet } from "./rules.js"
-import { effectiveRules, type EffectiveInput } from "./sources.js"
+import { effectiveRules, type EffectiveInput, type HerdrRules } from "./sources.js"
 import type { StoreData } from "./store.js"
 import { evaluate } from "./wildcard.js"
 
@@ -64,6 +64,8 @@ export interface ReviewInput {
   limit?: number
   /** What the plugin was started with; decides which presets are on. Default: no options, outside herdr. */
   options?: EffectiveInput["options"]
+  /** The rules file from herdr's config directory, if it was read. */
+  herdr?: HerdrRules
 }
 
 /**
@@ -77,8 +79,9 @@ export function review({
   rules,
   limit = 10,
   options = { allow: [], presets: {}, insideHerdr: false },
+  herdr,
 }: ReviewInput): string {
-  const effective = effectiveRules({ commands: rules.commands, store, options })
+  const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
   const bash = buildBashRules(rules, effective.patterns)
   const vet = (pattern: string) => classifyPattern(pattern, rules.commands)
   const out: string[] = []

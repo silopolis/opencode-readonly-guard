@@ -52,6 +52,14 @@ describe("resolveOptions", () => {
     expect(resolveOptions({}, { HERDR_ENV: "true" }).insideHerdr).toBe(false)
   })
 
+  test("looks for herdr's rules file next to herdr's config", () => {
+    expect(resolveOptions({}, { XDG_CONFIG_HOME: "/cfg" }).herdrFile).toBe("/cfg/herdr/readonly-guard.json")
+    expect(resolveOptions({}, { XDG_CONFIG_HOME: "/cfg", HERDR_CONFIG_PATH: "/etc/h/config.toml" }).herdrFile).toBe(
+      "/etc/h/readonly-guard.json",
+    )
+    expect(resolveOptions({}, {}).herdrFile).toMatch(/\/\.config\/herdr\/readonly-guard\.json$/)
+  })
+
   test("ignores wrongly typed values and says so", () => {
     const options = resolveOptions({
       allow: "whoami",

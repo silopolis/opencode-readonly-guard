@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { EXIT, runCli, type CliIo } from "../../src/commands.js"
@@ -13,7 +13,12 @@ let ran: [string, string[]][]
 const io = (env: NodeJS.ProcessEnv = {}): CliIo => ({
   out: (text) => void (stdout += text),
   err: (text) => void (stderr += text),
-  env: { READONLY_GUARD_STORE: join(dir, "store.json"), READONLY_GUARD_DATA: join(dir, "log"), ...env },
+  env: {
+    READONLY_GUARD_STORE: join(dir, "store.json"),
+    READONLY_GUARD_DATA: join(dir, "log"),
+    HERDR_CONFIG_PATH: join(dir, "herdr", "config.toml"),
+    ...env,
+  },
   run: (command, args) => {
     ran.push([command, args])
     return 0
@@ -94,6 +99,18 @@ describe("check", () => {
     expect(inHerdr("check", rename)).toBe(EXIT.allow)
     expect(cli("check", rename)).toBe(EXIT.ask) // a listed UI command only applies inside herdr
     expect(inHerdr("check", "--no-store", rename)).toBe(EXIT.ask)
+  })
+
+  test("herdr's rules file applies inside herdr only, and --no-store ignores it", () => {
+    mkdirSync(join(dir, "herdr"))
+    writeFileSync(
+      join(dir, "herdr", "readonly-guard.json"),
+      JSON.stringify({ presets: { "herdr-ui": false }, allow: ["herdr notification show *"] }),
+    )
+    expect(inHerdr("check", "herdr notification show done")).toBe(EXIT.allow)
+    expect(inHerdr("check", "herdr tab rename w1:t1 x")).toBe(EXIT.ask)
+    expect(cli("check", "herdr notification show done")).toBe(EXIT.ask)
+    expect(inHerdr("check", "--no-store", "herdr notification show done")).toBe(EXIT.ask)
   })
 
   test("needs a command", () => {

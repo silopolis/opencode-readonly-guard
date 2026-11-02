@@ -7,7 +7,7 @@ import { createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { review } from "./review.js"
 import { buildBashRules, loadRules } from "./rules.js"
-import { effectiveRules } from "./sources.js"
+import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 
 export interface CliIo {
@@ -74,8 +74,12 @@ function check(args: string[], io: CliIo): number {
   // --no-store means the shared rules only: no store, and no presets either
   const learned = noStore
     ? []
-    : effectiveRules({ commands: rules.commands, store: loadStore(options.storeFile, () => undefined), options })
-        .patterns
+    : effectiveRules({
+        commands: rules.commands,
+        store: loadStore(options.storeFile, () => undefined),
+        options,
+        herdr: loadHerdrRules(options),
+      }).patterns
   const decision = decide(command, buildBashRules(rules, learned))
   if (json) io.out(`${JSON.stringify({ command, ...decision })}\n`)
   else if (decision.verdict === "block") io.out(`block  ${decision.reason}\n`)
@@ -116,7 +120,14 @@ function printReview(args: string[], io: CliIo): number {
   }
   const options = resolveOptions({ store: takeValue(args, "--store"), logDir: takeValue(args, "--log-dir") }, io.env)
   io.out(
-    `${review({ store: loadStore(options.storeFile), events: createLog(options.logDir).read(), rules: loadRules(), limit, options })}\n`,
+    `${review({
+      store: loadStore(options.storeFile),
+      events: createLog(options.logDir).read(),
+      rules: loadRules(),
+      limit,
+      options,
+      herdr: loadHerdrRules(options),
+    })}\n`,
   )
   return 0
 }

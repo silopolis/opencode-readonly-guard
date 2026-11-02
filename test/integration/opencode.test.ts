@@ -127,6 +127,29 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
     expect(box.events().find((event) => event.type === "init")).toMatchObject({ presets: [] })
   })
 
+  test("herdr: the rules file in herdr's config directory is read inside herdr only", () => {
+    const file = { presets: { "herdr-ui": false }, allow: ["herdr notification show *", "herdr agent prompt *"] }
+    box.cleanup()
+    box = sandbox({ herdr: true })
+    box.writeHerdrFile(file)
+    const inside = bash(agentRules(box, "plan"))
+    expect(inside).toContainEqual({ permission: "bash", pattern: "herdr notification show *", action: "allow" })
+    expect(inside.some((rule) => rule.pattern.startsWith("herdr tab rename") && rule.action === "allow")).toBe(false)
+    expect(inside.findLast((rule) => rule.pattern === "herdr agent prompt *")?.action).toBe("ask")
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ learned: 1, presets: [] })
+    expect(box.events().some((event) => event.type === "error" && event.where === "herdr config")).toBe(true)
+
+    // the same files, outside herdr: not read, nothing allowed
+    box.cleanup()
+    box = sandbox()
+    box.writeHerdrFile(file)
+    const outside = bash(agentRules(box, "plan"))
+    expect(outside.some((rule) => rule.pattern.startsWith("herdr notification show") && rule.action === "allow")).toBe(
+      false,
+    )
+    expect(box.events().find((event) => event.type === "init")).toMatchObject({ learned: 0, presets: [] })
+  })
+
   test("startup is logged with the read-only agents", () => {
     agentRules(box, "plan")
     const init = box.events().find((event) => event.type === "init")

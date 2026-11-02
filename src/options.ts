@@ -1,5 +1,8 @@
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+
+/** The rules file looked up in herdr's config directory. */
+export const HERDR_FILE_NAME = "readonly-guard.json"
 
 /** Plugin options, as set in `opencode.json`: `"plugin": [["opencode-readonly-guard", { … }]]`. */
 export interface GuardOptions {
@@ -30,6 +33,8 @@ export interface ResolvedOptions {
   presets: Record<string, boolean>
   /** Is opencode running in a herdr pane (`HERDR_ENV=1`)? */
   insideHerdr: boolean
+  /** Rules file in herdr's config directory, read only inside herdr. */
+  herdrFile: string
   storeFile: string
   logDir: string
   toast: boolean
@@ -53,7 +58,8 @@ const switchTable = (value: unknown): Record<string, boolean> | undefined =>
 
 /**
  * Validate options and apply defaults. Precedence for paths: option, then `READONLY_GUARD_STORE` /
- * `READONLY_GUARD_DATA` (handy in tests), then the XDG defaults.
+ * `READONLY_GUARD_DATA` (handy in tests), then the XDG defaults. herdr's rules file sits next to herdr's config:
+ * in the directory of `HERDR_CONFIG_PATH`, else `$XDG_CONFIG_HOME/herdr`.
  */
 export function resolveOptions(raw: unknown, env: NodeJS.ProcessEnv = process.env): ResolvedOptions {
   const options = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
@@ -75,6 +81,10 @@ export function resolveOptions(raw: unknown, env: NodeJS.ProcessEnv = process.en
     allow: take("allow", stringList, []),
     presets: take("presets", switchTable, {}),
     insideHerdr: env.HERDR_ENV === "1",
+    herdrFile: join(
+      env.HERDR_CONFIG_PATH ? dirname(env.HERDR_CONFIG_PATH) : join(configHome, "herdr"),
+      HERDR_FILE_NAME,
+    ),
     storeFile: take("store", text, env.READONLY_GUARD_STORE || join(configHome, "opencode", "readonly-guard.json")),
     logDir: take("logDir", text, env.READONLY_GUARD_DATA || join(dataHome, "opencode", "readonly-guard")),
     toast: take("toast", (value) => (typeof value === "boolean" ? value : undefined), true),

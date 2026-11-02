@@ -31,6 +31,8 @@ export interface Sandbox {
   write(path: string, content: string): void
   /** Pre-fill the learned-rules file. */
   writeStore(data: unknown): void
+  /** Pre-fill the rules file in herdr's config directory (only read when the sandbox runs `herdr: true`). */
+  writeHerdrFile(data: unknown): void
   /** Run opencode in the project with the sandbox environment. */
   opencode(args: string[], timeout?: number): Run
   cleanup(): void
@@ -66,7 +68,11 @@ export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }:
   }
   // The suite may run from a herdr pane: whether opencode sees herdr must not depend on where the tests are started.
   for (const name of Object.keys(env)) if (name.startsWith("HERDR_")) delete env[name]
-  if (herdr) env.HERDR_ENV = "1"
+  const herdrDir = join(dir, "herdr")
+  if (herdr) {
+    env.HERDR_ENV = "1"
+    env.HERDR_CONFIG_PATH = join(herdrDir, "config.toml") // never the real ~/.config/herdr
+  }
   if (!realHome) {
     for (const [name, sub] of [
       ["XDG_CONFIG_HOME", "config"],
@@ -102,6 +108,10 @@ export function sandbox({ plugin = pluginUrl, realHome = false, herdr = false }:
     events: () => createLog(logDir).read(),
     write,
     writeStore: (data) => writeFileSync(store, JSON.stringify(data)),
+    writeHerdrFile: (data) => {
+      mkdirSync(herdrDir, { recursive: true })
+      writeFileSync(join(herdrDir, "readonly-guard.json"), JSON.stringify(data))
+    },
     opencode: (args, timeout = 120_000) => {
       const result = spawnSync("opencode", args, {
         cwd: project,

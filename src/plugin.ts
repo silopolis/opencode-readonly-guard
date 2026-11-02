@@ -6,7 +6,7 @@ import { injectRules, type MutableConfig } from "./inject.js"
 import { clip, createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { loadRules } from "./rules.js"
-import { effectiveRules } from "./sources.js"
+import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 import { createTools } from "./tools.js"
 
@@ -73,7 +73,10 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
       const store = loadStore(options.storeFile, (error) =>
         guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
       )
-      const effective = effectiveRules({ commands: rules.commands, store, options })
+      const herdr = loadHerdrRules(options, (error) =>
+        guardLog.write({ type: "error", where: "herdr config", error: String(error.cause ?? error) }),
+      )
+      const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
       for (const problem of effective.problems) guardLog.write({ type: "error", ...problem })
       const names = injectRules(config as MutableConfig, {
         rules,

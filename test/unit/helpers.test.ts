@@ -23,3 +23,19 @@ test("the sandbox does not inherit the caller's herdr environment", () => {
     box.cleanup()
   }
 })
+
+test("`herdr: true` simulates a herdr pane with a config directory of its own", () => {
+  process.env.HERDR_CONFIG_PATH = "/somewhere/config.toml"
+  const box = sandbox({ herdr: true })
+  try {
+    expect(box.env.HERDR_ENV).toBe("1")
+    expect(box.env.HERDR_CONFIG_PATH?.startsWith(box.dir)).toBe(true)
+    expect(
+      Object.keys(box.env)
+        .filter((name) => name.startsWith("HERDR_"))
+        .toSorted(),
+    ).toEqual(["HERDR_CONFIG_PATH", "HERDR_ENV"])
+  } finally {
+    box.cleanup()
+  }
+})

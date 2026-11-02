@@ -1,18 +1,26 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { classifyPattern } from "../../src/classify.js"
 import { buildBashRules, loadRules } from "../../src/rules.js"
-import { effectiveRules, PRESETS, type EffectiveInput } from "../../src/sources.js"
+import { effectiveRules, loadHerdrRules, PRESETS, type EffectiveInput } from "../../src/sources.js"
 import { emptyStore } from "../../src/store.js"
 import { evaluate } from "../../src/wildcard.js"
 
 const { commands } = loadRules()
 const UI = ["herdr notification show *", "herdr tab rename *"]
 
-const effective = (store: Partial<EffectiveInput["store"]> = {}, options: Partial<EffectiveInput["options"]> = {}) =>
+const effective = (
+  store: Partial<EffectiveInput["store"]> = {},
+  options: Partial<EffectiveInput["options"]> = {},
+  herdr?: EffectiveInput["herdr"],
+) =>
   effectiveRules({
     commands,
     store: { ...emptyStore(), ...store },
     options: { allow: [], presets: {}, insideHerdr: true, ...options },
+    herdr,
   })
 const action = (command: string, patterns: readonly string[]) =>
   evaluate(command, buildBashRules(loadRules(), patterns))
@@ -92,6 +100,93 @@ describe("switching presets", () => {
     expect(result.problems).toEqual([
       { where: "presets", error: 'unknown preset "other" ignored' },
       { where: "presets", error: 'unknown preset "no-such" ignored' },
+    ])
+  })
+})
+
+describe("herdr's rules file", () => {
+  let dir: string
+  beforeEach(() => void (dir = mkdtempSync(join(tmpdir(), "rg-herdr-"))))
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+  const file = () => join(dir, "readonly-guard.json")
+  const load = (insideHerdr = true, onError?: (error: Error) => void) =>
+    loadHerdrRules({ insideHerdr, herdrFile: file() }, onError)
+
+  test("a missing file is no file", () => {
+    expect(load()).toEqual({ allow: [], presets: {} })
+  })
+
+  test("is read inside herdr only", () => {
+    writeFileSync(file(), JSON.stringify({ allow: ["herdr tab rename *"], presets: { "herdr-ui": false } }))
+    expect(load(true)).toEqual({ allow: ["herdr tab rename *"], presets: { "herdr-ui": false } })
+    expect(load(false)).toEqual({ allow: [], presets: {} })
+  })
+
+  test("ignores wrongly typed entries and keys it does not know", () => {
+    writeFileSync(file(), JSON.stringify({ allow: ["herdr x", 3], presets: { a: true, b: "no" }, dismissed: ["z"] }))
+    expect(load()).toEqual({ allow: ["herdr x"], presets: { a: true } })
+    writeFileSync(file(), JSON.stringify({ allow: "herdr x", presets: [true] }))
+    expect(load()).toEqual({ allow: [], presets: {} })
+  })
+
+  test("a corrupt file is reported and ignored", () => {
+    writeFileSync(file(), "{ nope")
+    const errors: Error[] = []
+    expect(load(true, (error) => errors.push(error))).toEqual({ allow: [], presets: {} })
+    expect(errors).toHaveLength(1)
+    expect(errors[0].message).toContain("cannot parse")
+    expect(() => load()).not.toThrow()
+  })
+
+  test("its preset switch wins over the store and the plugin options", () => {
+    const off = { allow: [], presets: { "herdr-ui": false } }
+    expect(effective({ presets: { "herdr-ui": true } }, { presets: { "herdr-ui": true } }, off).presets).toEqual([])
+    const on = { allow: [], presets: { "herdr-ui": true } }
+    expect(effective({ presets: { "herdr-ui": false } }, { presets: { "herdr-ui": false } }, on).presets).toEqual([
+      "herdr-ui",
+    ])
+  })
+
+  test("its patterns add to the others and pass the same safety check", () => {
+    const herdr = {
+      allow: ["herdr agent list *", "herdr pane send-text *", "herdr agent prompt reviewer hi"],
+      presets: {},
+    }
+    const result = effective({ allow: ["whoami *"] }, {}, herdr)
+    expect(result.learned).toEqual(["whoami *", "herdr agent list *"])
+    expect(result.problems.map(({ where, pattern }) => [where, pattern])).toEqual([
+      ["herdr config", "herdr pane send-text *"],
+      ["herdr config", "herdr agent prompt reviewer hi"],
+    ])
+  })
+
+  test("only herdr patterns belong in it", () => {
+    const result = effective({}, {}, { allow: ["whoami *", "git log *", "rtk herdr tab rename *"], presets: {} })
+    expect(result.learned).toEqual([])
+    expect(result.problems).toEqual(
+      ["whoami *", "git log *", "rtk herdr tab rename *"].map((pattern) => ({
+        where: "herdr config",
+        pattern,
+        error: "ignored rule: only herdr commands belong in this file",
+      })),
+    )
+  })
+
+  test("listing one UI command there, with the preset off, allows only that one", () => {
+    const result = effective({}, {}, { allow: ["herdr notification show *"], presets: { "herdr-ui": false } })
+    expect(result.presets).toEqual([])
+    expect(action("herdr notification show x", result.patterns)).toBe("allow")
+    expect(action("herdr tab rename w1:t1 x", result.patterns)).toBe("ask")
+  })
+
+  test("is ignored outside herdr, even if it was passed in", () => {
+    const herdr = { allow: ["herdr agent list *"], presets: { "herdr-ui": false } }
+    expect(effective({}, { insideHerdr: false }, herdr)).toMatchObject({ learned: [], presets: [], problems: [] })
+  })
+
+  test("unknown presets in it are reported with its name", () => {
+    expect(effective({}, {}, { allow: [], presets: { nope: true } }).problems).toEqual([
+      { where: "herdr config", error: 'unknown preset "nope" ignored' },
     ])
   })
 })
