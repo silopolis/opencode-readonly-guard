@@ -14,6 +14,10 @@ const always = (pattern: string, general: string, agent = "plan"): LogEvent =>
   event({ type: "replied", reply: "always", permission: "bash", agent, patterns: [pattern], always: [general] })
 const answers = (reply: string, pattern: string): LogEvent =>
   event({ type: "replied", reply, permission: "bash", agent: "plan", patterns: [pattern], always: [] })
+// A prompt lists every stage of a compound command, the allowed ones too, and opencode remembers a general
+// pattern for each of them: `uptime | head -20` gives patterns [uptime, head -20] and always [uptime *, head *].
+const compound = (reply: string, stages: string[], general: string[]): LogEvent =>
+  event({ type: "replied", reply, permission: "bash", agent: "plan", patterns: stages, always: general })
 const blocked = (command: string): LogEvent => event({ type: "blocked", reason: 'write redirection "> f"', command })
 const run = (events: LogEvent[], store: StoreData = emptyStore(), limit?: number) =>
   review({ store, events, rules, limit })
@@ -80,6 +84,31 @@ describe("review", () => {
     expect(text).toContain('### Candidates from "always" answers (0)')
   })
 
+  test("a candidate only comes from a stage the rules still ask about, with its own general pattern", () => {
+    const text = run([compound("always", ["uptime", "head -20", "echo ---"], ["uptime *", "head *", "echo *"])])
+    expect(text).toContain('### Candidates from "always" answers (1)')
+    expect(text).toContain("1. `uptime`: 1×, agents: plan, opencode remembered: `uptime *`\n")
+    expect(text).toContain("[OK] general: `uptime *`")
+    expect(text).not.toContain("`head *`")
+    expect(text).not.toContain("`echo *`")
+  })
+
+  test("a stage the write guard blocks is not a candidate", () => {
+    const text = run([compound("always", ["uptime", "rm -rf build"], ["uptime *", "rm *"])])
+    expect(text).toContain('### Candidates from "always" answers (1)')
+    expect(text).not.toContain("rm -rf build")
+  })
+
+  test("prompt statistics and suggestions only count stages the rules still ask about", () => {
+    const events = Array.from({ length: 3 }, () => compound("once", ["head -5", "uptime", "sort -u"], []))
+    const text = run(events)
+    expect(text).toContain("- `uptime`: 3 / 0 / 0")
+    expect(text).not.toContain("- `head`")
+    expect(text).not.toContain("- `sort`")
+    expect(text).toContain("[OK] general: `uptime *`")
+    expect(text).not.toContain("general: `head *`")
+  })
+
   test("counts repeats, orders by count and honours the limit", () => {
     const events = [always("a1", "a1 *"), always("b1", "b1 *"), always("b1", "b1 *", "explore"), always("c1", "c1 *")]
     const text = run(events, emptyStore(), 2)
@@ -93,15 +122,15 @@ describe("review", () => {
       answers("once", "uptime"),
       answers("once", "uptime"),
       answers("always", "uptime"),
-      answers("reject", "git push"),
+      answers("reject", "git stash list"),
       answers("once", "git log --oneline"),
     ]
     const text = run(events)
     expect(text).toContain("- `uptime`: 2 / 1 / 0")
-    expect(text).toContain("- `git push`: 0 / 0 / 1")
+    expect(text).toContain("- `git stash`: 0 / 0 / 1")
     expect(text).toContain("### Suggested additions")
     expect(text).toContain("[OK] general: `uptime *`")
-    expect(text).not.toContain("general: `git push *`")
+    expect(text).not.toContain("general: `git stash *`")
   })
 
   test("never suggests a head that was ever rejected or is unsafe", () => {

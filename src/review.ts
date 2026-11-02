@@ -1,11 +1,12 @@
 import { dirname } from "node:path"
+import { createAnalyzer } from "./analyze.js"
 import { classifyPattern, normalizePattern } from "./classify.js"
 import { TOOL_UPDATE } from "./constants.js"
 import { clip, type LogEvent } from "./log.js"
 import { buildBashRules, type RuleSet } from "./rules.js"
 import { effectiveRules, type EffectiveInput, type HerdrRules } from "./sources.js"
 import type { StoreData } from "./store.js"
-import { evaluate } from "./wildcard.js"
+import { evaluate, wildcardMatch } from "./wildcard.js"
 
 /** Commands whose first argument is a subcommand, so statistics group by `git log` rather than `git`. */
 const MULTI_WORD = new Set([
@@ -84,6 +85,13 @@ export function review({
   const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
   const bash = buildBashRules(rules, effective.patterns)
   const vet = (pattern: string) => classifyPattern(pattern, rules.commands)
+  const analyzer = createAnalyzer(rules.commands)
+  /**
+   * A prompt lists every stage of a compound command, including those already allowed, so only the stages the
+   * current rules would still ask about count: not allowed, and not blocked by the write guard either.
+   */
+  const stillAsks = (pattern: string): boolean =>
+    evaluate(pattern, bash) !== "allow" && !analyzer.analyze(pattern).block
   const out: string[] = []
   out.push("## readonly-guard review")
   out.push(
@@ -97,7 +105,7 @@ export function review({
     if (event.type !== "replied" || event.reply !== "always" || event.permission !== "bash") continue
     for (const raw of event.patterns ?? []) {
       const pattern = normalizePattern(raw)
-      if (store.dismissed.includes(pattern) || evaluate(pattern, bash) === "allow") continue
+      if (store.dismissed.includes(pattern) || !stillAsks(pattern)) continue
       const candidate = candidates.get(pattern) ?? {
         pattern,
         count: 0,
@@ -107,7 +115,8 @@ export function review({
       }
       candidate.count++
       if (event.agent) candidate.agents.add(event.agent)
-      for (const always of event.always ?? []) candidate.always.add(always)
+      // opencode remembers one general pattern per stage: keep the ones that cover this stage
+      for (const always of event.always ?? []) if (wildcardMatch(pattern, always)) candidate.always.add(always)
       candidate.last = event.ts
       candidates.set(pattern, candidate)
     }
@@ -143,6 +152,7 @@ export function review({
   for (const event of events) {
     if (event.type !== "replied" || event.permission !== "bash") continue
     for (const pattern of event.patterns ?? []) {
+      if (!stillAsks(normalizePattern(pattern))) continue
       const head = headOf(pattern)
       const entry = stats.get(head) ?? { once: 0, always: 0, reject: 0 }
       if (event.reply === "once" || event.reply === "always" || event.reply === "reject") entry[event.reply]++
@@ -150,7 +160,10 @@ export function review({
     }
   }
   const top = [...stats.entries()].toSorted((a, b) => total(b[1]) - total(a[1])).slice(0, 15)
-  out.push("", "### Prompts in read-only agents by command (once / always / reject)")
+  out.push(
+    "",
+    "### Prompts in read-only agents by command, still asking with the current rules (once / always / reject)",
+  )
   if (!top.length) out.push("(none)")
   for (const [head, entry] of top) out.push(`- \`${head}\`: ${entry.once} / ${entry.always} / ${entry.reject}`)
   const suggestions = top.filter(
