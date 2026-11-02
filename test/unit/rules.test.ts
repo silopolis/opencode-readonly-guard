@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { ValidateFunction } from "ajv"
 import { Ajv2020 } from "ajv/dist/2020.js"
 import { readFileSync } from "node:fs"
+import { classifyPattern } from "../../src/classify.js"
 import { buildBashRules, loadRules } from "../../src/rules.js"
 import { evaluate } from "../../src/wildcard.js"
 
@@ -53,6 +54,82 @@ describe("shared rule files", () => {
   test("the schema rejects shell operators in patterns", () => {
     const validate = validatorFor("schema/patterns.schema.json")
     expect(validate({ version: 1, rules: [{ pattern: "cat * > x", reason: "nope" }] })).toBe(false)
+  })
+})
+
+const sample = (pattern: string): string => pattern.replaceAll("*", "x")
+
+describe("herdr rules", () => {
+  const { allow, ask, commands } = loadRules()
+  const { herdr } = commands
+  const shipped = buildBashRules(loadRules())
+  const herdrAsk = ask.filter(({ pattern }) => pattern === "herdr" || pattern.startsWith("herdr "))
+
+  test("the opt-in UI subcommands are not in the shared allowlist, and ask.json leaves them alone", () => {
+    for (const path of herdr.ui) {
+      expect(allow.filter(({ pattern }) => pattern.startsWith(`herdr ${path}`))).toEqual([])
+      expect(ask.filter(({ pattern }) => pattern.startsWith(`herdr ${path}`))).toEqual([])
+    }
+  })
+
+  test("the UI subcommands ask until the user lists them", () => {
+    for (const command of ["herdr tab rename w1:t1 plan ready", "herdr notification show done"]) {
+      expect({ command, action: evaluate(command, shipped) }).toEqual({ command, action: "ask" })
+    }
+    const listed = buildBashRules(loadRules(), ["herdr tab rename *", "herdr notification show *"])
+    for (const command of ["herdr tab rename w1:t1 plan ready", "herdr notification show done"]) {
+      expect({ command, action: evaluate(command, listed) }).toEqual({ command, action: "allow" })
+    }
+    // listing one does not open its neighbours
+    expect(evaluate("herdr tab close w1:t2", listed)).toBe("ask")
+    expect(evaluate("herdr pane send-text w1:p2 hi", listed)).toBe("ask")
+    // bare group help stays allowed, it prints help
+    expect(evaluate("herdr notification", listed)).toBe("allow")
+  })
+
+  test("allow.json only has help and read-only herdr patterns", () => {
+    const groups = herdr.help.filter((entry) => !entry.startsWith("-"))
+    const derived = new Set([
+      ...herdr.help.map((entry) => `herdr ${entry}`),
+      ...groups.map((group) => `herdr ${group} --help`),
+      ...herdr.read.map((path) => `herdr ${path} *`),
+    ])
+    const shippedHerdr = allow.map(({ pattern }) => pattern).filter((pattern) => pattern.startsWith("herdr"))
+    expect(new Set(shippedHerdr)).toEqual(derived)
+  })
+
+  test("every mutating herdr rule asks, even when an agent allows herdr itself", () => {
+    expect(herdrAsk.length).toBeGreaterThan(40)
+    const permissive = buildBashRules(loadRules(), [], [["herdr *", "allow"]])
+    for (const { pattern } of herdrAsk) {
+      expect({ pattern, shipped: evaluate(sample(pattern), shipped) }).toEqual({ pattern, shipped: "ask" })
+      expect({ pattern, permissive: evaluate(sample(pattern), permissive) }).toEqual({ pattern, permissive: "ask" })
+    }
+  })
+
+  test("--trust-repository asks wherever it appears", () => {
+    const permissive = buildBashRules(loadRules(), ["herdr worktree list *"])
+    expect(evaluate("herdr worktree list", permissive)).toBe("allow")
+    expect(evaluate("herdr worktree list --trust-repository", permissive)).toBe("ask")
+  })
+
+  test("none of them can be learned, exact or with a wildcard", () => {
+    for (const { pattern } of herdrAsk) {
+      const verdict = classifyPattern(sample(pattern))
+      expect({ pattern, ok: verdict.ok }).toEqual({ pattern, ok: false })
+    }
+  })
+
+  test("every subcommand the write guard blocks also asks, in case the guard cannot tell the agent", () => {
+    for (const path of herdr.write) {
+      expect(herdrAsk.map(({ pattern }) => pattern)).toContain(`herdr ${path} *`)
+    }
+  })
+
+  test("a read-only herdr command is allowed with a wildcard but not after a global option", () => {
+    expect(evaluate("herdr agent list", shipped)).toBe("allow")
+    expect(evaluate("herdr pane read w1:p1 --lines 20", shipped)).toBe("allow")
+    expect(evaluate("herdr --machine box agent list", shipped)).toBe("ask")
   })
 })
 

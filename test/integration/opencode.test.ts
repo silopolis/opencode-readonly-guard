@@ -34,6 +34,11 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
       expect(patterns).toContain("*=ask")
       expect(patterns).toContain("git log*=allow")
       expect(patterns).toContain("*-delete*=ask")
+      // herdr: reads are allowed, instructions to other agents and the UI commands are not
+      expect(patterns).toContain("herdr agent list *=allow")
+      expect(patterns).toContain("herdr agent prompt *=ask")
+      expect(patterns).not.toContain("herdr tab rename *=allow")
+      expect(patterns).not.toContain("herdr notification show *=allow")
       // the ask flags come after every allow rule, so they win
       const last = bash(rules).at(-1)
       expect(last?.action).toBe("ask")
@@ -68,6 +73,21 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
     expect(rules).toContainEqual({ permission: "bash", pattern: "whoami *", action: "allow" })
     expect(rules.some((rule) => rule.pattern === "rm *")).toBe(false)
     expect(box.events().some((event) => event.type === "error" && String(event.error).includes("rm"))).toBe(true)
+  })
+
+  test("herdr: the UI commands are allowed once the user lists them, the others are refused even then", () => {
+    box.writeStore({ allow: ["herdr tab rename *", "herdr notification show *", "herdr pane send-text *"] })
+    const rules = bash(agentRules(box, "plan"))
+    for (const pattern of ["herdr tab rename *", "herdr notification show *"]) {
+      expect(rules).toContainEqual({ permission: "bash", pattern, action: "allow" })
+    }
+    expect(rules.some((rule) => rule.pattern === "herdr pane send-text *" && rule.action === "allow")).toBe(false)
+    expect(rules.findLast((rule) => rule.pattern === "herdr pane send-text *")?.action).toBe("ask")
+    expect(
+      box.events().some((event) => event.type === "error" && String(event.error).includes("herdr pane send-text")),
+    ).toBe(true)
+    const init = box.events().find((event) => event.type === "init")
+    expect(init?.learned).toBe(2)
   })
 
   test("startup is logged with the read-only agents", () => {
