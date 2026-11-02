@@ -116,7 +116,7 @@
     { "command": "rtk git branch --contains task", "verdict": "allow" },
     { "command": "rtk git worktree list", "verdict": "allow" },
     { "command": "rtk git ls-files .opencode", "verdict": "allow" },
-    { "command": "rtk du -sh /home/tarax", "verdict": "allow" },
+    { "command": "rtk du -sh ~/.cache", "verdict": "allow" },
     { "command": "rtk df -h /home /", "verdict": "allow" },
     { "command": "rtk diff a b", "verdict": "allow" },
     { "command": "npm view @opencode-ai/plugin version", "verdict": "allow" },
