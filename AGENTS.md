@@ -75,7 +75,8 @@ describes each file). They ship in the npm package and are read at runtime.
   of the plugin in one opencode, and the packed tarball.
 - `e2e/`: a real model drives a read-only harness agent; opt-in (`OPENCODE_E2E=1`, set by the mise task).
 - `helpers.ts`: `sandbox()`, a throwaway project with its own XDG directories, store and log (and, with
-  `globalPlugin`, its own global config). Use it for anything that starts opencode.
+  `globalPlugin`, its own global config). Use it for anything that starts opencode. `childEnv()`: the caller's
+  environment without `GIT_*` and `HERDR_*`, for any other child process (see "Hazards").
 
 ## Changing the rules
 
@@ -118,3 +119,9 @@ Renovate (`renovate.json`) opens grouped weekly pull requests for npm and `bun.l
   `events.jsonl` under the XDG directories. Tests go through `sandbox()`, or set `READONLY_GUARD_STORE` and
   `READONLY_GUARD_DATA` to temporary paths. The same goes for running opencode by hand: `opencode debug config` loads
   every globally configured plugin, including an installed copy of this one, which then writes to its log.
+- **Tests run inside git hooks.** The pre-push hook runs the unit tests with git's hook environment: in a linked
+  worktree git exports `GIT_DIR=<main>/.git/worktrees/<name>`, and hk adds `GIT_WORK_TREE`. A test that starts git
+  with the inherited environment acts on the worker's repository, wherever its `cwd`: `git init` in a temporary
+  directory wrote `core.bare` or `core.worktree` into the shared `.git/config` (`git status` in the main checkout then
+  shows the worktree's files), and `git commit` committed on the worker's branch. Start git, opencode and anything
+  that may run git through `sandbox()`, or pass `env: childEnv()` (`test/helpers.ts`), which drops every `GIT_*`.

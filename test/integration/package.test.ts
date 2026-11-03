@@ -6,7 +6,7 @@ import { isBuiltin } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
-import { hasOpencode, repoRoot, requireBuild, sandbox } from "../helpers.js"
+import { childEnv, hasOpencode, repoRoot, requireBuild, sandbox } from "../helpers.js"
 
 setDefaultTimeout(300_000)
 
@@ -17,8 +17,9 @@ let installed: string
 let unpacked: string
 let files: string[]
 
+// npm may run git, and `npm install` runs in a temporary directory: no inherited GIT_DIR may point it elsewhere.
 const sh = (command: string, args: string[], cwd: string) => {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" })
+  const result = spawnSync(command, args, { cwd, env: childEnv(), encoding: "utf8" })
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed:\n${result.stderr}${result.stdout}`)
   return result.stdout
 }

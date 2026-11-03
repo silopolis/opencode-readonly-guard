@@ -9,7 +9,21 @@ export const repoRoot = fileURLToPath(new URL("..", import.meta.url))
 /** How opencode refers to this repository as a plugin. */
 export const pluginUrl = pathToFileURL(repoRoot).href
 
-export const hasOpencode = spawnSync("opencode", ["--version"], { stdio: "ignore" }).status === 0
+/**
+ * The environment for the processes the tests start: the caller's, without the variables that tie a child to where
+ * the suite runs.
+ * - `GIT_*`: in a git hook (the pre-push hook runs the unit tests), git exports GIT_DIR and hk adds GIT_WORK_TREE.
+ *   Inherited, they take a `git init` or `git commit` in a temporary directory to the caller's repository: from a
+ *   linked worktree, that wrote core.bare or core.worktree into the shared config and committed on its branch.
+ * - `HERDR_*`: the suite may run from a herdr pane, and whether opencode sees herdr must not depend on that.
+ */
+export function childEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env }
+  for (const name of Object.keys(env)) if (name.startsWith("GIT_") || name.startsWith("HERDR_")) delete env[name]
+  return env
+}
+
+export const hasOpencode = spawnSync("opencode", ["--version"], { stdio: "ignore", env: childEnv() }).status === 0
 
 export interface Run {
   status: number | null
@@ -24,6 +38,7 @@ export interface Sandbox {
   project: string
   /** Where learned rules are stored. */
   store: string
+  /** The environment of every process the sandbox starts: `childEnv()` plus the sandbox's own paths. */
   env: NodeJS.ProcessEnv
   /** Events written by the plugin. */
   events(): LogEvent[]
@@ -86,13 +101,11 @@ export function sandbox({
   mkdirSync(project, { recursive: true })
   // PWD must follow the working directory: opencode trusts it over the real cwd.
   const env: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...childEnv(),
     PWD: project,
     READONLY_GUARD_STORE: store,
     READONLY_GUARD_DATA: logDir,
   }
-  // The suite may run from a herdr pane: whether opencode sees herdr must not depend on where the tests are started.
-  for (const name of Object.keys(env)) if (name.startsWith("HERDR_")) delete env[name]
   const herdrDir = join(dir, "herdr")
   if (herdr) {
     env.HERDR_ENV = "1"
@@ -112,14 +125,13 @@ export function sandbox({
     mkdirSync(dirname(join(project, path)), { recursive: true })
     writeFileSync(join(project, path), content)
   }
-  // opencode needs a repository with a commit to track the project's state.
-  spawnSync("git", ["init", "-q"], { cwd: project })
+  // opencode needs a repository with a commit to track the project's state. `env`, not the inherited environment:
+  // it holds no GIT_* variable, so git acts on the project and nothing else.
+  spawnSync("git", ["init", "-q"], { cwd: project, env })
   spawnSync(
     "git",
     ["-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "--allow-empty", "-m", "init"],
-    {
-      cwd: project,
-    },
+    { cwd: project, env },
   )
   write("opencode.json", configWith(plugin))
   if (globalPlugin) {
