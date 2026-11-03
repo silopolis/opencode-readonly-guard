@@ -277,6 +277,113 @@ describe("write guard", () => {
   })
 })
 
+/**
+ * Two copies of the plugin in one opencode instance (a global and a project entry): opencode calls every `server()`
+ * with the same input, in load order, then every config hook in the same order.
+ */
+async function startCopies(
+  first: Record<string, unknown>,
+  second: Record<string, unknown>,
+): Promise<{ copies: Hooks[]; config: MutableConfig }> {
+  const input = { client, worktree: "/work" } as unknown as PluginInput
+  const base = { store: join(dir, "store.json"), logDir: join(dir, "log") }
+  const copies = [await plugin.server(input, { ...base, ...first }), await plugin.server(input, { ...base, ...second })]
+  const config: MutableConfig = {}
+  for (const hooks of copies) await hooks.config!(config as never)
+  return { copies, config }
+}
+
+/** Run a hook of every copy in order, as opencode does: the first error stops the chain. */
+async function trigger<Name extends "chat.params" | "tool.execute.before" | "event">(
+  copies: Hooks[],
+  name: Name,
+  ...args: Parameters<NonNullable<Hooks[Name]>>
+): Promise<void> {
+  for (const hooks of copies) await (hooks[name] as ((...args: unknown[]) => Promise<void>) | undefined)?.(...args)
+}
+
+describe("two copies in one opencode instance", () => {
+  test("the copy loaded last applies its options, and the other leaves the config alone", async () => {
+    const { config } = await startCopies(
+      { allow: ["uptime -p"], command: "review-first" },
+      { allow: ["locale -a"], agents: { exclude: ["explore"] }, command: "review-second" },
+    )
+    expect(bashRules(config)["locale -a"]).toBe("allow")
+    expect(bashRules(config)["uptime -p"]).toBeUndefined()
+    expect(config.agent?.explore).toBeUndefined()
+    expect(Object.keys(config.command ?? {})).toEqual(["review-second"])
+    const inits = events().filter((event) => event.type === "init")
+    expect(inits).toHaveLength(1)
+    expect(inits[0]).toMatchObject({ roAgents: ["plan"], learned: 1 })
+    expect(inits[0].copies).toHaveLength(2)
+    expect(inits[0].module).toBe((inits[0].copies as string[])[1])
+  })
+
+  test("the losing copy's option warnings are not logged", async () => {
+    await startCopies({ allow: "nope" }, {})
+    expect(events().filter((event) => event.type === "error")).toEqual([])
+    await startCopies({}, { allow: "nope" })
+    expect(events().filter((event) => event.type === "error")).toMatchObject([{ where: "options" }])
+  })
+
+  test("only one copy guards, logs and warns at runtime", async () => {
+    const { copies } = await startCopies({}, {})
+    await trigger(copies, "chat.params", { sessionID: "s1", agent: "plan" } as never, {} as never)
+    await trigger(
+      copies,
+      "tool.execute.before",
+      { tool: "bash", sessionID: "s1", callID: "c1" },
+      { args: { command: "git log" } },
+    )
+    await expect(
+      trigger(
+        copies,
+        "tool.execute.before",
+        { tool: "bash", sessionID: "s1", callID: "c2" },
+        { args: { command: "ls > f" } },
+      ),
+    ).rejects.toThrow("Blocked")
+    // the copy loaded first runs first: it let the write through to the next one without a word
+    await copies[0]["tool.execute.before"]!(
+      { tool: "bash", sessionID: "s1", callID: "c3" },
+      { args: { command: "ls > f" } },
+    )
+    await trigger(copies, "event", asked("p1", "s1", "whoami") as never)
+    await trigger(copies, "event", replied("p1", "s1", "always") as never)
+    expect(
+      events()
+        .filter((event) => event.type !== "init")
+        .map((event) => event.type),
+    ).toEqual(["call", "blocked", "asked", "replied"])
+    expect(toasts).toHaveLength(1)
+  })
+
+  test("only the copy in charge registers the tools, and a copy's tools act as that copy", async () => {
+    const input = { client, worktree: "/work" } as unknown as PluginInput
+    const base = { store: join(dir, "store.json"), logDir: join(dir, "log") }
+    const first = await plugin.server(input, base)
+    // read before the second copy exists, while the first one is in charge
+    const early = first.tool
+    expect(Object.keys(early ?? {}).toSorted()).toEqual(["readonly_guard_review", "readonly_guard_update"])
+    const second = await plugin.server(input, base)
+    for (const hooks of [first, second]) await hooks.config!({} as never)
+    expect(first.tool).toBeUndefined()
+    expect(Object.keys(second.tool ?? {}).toSorted()).toEqual(["readonly_guard_review", "readonly_guard_update"])
+    // the first copy never applied rules, so only the second one knows that plan is read-only
+    await expect(early!.readonly_guard_review.execute({}, { agent: "plan" } as never)).rejects.toThrow(
+      "not available in read-only agents",
+    )
+  })
+
+  test("copies in different opencode instances are independent", async () => {
+    await start()
+    await start({ allow: ["id -un"] })
+    const inits = events().filter((event) => event.type === "init")
+    expect(inits).toHaveLength(2)
+    for (const init of inits) expect(init.copies).toHaveLength(1)
+  })
+})
+
 const asked = (id: string, sessionID: string, command: string) => ({
   event: {
     type: "permission.asked",

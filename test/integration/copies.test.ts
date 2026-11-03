@@ -30,8 +30,8 @@ describe.skipIf(!hasOpencode)("two copies of the plugin in one opencode", () => 
     copyDir = mkdtempSync(join(tmpdir(), "rg-copy-"))
     globalCopy = copyPlugin(copyDir)
     box = sandbox({
-      plugin: [pluginUrl, { allow: ["id -un"], agents: { exclude: ["explore"] } }],
-      globalPlugin: [globalCopy, { allow: ["whoami *"], command: "global-review" }],
+      plugin: [pluginUrl, { allow: ["locale -a"], agents: { exclude: ["explore"] } }],
+      globalPlugin: [globalCopy, { allow: ["uptime -p"], command: "global-review" }],
     })
   })
   afterEach(() => {
@@ -41,8 +41,8 @@ describe.skipIf(!hasOpencode)("two copies of the plugin in one opencode", () => 
 
   test("the project's copy applies its own options, and only once", () => {
     const plan = agentRules(box, "plan").filter((rule) => rule.permission === "bash")
-    expect(plan).toContainEqual({ permission: "bash", pattern: "id -un", action: "allow" })
-    expect(plan.some((rule) => rule.pattern === "whoami *")).toBe(false)
+    expect(plan).toContainEqual({ permission: "bash", pattern: "locale -a", action: "allow" })
+    expect(plan.some((rule) => rule.pattern === "uptime -p")).toBe(false)
     // excluded by the project's options, so neither copy touched it
     expect(agentRules(box, "explore").some((rule) => rule.permission === "readonly_guard_review")).toBe(false)
 

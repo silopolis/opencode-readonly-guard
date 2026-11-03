@@ -2,6 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 import { createAnalyzer } from "./analyze.js"
 import { registerReviewCommand } from "./command.js"
 import { UTILITY_AGENTS } from "./constants.js"
+import { registerCopy } from "./copies.js"
 import { injectRules, type MutableConfig } from "./inject.js"
 import { clip, createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
@@ -43,7 +44,8 @@ const BLOCK_ADVICE =
   "(do not redirect output to files), or ask the user to switch to a write-capable agent such as build. " +
   "If this is a false positive, rephrase the command without shell redirection or write operations."
 
-export const server: Plugin = async ({ client, worktree }, rawOptions) => {
+export const server: Plugin = async (pluginInput, rawOptions) => {
+  const { client, worktree } = pluginInput
   const options = resolveOptions(rawOptions)
   const rules = loadRules()
   const analyzer = createAnalyzer(rules.commands)
@@ -51,8 +53,11 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
   const readOnly = new Set<string>()
   const agentOf = new Map<string, string>()
   const asks = new Map<string, AskRecord>()
-
-  for (const warning of options.warnings) guardLog.write({ type: "error", where: "options", error: warning })
+  // Registered once the setup above succeeded: a copy that fails to start never takes charge.
+  const copy = registerCopy(pluginInput, {
+    module: import.meta.url,
+    tools: createTools({ readOnly, rules, log: guardLog, storeFile: options.storeFile, project: worktree, options }),
+  })
 
   const agentFor = async (sessionID: string): Promise<string | undefined> => {
     const known = agentOf.get(sessionID)
@@ -68,8 +73,11 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
     }
   }
 
+  // Every hook of a copy that is not in charge returns at once (another copy of the plugin was loaded after it).
   return {
     config: async (config) => {
+      if (!copy.active()) return
+      for (const warning of options.warnings) guardLog.write({ type: "error", where: "options", error: warning })
       const store = loadStore(options.storeFile, (error) =>
         guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
       )
@@ -93,23 +101,23 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
         roAgents: [...names],
         learned: effective.learned.length,
         presets: effective.presets,
+        module: import.meta.url,
+        copies: copy.modules(),
       })
     },
 
-    tool: createTools({
-      readOnly,
-      rules,
-      log: guardLog,
-      storeFile: options.storeFile,
-      project: worktree,
-      options,
-    }),
+    // Read by opencode after every copy has started, so only the copy in charge registers the tools.
+    get tool() {
+      return copy.active() ? copy.tools : undefined
+    },
 
     "chat.params": async (input) => {
+      if (!copy.active()) return
       if (input.sessionID && input.agent && !UTILITY_AGENTS.has(input.agent)) agentOf.set(input.sessionID, input.agent)
     },
 
     "tool.execute.before": async (input, output) => {
+      if (!copy.active()) return
       const tool = String(input.tool ?? "").toLowerCase()
       if (tool !== "bash" && tool !== "shell") return
       const command: unknown = output.args?.command
@@ -132,6 +140,7 @@ export const server: Plugin = async ({ client, worktree }, rawOptions) => {
     },
 
     event: async ({ event }) => {
+      if (!copy.active()) return
       const { type, properties: p = {} } = event as unknown as RuntimeEvent
       if (type === "permission.asked" && p.id && p.sessionID) {
         const agent = agentOf.get(p.sessionID)
