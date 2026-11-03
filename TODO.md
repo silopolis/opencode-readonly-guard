@@ -86,12 +86,14 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 
 ## Loading
 
-- [ ] Guarantee the plugin runs once per opencode process. Today a global and a project entry (or a `plugins/` copy
-      plus an npm entry) load two instances that both inject rules, register the tools and log every event twice.
-      Add a process-wide guard (for example a `globalThis` symbol set by the first instance) and decide which
-      instance wins: if a global instance is already loaded and the project config also lists the plugin, the
-      project's options should take effect (re-run the config injection with the project's options, replacing the
-      global instance's rules) rather than being ignored. Cover it with an integration test that loads both.
+- [x] Guarantee the plugin runs once per opencode instance. The copies of the plugin find each other through a
+      versioned `globalThis` key (`src/copies.ts`), and the copy loaded last (the project's entry) is in charge with
+      its own options; the others skip every hook and register no tools. Covered by `test/integration/copies.test.ts`.
+  - [ ] It relies on opencode running every `server()` before any `config` hook and reading `hooks.tool` after
+        them (1.19.3). If a release interleaves them, the first copy injects too, and the copy in charge then takes
+        the injected rules for the agent's own. The integration test catches it on an opencode bump; a fix would
+        keep each agent's pre-injection permission in the shared registry.
+  - [ ] Copies built before the guard do not take part and still run next to a new one.
 - [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
       a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
       tool arguments, is a legacy path that makes every argument required and validates none.
@@ -105,8 +107,8 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [x] opencode project config for contributors: an `AGENTS.md` with the commands and conventions, `opencode.json`
       with a `permission` setup that allows the check tasks and read-only `git`/`gh`, and the project commands
       `/check` and `/add-rule` in `.opencode/commands/`.
-  - [ ] Load the repository's own plugin from `dist/` for dogfooding. Waits for "Loading": a contributor who already
-        has the plugin globally would load it twice.
+  - [ ] Load the repository's own plugin from `dist/` for dogfooding. A global copy no longer runs next to it (the
+        project's copy wins); what remains is proving that a checkout without a build fails soft, see "Loading".
 - [x] Automated dependency updates: Renovate (`renovate.json`; Dependabot handles neither `mise.toml` nor bun) for
       npm and `bun.lock`, `mise.toml` (opencode included), `hk.pkl` and the GitHub Actions (pinned to SHAs), with
       grouped minor/patch updates and `build(deps):` / `ci(deps):` commits.

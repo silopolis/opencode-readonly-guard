@@ -77,5 +77,9 @@ and the project follows [Semantic Versioning](https://semver.org/).
   restored without `node_modules`, a copy of `dist/` and `rules/`), it failed to import and opencode dropped it without a
   message, leaving read-only agents unguarded. `dist/index.js` and `dist/cli.js` are now bundles that only import Node
   built-ins (zod is included, its licence is in `dist/zod.LICENSE`).
+- A plugin configured twice with different specs (a global and a project entry, two checkouts) ran twice: both copies
+  injected rules, registered the review tools and logged every event. Only the copy loaded last runs now, which is the
+  project's entry, and its options replace the global ones (they are not merged). The `init` event names the copy in
+  charge (`module`) and every copy loaded (`copies`).
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main
