@@ -52,8 +52,11 @@ Other ways:
 
 > The package is not published to npm yet (see [TODO.md](TODO.md)). Until then, use the from-source route.
 
-Load it once (not from both a global and a project config): two copies would both inject rules, register the same
-tools and log every event twice.
+Configured more than once (a global and a project entry, or two checkouts), the plugin runs once: the copy loaded
+last is in charge and the others stay passive. opencode loads the global config before the project's, so the
+project's entry wins, and its options replace the global entry's (they are not merged). The `init` event in the log
+names the copy in charge (`module`) and every copy loaded (`copies`). A copy built before this rule does not know
+about it and still runs next to the others.
 
 ## Using it
 
@@ -180,7 +183,8 @@ Set them with the tuple form: `["opencode-readonly-guard", { … }]`.
 
 `READONLY_GUARD_STORE` and `READONLY_GUARD_DATA` override the default paths (an explicit option wins). The store file
 is plain JSON and safe to keep in your dotfiles; the event log contains the commands your agents ran, so keep it local.
-The startup `init` event in the log lists the `presets` in effect next to the number of `learned` rules.
+The startup `init` event in the log lists the `presets` in effect next to the number of `learned` rules, and the
+copies of the plugin loaded (see [Install](#install)).
 
 ## What it does not do
 
@@ -244,6 +248,10 @@ upstream issue (they are in [TODO.md](TODO.md)).
 - That install only happens for npm packages. A plugin loaded from a path (`file://…`) resolves its imports from that
   path, and if one fails (no `node_modules` there) opencode drops the plugin without a log line, even at `DEBUG`, while
   `opencode debug config` still lists it. This is why `dist/` is a bundle that only imports Node built-ins.
+- Plugin entries are merged only when they name the same `file://` URL or npm package (the last one is kept). Two
+  specs of the same plugin load two copies of its module. Each gets the same input object, every `server()` runs
+  before any `config` hook, global entries before project ones, and `hooks.tool` is read after all of them, which is
+  what lets the copies agree on one of them.
 - opencode 2.x plugins are `Plugin.define({ id, setup })`, V1 plugins do not run there, and V2 has a real
   `permission.hook("evaluate")` that would remove most of these workarounds.
 

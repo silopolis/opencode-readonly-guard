@@ -43,7 +43,9 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
 
 - `index.ts`: the module's only export, `{ id, server }`.
 - `plugin.ts`: the opencode hooks: `config` (inject the rules, register `/guard-review`), `tool.execute.before` (the
-  write guard), `event` (log prompts and answers), `chat.params` (which agent owns a session).
+  write guard), `event` (log prompts and answers), `chat.params` (which agent owns a session). Every hook returns at
+  once unless its copy is in charge. `copies.ts`: how copies of the plugin in one opencode instance (a global and a
+  project entry) agree that the one loaded last runs; a new hook must check `copy.active()` too.
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
   `environment.ts`: statements that export variables to later commands (`export`, `set -a`, namerefs, a new value
@@ -69,11 +71,11 @@ describes each file). They ship in the npm package and are read at runtime.
 
 - `unit/`: mostly one file per module. `cases.test.ts` runs every case in `rules/cases.json`; `rules.test.ts` checks
   the rule files against each other.
-- `integration/`: the real opencode without a model (`opencode debug config|agent` in a sandbox project) and the
-  packed tarball.
+- `integration/`: the real opencode without a model (`opencode debug config|agent` in a sandbox project), two copies
+  of the plugin in one opencode, and the packed tarball.
 - `e2e/`: a real model drives a read-only harness agent; opt-in (`OPENCODE_E2E=1`, set by the mise task).
-- `helpers.ts`: `sandbox()`, a throwaway project with its own XDG directories, store and log. Use it for anything
-  that starts opencode.
+- `helpers.ts`: `sandbox()`, a throwaway project with its own XDG directories, store and log (and, with
+  `globalPlugin`, its own global config). Use it for anything that starts opencode.
 
 ## Changing the rules
 
@@ -87,8 +89,8 @@ change and its cases in `rules/cases.json` go in the same commit. `/add-rule <co
   the rtk plugin. Everything else asks, including `mise run build`, `setup`, the integration and e2e tests, `:::` task
   lists and `--output`. Widen it in your own config, not here.
 - `.opencode/commands/`: `/check` (run `mise run check`, fix or report) and `/add-rule <command>`.
-- The plugin itself is not loaded from this config yet: two copies (a global install plus a project entry) both
-  inject rules and log every event twice, see TODO.md "Loading". Dogfooding waits for that fix.
+- The plugin itself is not loaded from this config yet. A global install no longer runs next to a project entry (the
+  project's copy wins), but a checkout without a build must first be shown to fail soft, see TODO.md "Loading".
 
 ## Dependency updates
 
