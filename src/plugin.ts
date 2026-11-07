@@ -219,33 +219,53 @@ function startedCopy(
   })
   const guard = writeGuard(analyzer, sessions, readOnly, guardLog, worktree)
 
+  const applyPolicy = (config: MutableConfig) => {
+    for (const warning of options.warnings) guardLog.write({ type: "error", where: "options", error: warning })
+    const { store, include, exclude } = agentLists(options, (error) =>
+      guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
+    )
+    const herdr = loadHerdrRules(options, (error) =>
+      guardLog.write({ type: "error", where: "herdr config", error: String(error.cause ?? error) }),
+    )
+    const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
+    for (const problem of effective.problems) guardLog.write({ type: "error", ...problem })
+    const names = injectRules(config, { rules, learned: effective.patterns, include, exclude })
+    readOnly.clear()
+    for (const name of names) readOnly.add(name)
+    if (options.command) registerReviewCommand(config, options.command)
+    guardLog.write({
+      type: "init",
+      project: worktree,
+      roAgents: [...names],
+      learned: effective.learned.length,
+      presets: effective.presets,
+      module: import.meta.url,
+      copies: copy.modules(),
+      failed: failedCopies(pluginInput).map(({ module, error }) => ({ module, error })),
+    })
+  }
+
   // Every hook of a copy that is not in charge returns at once (another copy of the plugin was loaded after it).
   return {
     config: async (config) => {
       if (!copy.active()) return
-      for (const warning of options.warnings) guardLog.write({ type: "error", where: "options", error: warning })
-      const { store, include, exclude } = agentLists(options, (error) =>
-        guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
-      )
-      const herdr = loadHerdrRules(options, (error) =>
-        guardLog.write({ type: "error", where: "herdr config", error: String(error.cause ?? error) }),
-      )
-      const effective = effectiveRules({ commands: rules.commands, store, options, herdr })
-      for (const problem of effective.problems) guardLog.write({ type: "error", ...problem })
-      const names = injectRules(config as MutableConfig, { rules, learned: effective.patterns, include, exclude })
-      readOnly.clear()
-      for (const name of names) readOnly.add(name)
-      if (options.command) registerReviewCommand(config as MutableConfig, options.command)
-      guardLog.write({
-        type: "init",
-        project: worktree,
-        roAgents: [...names],
-        learned: effective.learned.length,
-        presets: effective.presets,
-        module: import.meta.url,
-        copies: copy.modules(),
-        failed: failedCopies(pluginInput).map(({ module, error }) => ({ module, error })),
-      })
+      try {
+        applyPolicy(config as MutableConfig)
+      } catch (error) {
+        // opencode would log it and go on, with read-only agents half configured or not at all: fail closed
+        const names = failClosed(config as MutableConfig, agentLists(options))
+        readOnly.clear()
+        for (const name of names) readOnly.add(name)
+        guardLog.write({
+          type: "error",
+          where: "config",
+          error: describeError(error),
+          writeGuard: true,
+          project: worktree,
+          roAgents: [...names],
+          module: import.meta.url,
+        })
+      }
     },
 
     // Read by opencode after every copy has started, so only the copy in charge registers the tools.

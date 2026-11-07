@@ -514,6 +514,23 @@ describe("a copy that cannot load its rules", () => {
   })
 })
 
+describe("a config hook that fails", () => {
+  test("fails closed and keeps the write guard", async () => {
+    const hooks = await plugin.server(newInstance(), paths())
+    // opencode validates its config, so take an error of our own: the review command cannot be added to a string
+    const config = { command: "not a table" } as unknown as MutableConfig
+    await hooks.config!(config as never)
+    expect(bashRules(config)).toEqual({ "*": "ask" })
+    expect(bashRules(config, "explore")).toEqual({ "*": "ask" })
+    await useAgent(hooks, "s1", "plan")
+    await expect(bash(hooks, "s1", "ls > f")).rejects.toThrow("Blocked")
+    expect(events().filter((event) => event.type === "error")).toMatchObject([
+      { where: "config", writeGuard: true, error: expect.any(String), roAgents: ["plan", "explore"] },
+    ])
+    expect(events().some((event) => event.type === "init")).toBe(false)
+  })
+})
+
 const asked = (id: string, sessionID: string, command: string) => ({
   event: {
     type: "permission.asked",
