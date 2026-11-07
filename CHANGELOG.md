@@ -55,6 +55,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
   or abbreviated, where the ask rules cannot see it.
 - Exact `<program> <subcommand> --help` commands for git, herdr, npm and mise are allowed, after the always-ask flags
   (`git commit --help`, `herdr worktree create --help`); `opencode-readonly-guard rules` reports them.
+- `opencode-readonly-guard doctor [--json]`: starts opencode in the current directory without a model and reports the
+  plugin's entries and which one is in charge, why a `file://` copy cannot be imported (`dist/` missing), the agents
+  that carry the guard's rules, the errors of that start and the last start logged for the project. Exit status 1
+  when the guard is not active. A plugin that opencode cannot import runs no code, so only an outside check can see it.
 
 ### Fixed
 
@@ -81,5 +85,11 @@ and the project follows [Semantic Versioning](https://semver.org/).
   injected rules, registered the review tools and logged every event. Only the copy loaded last runs now, which is the
   project's entry, and its options replace the global ones (they are not merged). The `init` event names the copy in
   charge (`module`) and every copy loaded (`copies`).
+- A plugin that could not read its rule files (`server()` threw) was dropped by opencode, and an error in its config
+  hook left the agents half configured: read-only agents ran with `bash: allow` and no write guard. The plugin now
+  fails closed: read-only agents ask before every command (their own deny rules stay), the write guard stays on unless
+  `rules/commands.json` is the broken file, an `error` event records the reason (`where`: `load` or `config`,
+  `writeGuard`) and a toast says so. A copy that started is in charge instead, and its `init` event lists the broken
+  copies (`failed`).
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main

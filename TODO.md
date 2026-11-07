@@ -73,9 +73,11 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 
 ## Learning and review
 
-- [ ] Check in a real TUI that the "always" warning toast is shown (only the API call is covered by tests).
+- [ ] Check in a real TUI that the toasts are shown: the "always" warning, and "failed to start" (sent during startup;
+      tests cover the API call, and a probe against `opencode serve` showed it on the global event stream).
 - [ ] Make the review smarter: merge near-duplicate candidates, group by command, propose removals of unused rules.
-- [ ] A `doctor` subcommand: show which agents are treated as read-only and the resolved rules.
+- [x] A `doctor` subcommand: show which agents are treated as read-only and the resolved rules
+      (`opencode-readonly-guard doctor`, `src/doctor.ts`; `--json` includes each agent's bash rules).
 - [ ] Event log: optional redaction (commands can contain secrets), configurable retention, file permissions 0600.
 
 ## Interplay with other plugins
@@ -97,8 +99,15 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
       a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
       tool arguments, is a legacy path that makes every argument required and validates none.
-- [ ] Detect and report a plugin that fails to load instead of being dropped silently (for example a startup
-      self-check, or documented `doctor` output). opencode logs nothing about it, even at `DEBUG`.
+- [x] Detect and report a plugin that fails to load instead of being dropped silently. A copy that imports but cannot
+      read its rules, or fails in its config hook, fails closed (read-only agents ask before every command, the write
+      guard stays on while `commands.json` loads, an `error` event and a toast); a copy that started takes over and
+      lists it in `init.failed`. A copy that cannot be imported runs no code: `opencode-readonly-guard doctor` finds
+      it (covered by `test/integration/failclosed.test.ts` and `doctor.test.ts`).
+  - [ ] `doctor` does not check `engines.opencode`: opencode skips an incompatible plugin with a `session.error`
+        event only, and doctor then reports "no copy of the plugin started" without saying why.
+  - [ ] npm entries are not import-checked (opencode installs them in its own cache); doctor only reports whether
+        such a copy started.
 - [x] Add an integration test that loads the built plugin from a directory without `node_modules` (the packed
       tarball, unpacked as is).
 
