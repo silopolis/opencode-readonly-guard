@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
+import { createAnalyzer } from "../../src/analyze.js"
 import type { RuleFile } from "../../src/embed.js"
-import { BUILTIN_RULES, loadRules, readCommands, readRuleSet, type RuleSources } from "../../src/rules.js"
+import {
+  BUILTIN_RULES,
+  buildBashRules,
+  loadRules,
+  readCommands,
+  readRuleSet,
+  type RuleSources,
+} from "../../src/rules.js"
+import { evaluate } from "../../src/wildcard.js"
 
 const onDisk = (file: string): unknown =>
   JSON.parse(readFileSync(new URL(`../../rules/${file}`, import.meta.url), "utf8"))
@@ -59,6 +68,29 @@ describe("the copy of the rule files built into the plugin", () => {
     const { commands, fallbacks } = readCommands(sources({ "commands.json": unreadable("commands.json") }))
     expect(commands).toEqual(loadRules().commands)
     expect(fallbacks).toMatchObject([{ file: "commands.json" }])
+  })
+
+  test("alone, it gives the same policy: the allowlist, the ask flags, the help layer and the redirection twins", () => {
+    const all = { "allow.json": unreadable("allow.json"), "ask.json": { version: 2 }, "commands.json": { version: 1 } }
+    const rules = readRuleSet(sources(all))
+    expect(rules.fallbacks?.map(({ file }) => file)).toEqual(["allow.json", "ask.json", "commands.json"])
+    const bash = buildBashRules(rules)
+    expect(bash).toEqual(buildBashRules(loadRules()))
+    for (const [command, action] of [
+      ["sha256sum dist/index.js", "allow"],
+      ["git help commit", "allow"],
+      ["herdr --help 2>&1", "allow"],
+      ["mise set --help 2>/dev/null", "allow"],
+      ["set -euo pipefail 2>&1", "allow"],
+      ["ss -t -K", "ask"],
+      ["herdr --help 2>err.txt", "ask"],
+    ] as const) {
+      expect({ command, action: evaluate(command, bash) }).toEqual({ command, action })
+    }
+    const guard = createAnalyzer(rules.commands)
+    expect(guard.analyze("ps auxe")).toMatchObject({ block: true })
+    expect(guard.analyze("ss -tK")).toMatchObject({ block: true })
+    expect(guard.analyze("export -p")).toMatchObject({ block: true })
   })
 
   test("without a copy, a file that cannot be read is an error", () => {

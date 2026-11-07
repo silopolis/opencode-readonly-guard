@@ -35,13 +35,15 @@ const bash = (box: Sandbox, agent: string) =>
     .filter((rule) => rule.permission === "bash")
     .map((rule) => `${rule.pattern}=${rule.action}`)
 
-/** The full policy: the shared allowlist, the always-ask flags and the help layer. */
+/** The full policy: the shared allowlist, the always-ask flags, the help layer and the redirection twins. */
 function expectFullPolicy(box: Sandbox): void {
   for (const agent of ["plan", "explore"]) {
     const rules = bash(box, agent)
     expect(rules).toContain("git log*=allow")
     expect(rules).toContain("*-delete*=ask")
     expect(rules).toContain("herdr worktree create --help=allow")
+    expect(rules).toContain("git help commit=allow")
+    expect(rules).toContain("herdr --help 2>&1=allow")
   }
 }
 
@@ -93,5 +95,8 @@ describe("the command-line tool without its rule files", () => {
     expect(blocked.stderr).toContain("warning: readonly-guard: cannot load commands.json")
     expect(blocked.stderr).toContain("using the copy built into the tool")
     expect(run("git log --oneline").status).toBe(0)
+    expect(run("sha256sum dist/index.js && git help commit").status).toBe(0)
+    expect(run("export -p").status).toBe(2)
+    expect(run("ps auxe").status).toBe(2)
   })
 })
