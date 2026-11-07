@@ -28,6 +28,11 @@
     { "pattern": "du *", "reason": "disk usage" },
     { "pattern": "df *", "reason": "free disk space (--output=FIELDS asks because of the --output rule)" },
     { "pattern": "pgrep *", "reason": "find processes (--signal has no effect in pgrep)" },
+    {
+      "pattern": "ps *",
+      "reason": "list processes (BSD e and -o environ print environments: the guard blocks them, and -e outside the checked forms)"
+    },
+    { "pattern": "rtk ps *", "reason": "`ps` after the rtk plugin rewrites it" },
     { "pattern": "nproc *", "reason": "print the number of processing units" },
     { "pattern": "arch *", "reason": "print the machine architecture" },
     { "pattern": "uptime *", "reason": "how long the system has been running, and its load" },

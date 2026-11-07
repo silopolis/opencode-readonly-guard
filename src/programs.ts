@@ -144,6 +144,106 @@ export function xxdOutput(args: readonly string[]): string | undefined {
   return args.slice(j)[1]
 }
 
+/** procps-ng ps (src/ps/parser.c): the options that take the rest of the word or the next word as a value. */
+const PS_SYSV_WITH_VALUE = "CDGJORUgopqstuz"
+const PS_BSD_WITH_VALUE = "OUkopqt"
+/** The BSD letters ps accepts (`L` and `V` only alone); any other letter makes a BSD parse fail. */
+const PS_BSD_LETTERS = /^[HMOSTUXZacefghjklmnopqrstuvwx]$/
+const PS_GNU_WITH_VALUE = new Set([
+  "Group",
+  "User",
+  "cols",
+  "columns",
+  "date-format",
+  "delimiter",
+  "format",
+  "group",
+  "lines",
+  "pid",
+  "ppid",
+  "quick-pid",
+  "rows",
+  "sid",
+  "sort",
+  "tty",
+  "user",
+  "width",
+])
+/**
+ * Command lines with `-e` that never fall back to BSD `e`: these words only, checked in every combination of up to
+ * three of them with a marker process (procps-ng 4.0.7).
+ */
+const PS_CHECKED_FLAGS = new Set(["-e", "-ef", "-eF", "-ely", "-elf", "-ejH", "-eLf", "-eH", "-ew", "-eww", "-efww"])
+const PS_CHECKED_EXTRA = new Set(["-f", "-F", "-w", "-ww", "-H", "-l"])
+const PS_CHECKED_FORMAT = new Set(["-o", "-O", "-eo", "-eO"])
+const PS_CHECKED_GNU = new Set(["forest", "sort", "no-headers", "headers", "cols", "width", "format"])
+
+/**
+ * Does a reading of ps's arguments reach the BSD letter `e`, and does it fail on a letter BSD syntax refuses?
+ * Words without a dash are BSD options; `-xyz` is read as SysV options, or as BSD ones when `dashAsBsd` (ps's
+ * second-chance parse). GNU `--name` options read the same in both and are skipped with their values.
+ */
+function psReading(args: readonly string[], dashAsBsd: boolean): { e: boolean; fails: boolean } {
+  let e = false
+  let fails = false
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg.startsWith("--")) {
+      const option = arg.slice(2)
+      if (!/[=:]/.test(option) && PS_GNU_WITH_VALUE.has(option)) j++
+      continue
+    }
+    const dash = arg.startsWith("-")
+    const letters = dash ? arg.slice(1) : arg
+    if (!/^[A-Za-z]/.test(letters)) continue // process, group and session lists
+    const bsd = !dash || dashAsBsd
+    for (let c = 0; c < letters.length; c++) {
+      const letter = letters[c]
+      if (bsd && /\d/.test(letter)) break // a process list ends the word
+      if (bsd && letter === "e") e = true
+      if (bsd && !PS_BSD_LETTERS.test(letter)) fails = true
+      if ((bsd ? PS_BSD_WITH_VALUE : PS_SYSV_WITH_VALUE).includes(letter)) {
+        if (c === letters.length - 1) j++
+        break
+      }
+    }
+  }
+  return { e, fails }
+}
+
+/** Is this one of the `-e` command lines checked never to fall back to BSD `e` (see `PS_CHECKED_FLAGS`)? */
+function psCheckedShape(args: readonly string[]): boolean {
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg.startsWith("--")) {
+      const [name, value] = arg.slice(2).split(/=(.*)/s)
+      if (!PS_CHECKED_GNU.has(name)) return false
+      if (value === undefined && PS_GNU_WITH_VALUE.has(name) && ++j >= args.length) return false
+    } else if (PS_CHECKED_FORMAT.has(arg)) {
+      if (++j >= args.length) return false
+    } else if (!PS_CHECKED_FLAGS.has(arg) && !PS_CHECKED_EXTRA.has(arg)) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * ps prints the environment of processes with BSD `e` (`ps e`, `ps auxe`, no dash) and with the `environ` format.
+ * `-e` (all processes) is fine, but when ps cannot parse a command line it parses it again as BSD options, where
+ * `-e` is `e`: `ps -e -x -o pid,args` shows every environment. So a dash word with `e` only passes in the checked
+ * shapes, or when the BSD reading would fail anyway (`ps -C herdr`: BSD has no `C`).
+ */
+export function psEnvironment(args: readonly string[]): string | null {
+  if (args.some((arg) => /environ/i.test(arg))) return "ps -o environ prints the environment of processes"
+  if (psReading(args, false).e) return "ps e (BSD syntax) prints the environment of processes"
+  const second = psReading(args, true)
+  if (second.e && !second.fails && !psCheckedShape(args)) {
+    return "ps re-reads options it cannot parse as BSD ones, where -e is BSD e, which prints the environment of processes: use -e only with -f, -F, -l, -H, -w, -o/-O FORMAT, --sort, --forest, or use ps aux"
+  }
+  return null
+}
+
 /** ss's short options that take a value (`f: A: D: F: N:` in ss.c). */
 const SS_WITH_VALUE = "fADFN"
 

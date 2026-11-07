@@ -54,9 +54,9 @@ describe("shared rule files", () => {
 
   test("commands the rtk plugin rewrites have their rtk form too", () => {
     const patterns = loadRules().allow.map(({ pattern }) => pattern)
-    // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff
+    // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff, ps
     const rewritten = patterns.filter((pattern) =>
-      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff) |systemctl status |docker (ps|images|logs) )/.test(
+      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff|ps) |systemctl status |docker (ps|images|logs) )/.test(
         pattern,
       ),
     )

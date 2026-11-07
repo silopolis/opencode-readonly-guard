@@ -481,6 +481,74 @@ describe("analyze", () => {
     }
   })
 
+  test("ps: BSD e and the environ format print environments; -e is all processes", () => {
+    for (const command of [
+      "ps e",
+      "ps aux e",
+      "ps auxe",
+      "ps eww",
+      "ps axe -o pid,args",
+      "ps -p 1 e",
+      "ps -f e",
+      "rtk ps aux e",
+      "ps -o pid,environ -p 1",
+      "ps -p 1 -o environ:40",
+      "ps --format=ENVIRON",
+      "ps -eo pid,environ",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("environment") })
+    }
+    for (const command of [
+      "ps",
+      "ps aux",
+      "ps auxf",
+      "ps axjf",
+      "ps -aux",
+      "ps aux --sort=-%mem",
+      "ps -ef",
+      "ps -eF",
+      "ps -ely",
+      "ps -eLf",
+      "ps -ejH",
+      "ps -eww -o args",
+      "ps -ef --forest",
+      "ps -e -o pid,args",
+      "ps -eo pid,ppid,etime,args --sort=-etime",
+      "ps -eo pid,comm --sort pid --no-headers",
+      "ps -e --format pid,args --cols 200",
+      "ps -p 1 -o pid,etime,args",
+      "ps -o pid= -p 123",
+      "ps -fp 123",
+      "ps -T -p 123",
+      "ps --ppid 1 -o pid,cmd",
+      "ps -u steve",
+      "ps -C herdr -o pid,args",
+      "ps o pid,etime,args",
+      "ps p 123 o pid,args",
+      "ps t e",
+      "rtk ps aux",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ps: when its first parse fails, ps re-reads -e as BSD e, so -e only passes in the checked shapes", () => {
+    // procps-ng retries a command line it cannot parse as BSD options: `ps -e -x` (no SysV -x) then shows every
+    // environment. Checked with a marker process: `ps -ef -t`, `ps -e -x -o pid,args`, `ps -e -T --forest` leak.
+    for (const command of [
+      "ps -ef -t",
+      "ps -e -x -o pid,args",
+      "ps -e -T --forest",
+      "ps -ef -o pid,args --pid 1",
+      "ps -eS",
+      "ps -u eve",
+      "ps -s x -e",
+      "ps -e -p 1",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("BSD e") })
+    }
+  })
+
   test("lspci: -q and -Q write the ID cache, in any bundle; option values are not options", () => {
     for (const command of ["lspci -q", "lspci -qq", "lspci -Q", "lspci -nnq", "lspci -vkQ", "lspci -s 00:02.0 -q"]) {
       expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("lspci -q") })

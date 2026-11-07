@@ -22,6 +22,11 @@
     },
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
     { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
+    { "pattern": "ps *environ*", "reason": "ps -o environ prints the environment of processes (blocked by the guard)" },
+    {
+      "pattern": "rtk ps *environ*",
+      "reason": "ps -o environ prints the environment of processes (blocked by the guard)"
+    },
     { "pattern": "ss *-K*", "reason": "ss -K closes the sockets it lists (blocked by the guard)" },
     {
       "pattern": "ss *--k*",
