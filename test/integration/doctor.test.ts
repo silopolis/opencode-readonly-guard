@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { copyPlugin, hasOpencode, repoRoot, requireBuild, sandbox, type Sandbox } from "../helpers.js"
@@ -83,10 +83,29 @@ describe.skipIf(!hasOpencode)("doctor against the real opencode", () => {
       entries: { state: string }[]
       startup: { builtin?: string[] }
       problems: { where: string; file?: string }[]
+      warnings: string[]
     }
     expect(report.active).toBe(true)
     expect(report.entries.map((entry) => entry.state)).toEqual(["in charge"])
     expect(report.startup.builtin).toEqual(["commands.json"])
     expect(report.problems).toMatchObject([{ where: "rules", file: "commands.json" }])
+    expect(report.warnings).toContain(
+      "rules/commands.json cannot be read: the copy built into the plugin applies until the file is fixed",
+    )
+  })
+
+  // opencode 1.19.3 checks engines.opencode for npm packages only: a path plugin runs whatever its range says
+  test("a path copy outside its engines.opencode range is loaded by opencode; doctor warns", () => {
+    const future = copy((dir) => {
+      const file = join(dir, "package.json")
+      const manifest = JSON.parse(readFileSync(file, "utf8")) as { engines: Record<string, string> }
+      manifest.engines.opencode = ">=99"
+      writeFileSync(file, JSON.stringify(manifest))
+    })
+    const box = track(sandbox({ plugin: future.spec }))
+    const run = doctor(box)
+    expect(run.status).toBe(0)
+    expect(run.stdout).toContain("in charge")
+    expect(run.stdout).toMatch(/requires opencode >=99, this is \d+\.\d+\.\d+: opencode does not check this for path/)
   })
 })

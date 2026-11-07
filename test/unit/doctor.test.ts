@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { runCli, type CliIo, type ExecOptions, type ExecResult } from "../../src/commands.js"
-import type { DoctorReport } from "../../src/doctor.js"
+import { satisfies, type DoctorReport } from "../../src/doctor.js"
 import { createLog, type LogEvent } from "../../src/log.js"
 
 let dir: string
@@ -28,12 +28,17 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }))
 function checkout(
   name: string,
   built: string | false = "export default { id: 'opencode-readonly-guard', server: async () => ({}) }\n",
+  manifest: Record<string, unknown> = {},
 ) {
   const root = join(dir, name)
   mkdirSync(join(root, "src"), { recursive: true })
   writeFileSync(
     join(root, "package.json"),
-    JSON.stringify({ name: "opencode-readonly-guard", exports: { "./server": { import: "./dist/index.js" } } }),
+    JSON.stringify({
+      name: "opencode-readonly-guard",
+      exports: { "./server": { import: "./dist/index.js" } },
+      ...manifest,
+    }),
   )
   writeFileSync(join(root, "src", "index.ts"), "")
   if (built !== false) {
@@ -69,6 +74,8 @@ interface Fake {
   status?: number
   stderr?: string
   missing?: boolean
+  /** What `opencode --version` prints. Default: 1.19.3. */
+  version?: string
 }
 
 function io(fake: Fake, env: NodeJS.ProcessEnv = {}): CliIo {
@@ -90,6 +97,7 @@ function io(fake: Fake, env: NodeJS.ProcessEnv = {}): CliIo {
         return { status: result.status, stdout: result.stdout, stderr: result.stderr, error: result.error?.message }
       }
       if (fake.missing) return { status: null, stdout: "", stderr: "", error: "spawnSync opencode ENOENT" }
+      if (args[0] === "--version") return { status: 0, stdout: `${fake.version ?? "1.19.3"}\n`, stderr: "" }
       if (fake.status) return { status: fake.status, stdout: "", stderr: fake.stderr ?? "" }
       const log = createLog(fake.logDir ?? options.env.READONLY_GUARD_DATA!)
       for (const event of fake.events ?? []) log.write(event)
@@ -284,9 +292,75 @@ describe("doctor", () => {
     expect(result.warnings).toContainEqual(expect.stringContaining("does not exist"))
   })
 
+  test("a rule file replaced by the copy built into the plugin: active, with a warning", () => {
+    const copy = checkout("checkout")
+    const error = "readonly-guard: cannot load allow.json: JSON Parse error"
+    const result = report({
+      config: guardedConfig([origin(copy.spec)]),
+      events: [
+        { type: "error", where: "rules", file: "allow.json", error, project },
+        init(copy.module, { builtin: ["allow.json"] }),
+      ],
+    })
+    expect(result.active).toBe(true)
+    expect(result.problems).toMatchObject([{ where: "rules", file: "allow.json" }])
+    expect(result.warnings).toContain(
+      "rules/allow.json cannot be read: the copy built into the plugin applies until the file is fixed",
+    )
+  })
+
+  test("a path copy outside its engines.opencode range is loaded anyway, with a warning", () => {
+    const copy = checkout("checkout", undefined, { engines: { opencode: ">=99" } })
+    const result = report({ config: guardedConfig([origin(copy.spec)]), events: [init(copy.module)] })
+    expect(result.active).toBe(true)
+    expect(result.opencodeVersion).toBe("1.19.3")
+    expect(result.warnings).toContain(
+      `${copy.spec} requires opencode >=99, this is 1.19.3: opencode does not check this for path plugins, ` +
+        "and the plugin may not work",
+    )
+  })
+
+  test("an npm entry outside the range: skipped by opencode, which doctor names", () => {
+    const result = report({ config: guardedConfig([origin("opencode-readonly-guard")]), version: "2.0.1" })
+    expect(result.active).toBe(true) // the fake opencode applied the rules anyway: only the entry matters here
+    expect(result.entries).toMatchObject([{ kind: "npm", state: "not loaded" }])
+    expect(result.entries[0].error).toBe(
+      "skipped by opencode: requires opencode >=1.18.29 <2 (the range of this version of the tool), this is 2.0.1",
+    )
+    stdout = ""
+    expect(report({ config: guardedConfig([origin("opencode-readonly-guard")]) }).entries[0].error).toBeUndefined()
+  })
+
   test("rejects unknown arguments", () => {
     expect(doctor({}, "--bogus")).toBe(64)
     expect(stderr).toContain("doctor: unexpected argument --bogus")
     expect(calls).toEqual([])
+  })
+})
+
+describe("satisfies", () => {
+  test("the range forms package.json engines use here", () => {
+    expect(satisfies("1.19.3", ">=1.18.29 <2")).toBe(true)
+    expect(satisfies("1.18.28", ">=1.18.29 <2")).toBe(false)
+    expect(satisfies("2.0.0", ">=1.18.29 <2")).toBe(false)
+    expect(satisfies("1.5.0", ">=1 <1.4 || >=1.5")).toBe(true)
+    expect(satisfies("1.4.2", ">=1 <1.4 || >=1.5")).toBe(false)
+    expect(satisfies("1.2.3", "1.2.3")).toBe(true)
+    expect(satisfies("1.2.4", "=1.2.3")).toBe(false)
+    expect(satisfies("1.2.4", ">1.2.3 <=1.2.4")).toBe(true)
+  })
+
+  test("other forms and versions are not checked", () => {
+    for (const [version, range] of [
+      ["1.2.3", "^1.2"],
+      ["1.2.3", "~1.2.3"],
+      ["1.2.3", "1.x"],
+      ["1.2.3", ">1.2"],
+      ["1.2.3", "1.0.0 - 2.0.0"],
+      ["1.2.3-beta.1", ">=1"],
+      ["dev", ">=1"],
+    ]) {
+      expect(satisfies(version, range)).toBeUndefined()
+    }
   })
 })

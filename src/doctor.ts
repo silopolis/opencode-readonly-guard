@@ -38,6 +38,8 @@ export interface AgentReport {
 
 export interface DoctorReport {
   directory: string
+  /** What `opencode --version` printed, when the plugin is configured. */
+  opencodeVersion?: string
   /** Did the plugin start and apply its rules to at least one agent? */
   active: boolean
   /** Why the guard is not active. */
@@ -147,6 +149,64 @@ function readAnswer(stdout: string): { error?: string } | undefined {
   } catch {
     return undefined
   }
+}
+
+const VERSION = /^v?(\d+)\.(\d+)\.(\d+)$/
+const COMPARATOR = /^(>=|<=|>|<|=)?v?(\d+)(?:\.(\d+)(?:\.(\d+))?)?$/
+
+function compare(a: readonly number[], b: readonly number[]): number {
+  for (let index = 0; index < 3; index++) if (a[index] !== b[index]) return a[index] - b[index]
+  return 0
+}
+
+/**
+ * Does `version` satisfy the semver `range`? Only the forms an `engines` field of this kind uses: comparators
+ * (`>=1.18.29 <2`, `=1.2.3`, a bare version) and `||`. Any other form, or a pre-release version, is not checked
+ * (undefined): the answer only explains why opencode skipped a plugin.
+ */
+export function satisfies(version: string, range: string): boolean | undefined {
+  const parsed = VERSION.exec(version.trim())
+  if (!parsed) return undefined
+  const current = parsed.slice(1, 4).map(Number)
+  let any = false
+  for (const alternative of range.split("||")) {
+    const comparators = alternative.trim().split(/\s+/).filter(Boolean)
+    if (!comparators.length) return undefined
+    let all = true
+    for (const comparator of comparators) {
+      const match = COMPARATOR.exec(comparator)
+      if (!match) return undefined
+      const [, operator = "=", ...parts] = match
+      // a partial version keeps its meaning padded with zeros only after >= and < (>=1.2 is >=1.2.0, <2 is <2.0.0)
+      if (parts.some((part) => part === undefined) && operator !== ">=" && operator !== "<") return undefined
+      const order = compare(
+        current,
+        parts.map((part) => Number(part ?? 0)),
+      )
+      const holds = { ">=": order >= 0, "<=": order <= 0, ">": order > 0, "<": order < 0, "=": order === 0 }[operator]
+      all &&= holds ?? false
+    }
+    any ||= all
+  }
+  return any
+}
+
+/** The version `opencode --version` prints. */
+function versionOf(io: DoctorIo): string | undefined {
+  const run = io.exec("opencode", ["--version"], { cwd: io.cwd, env: io.env, timeout: 60_000 })
+  return run.status === 0 ? /\d+\.\d+\.\d+\S*/.exec(run.stdout)?.[0] : undefined
+}
+
+/**
+ * The `engines.opencode` range of an entry: from its package for a path, from this tool's package for an npm entry
+ * (opencode installs those in its own cache).
+ */
+function engineRange(entry: Entry): string | undefined {
+  const manifest = readJson(
+    entry.dir ? join(entry.dir, "package.json") : fileURLToPath(new URL("../package.json", import.meta.url)),
+  )
+  const engines = isRecord(manifest) && isRecord(manifest.engines) ? manifest.engines : {}
+  return typeof engines.opencode === "string" ? engines.opencode : undefined
 }
 
 interface Entry extends EntryReport {
@@ -301,6 +361,28 @@ function examine(io: DoctorIo, scratch: string): DoctorReport {
     } else if (copies.some((module) => loadedFrom(entry, module))) entry.state = "passive"
     else if (entry.dir) entry.error = importError(entry.module, entry.dir, io, scratch)
   }
+  const opencodeVersion = entries.length ? versionOf(io) : undefined
+  for (const entry of entries) {
+    const range = engineRange(entry)
+    // opencode skips the check for 0.x and development versions
+    if (!opencodeVersion || !range || opencodeVersion.startsWith("0.")) continue
+    const compatible = satisfies(opencodeVersion, range)
+    if (compatible === undefined) warnings.push(`${entry.spec}: its engines.opencode "${range}" was not checked`)
+    else if (compatible) continue
+    else if (entry.kind === "file") {
+      warnings.push(
+        `${entry.spec} requires opencode ${range}, this is ${opencodeVersion}: opencode does not check this for ` +
+          "path plugins, and the plugin may not work",
+      )
+    } else if (entry.state === "not loaded") {
+      entry.error = `skipped by opencode: requires opencode ${range} (the range of this version of the tool), this is ${opencodeVersion}`
+    }
+  }
+  for (const file of Array.isArray(startup?.builtin) ? startup.builtin : []) {
+    warnings.push(
+      `rules/${String(file)} cannot be read: the copy built into the plugin applies until the file is fixed`,
+    )
+  }
   for (const entry of entries) {
     if (entry.state === "failed") warnings.push(`${entry.spec} failed to start (${entry.error}); another copy guards`)
     if (entry.state === "not loaded" && startup)
@@ -332,6 +414,7 @@ function examine(io: DoctorIo, scratch: string): DoctorReport {
 
   return {
     directory,
+    opencodeVersion,
     active: !reason,
     reason,
     entries: entries.map((entry): EntryReport => {
@@ -377,7 +460,9 @@ function describeStartup(event: LogEvent): string {
 
 /** The report as text. */
 export function formatReport(report: DoctorReport): string {
-  const lines = [`Directory: ${report.directory}`, "", "Plugin entries"]
+  const lines = [`Directory: ${report.directory}`]
+  if (report.opencodeVersion) lines.push(`opencode:  ${report.opencodeVersion}`)
+  lines.push("", "Plugin entries")
   if (!report.entries.length) lines.push("  none")
   for (const entry of report.entries) {
     const state =
