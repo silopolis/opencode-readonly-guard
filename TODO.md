@@ -49,9 +49,7 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [ ] Cover non-bash tools in read-only agents (MCP tools with side effects, `webfetch` to internal hosts).
 - [ ] Per-project allowlists (`.opencode/readonly-guard.json`) merged with the global one.
 - [ ] More rules: `kubectl get/describe`, `gh pr view`, `docker compose ps|config`, … each with its write flags in
-      `ask.json` and cases in `cases.json`. Seen in sessions and left for later: absolute paths (`/usr/bin/ls`), and
-      the `2>&1` form of exact rules (opencode matches `herdr --help 2>&1` with its redirection; see the env-prefix
-      design note).
+      `ask.json` and cases in `cases.json`. Seen in sessions and left for later: absolute paths (`/usr/bin/ls`).
 - [ ] `$(…)` inside arithmetic (`(( $(cmd) ))`, `$(( $(cmd) ))`) is not analyzed: the tokenizer skips the body.
       opencode's own parser should still prompt for `cmd`, but the write guard does not see it.
 - [ ] `trap`, `alias`, `hash -p NAME PATH` and function definitions change what later commands run. They prompt
@@ -61,6 +59,38 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [ ] Bundled short options that carry a remote target slip past glob ask rules. The guard blocks them where it
       matters (`systemctl -aH`), but a general approach (normalizing option bundles before matching) waits for the
       2.x permission hook.
+
+## Statements, redirections and environment prefixes
+
+Design note: pull request `docs/env-prefix-design`. opencode builds one pattern per tree-sitter `command` node: the
+text includes the redirections of that command (`herdr --help 2>&1`); `cd`, `pushd` and `popd` are skipped;
+declarations (`export`, `local`, …), bare assignments (`B=/x`), `[ ]`, `[[ ]]` and `(( ))` are not command nodes, so
+they never prompt (the write guard judges them since the exported-variables fix).
+
+Can be done with globs now (rog-utilities, PR 1.4 `feat/rules-utilities`):
+
+- [ ] Builtins that prompt but run nothing: `shift *`, `continue *`, `break *`, `true *`, `false *`, `:`, `read *`
+      (the guard blocks `read` into an exported variable). `set`: exact forms only (`set -e`, `-u`, `-x`,
+      `-o pipefail`, `-euo pipefail`, …), never bare `set` (it prints every variable, the environment included),
+      never `set -a`/`-k`/`-o allexport` (blocked by the guard).
+- [ ] `2>&1` and `2>/dev/null` twins of exact allow rules, generated in `src/rules.ts` like the help layer: exact
+      text only, the same verdict as the base rule, never a wildcard and never a file target. Wildcard rules
+      (`ls *`) already match a trailing redirection.
+
+Can be done in code now (no permission change):
+
+- [ ] `decide()` and `opencode-readonly-guard check` still report "ask" for stages opencode never prompts for
+      (`B=/x`, `export LC_ALL=C`, `[[ … ]]`, `cd x`): skip them there too, so `check`, `cases.json` and the review
+      match opencode. The write guard keeps judging them.
+
+Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
+
+- [ ] Environment prefixes (`LC_ALL=C sort`, `GIT_OPTIONAL_LOCKS=0 git status`): strip literal assignments of the
+      variables in `commands.json` → `environment.exportSafe`, then judge the rest of the command as usual. A glob
+      cannot do it: `LC_ALL=* git diff` also matches `LC_ALL=C GIT_EXTERNAL_DIFF=x git diff`, and twinning every
+      allow and ask rule for every safe variable multiplies the rule list. Until then they ask.
+- [ ] Any redirection that only targets the terminal or the null device (`>/dev/null 2>&1`, `&>/dev/null`), on any
+      rule, without twins.
 
 ## Sharing rules
 
