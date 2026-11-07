@@ -56,9 +56,10 @@ and the project follows [Semantic Versioning](https://semver.org/).
 - Exact `<program> <subcommand> --help` commands for git, herdr, npm and mise are allowed, after the always-ask flags
   (`git commit --help`, `herdr worktree create --help`); `opencode-readonly-guard rules` reports them.
 - `opencode-readonly-guard doctor [--json]`: starts opencode in the current directory without a model and reports the
-  plugin's entries and which one is in charge, why a `file://` copy cannot be imported (`dist/` missing), the agents
-  that carry the guard's rules, the errors of that start and the last start logged for the project. Exit status 1
-  when the guard is not active. A plugin that opencode cannot import runs no code, so only an outside check can see it.
+  plugin's entries and which one is in charge, why a `file://` copy cannot be imported (`dist/` missing), whether
+  opencode's version is in each entry's `engines.opencode` range, the agents that carry the guard's rules, the errors
+  of that start and the last start logged for the project. Exit status 1 when the guard is not active. A plugin that
+  opencode cannot import runs no code, so only an outside check can see it.
 
 ### Fixed
 
@@ -86,10 +87,12 @@ and the project follows [Semantic Versioning](https://semver.org/).
   project's entry, and its options replace the global ones (they are not merged). The `init` event names the copy in
   charge (`module`) and every copy loaded (`copies`).
 - A plugin that could not read its rule files (`server()` threw) was dropped by opencode, and an error in its config
-  hook left the agents half configured: read-only agents ran with `bash: allow` and no write guard. The plugin now
-  fails closed: read-only agents ask before every command (their own deny rules stay), the write guard stays on unless
-  `rules/commands.json` is the broken file, an `error` event records the reason (`where`: `load` or `config`,
-  `writeGuard`) and a toast says so. A copy that started is in charge instead, and its `init` event lists the broken
-  copies (`failed`).
+  hook left the agents half configured: read-only agents ran with `bash: allow` and no write guard. The build now
+  carries a copy of `rules/*.json`, which replaces a file that cannot be read: read-only agents keep the full policy
+  and the write guard, an `error` event names the file (`where: "rules"`), the `init` event lists it (`builtin`), a
+  warning toast says so, and the command-line tool warns on stderr. If the plugin still cannot start (an error in its
+  config hook), it fails closed: read-only agents ask before every command (their own deny rules stay), the write
+  guard stays on, an `error` event records the reason (`where`: `load` or `config`) and a toast says so. A copy that
+  started is in charge instead, and its `init` event lists the broken copies (`failed`).
 
 [Unreleased]: https://github.com/silopolis/opencode-readonly-guard/commits/main

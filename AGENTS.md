@@ -45,9 +45,9 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
 - `plugin.ts`: the opencode hooks: `config` (inject the rules, register `/guard-review`), `tool.execute.before` (the
   write guard), `event` (log prompts and answers), `chat.params` (which agent owns a session). Every hook returns at
   once unless its copy is in charge. `copies.ts`: how copies of the plugin in one opencode instance (a global and a
-  project entry) agree that the one loaded last runs; a new hook must check `copy.active()` too. A copy that cannot
-  read its rules, or fails in its config hook, fails closed (`failClosed` in `inject.ts`) unless a copy that started
-  is in charge.
+  project entry) agree that the one loaded last runs; a new hook must check `copy.active()` too. A copy that fails in
+  its config hook, or cannot read its rules even from the built-in copy, fails closed (`failClosed` in `inject.ts`)
+  unless a copy that started is in charge.
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
   `environment.ts`: statements that export variables to later commands (`export`, `set -a`, namerefs, a new value
@@ -56,8 +56,9 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
   (abbreviations, bundles, values).
 - `wildcard.ts`: opencode's pattern matching, last match wins. `decide.ts`: allow, ask or block for a command line.
 - `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list, ending with the help layer (exact
-  `<program> <subcommand> --help` commands). `inject.ts`: finds the read-only agents and writes their rules into
-  opencode's config.
+  `<program> <subcommand> --help` commands). A file that cannot be read is replaced by the copy `embed.ts` builds in
+  (a Bun macro: `bun build` and `bun` itself replace its call with the files' text). `inject.ts`: finds the read-only
+  agents and writes their rules into opencode's config.
 - `classify.ts`: the safety check for patterns (learned rules, the `allow` option, `vet`).
 - `sources.ts`: presets (`herdr-ui`) and the merge of options, store and herdr's file. `options.ts`: plugin options
   and default paths.
@@ -68,7 +69,8 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
   through `CliIo.exec`). `constants.ts`: ids and tool names.
 
 `rules/`: `allow.json`, `ask.json`, `commands.json`, `cases.json` and their JSON Schemas in `schema/` (CONTRIBUTING.md
-describes each file). They ship in the npm package and are read at runtime.
+describes each file). They ship in the npm package and are read at runtime; `dist/` also carries a copy from build
+time, used only when a file cannot be read.
 
 `test/`
 

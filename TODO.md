@@ -5,7 +5,8 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 ## Release
 
 - [ ] Publish to npm (`opencode-readonly-guard` is free). `publishConfig` already asks for provenance; add a release
-      workflow (tag → CI → `npm publish --provenance`) and drop the "not published yet" notes from the README.
+      workflow (tag → CI → `npm publish --provenance`) and drop the "not published yet" notes from the README. Then
+      let `doctor` import-check npm entries (see "Loading").
 - [ ] Push the first tag (`v0.1.0`) and cut GitHub release notes from `CHANGELOG.md`.
 - [ ] Test on older 1.18.x releases to confirm the `>=1.18.29` lower bound, and widen CI to a small opencode matrix.
 - [ ] Submit the plugin to the opencode ecosystem list.
@@ -99,15 +100,15 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 - [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
       a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
       tool arguments, is a legacy path that makes every argument required and validates none.
-- [x] Detect and report a plugin that fails to load instead of being dropped silently. A copy that imports but cannot
-      read its rules, or fails in its config hook, fails closed (read-only agents ask before every command, the write
-      guard stays on while `commands.json` loads, an `error` event and a toast); a copy that started takes over and
-      lists it in `init.failed`. A copy that cannot be imported runs no code: `opencode-readonly-guard doctor` finds
-      it (covered by `test/integration/failclosed.test.ts` and `doctor.test.ts`).
-  - [ ] `doctor` does not check `engines.opencode`: opencode skips an incompatible plugin with a `session.error`
-        event only, and doctor then reports "no copy of the plugin started" without saying why.
+- [x] Detect and report a plugin that fails to load instead of being dropped silently. A rule file that cannot be read
+      is replaced by the copy built into the plugin (`src/embed.ts`), with an `error` event and a toast; a copy that
+      fails in its config hook fails closed (read-only agents ask before every command, the write guard stays on); a
+      copy that started takes over and lists a failed one in `init.failed`. A copy that cannot be imported runs no
+      code: `opencode-readonly-guard doctor` finds it, and names an npm entry outside its `engines.opencode` range
+      (covered by `test/integration/builtin.test.ts` and `doctor.test.ts`).
   - [ ] npm entries are not import-checked (opencode installs them in its own cache); doctor only reports whether
-        such a copy started.
+        such a copy started. Do it once the package is published (see "Release"), and test it against the real
+        package: an unpublished name must never appear in a config.
 - [x] Add an integration test that loads the built plugin from a directory without `node_modules` (the packed
       tarball, unpacked as is).
 
