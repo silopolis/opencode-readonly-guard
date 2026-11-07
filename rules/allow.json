@@ -238,6 +238,14 @@
     { "pattern": "chezmoi --version", "reason": "print the chezmoi version" },
     { "pattern": "flatpak --version", "reason": "print the flatpak version" },
     { "pattern": "virsh --version", "reason": "print the virsh version" },
+    { "pattern": "bash --version", "reason": "print the bash version (exact: bash with other arguments runs code)" },
+    { "pattern": "tree-sitter --version", "reason": "print the tree-sitter CLI version" },
+    { "pattern": "kitty --version", "reason": "print the kitty version" },
+    { "pattern": "tmux -V", "reason": "print the tmux version (exact: it neither starts nor contacts a server)" },
+    { "pattern": "magick -version", "reason": "print the ImageMagick version (exact: other arguments write images)" },
+    { "pattern": "luajit -v", "reason": "print the LuaJIT version (exact: with -v alone it runs no script)" },
+    { "pattern": "uv --version", "reason": "print the uv version" },
+    { "pattern": "shellcheck --version", "reason": "print the shellcheck version" },
     {
       "pattern": "mise version",
       "reason": "exact match only: print the mise version (mise keeps its own state and version-check cache)"
