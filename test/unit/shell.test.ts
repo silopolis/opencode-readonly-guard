@@ -73,4 +73,34 @@ describe("simpleCommands", () => {
   test("omits redirections", () => {
     expect(simpleCommands("ls -la 2>/dev/null")).toEqual(["ls -la"])
   })
+
+  // checked against tree-sitter-bash: opencode builds one pattern per `command` node and skips cd/pushd/popd
+  test("leaves out what opencode builds no pattern for, but not what it contains", () => {
+    for (const [line, expected] of [
+      ["B=/x", []],
+      ["a=1 b=2; ls", ["ls"]],
+      ["x=$(( 3 > 2 ))", []],
+      ["rev=$(git rev-parse HEAD)", ["git rev-parse HEAD"]],
+      ["arr=(a b c); echo ok", ["echo ok"]],
+      ["export LC_ALL=C; sort f", ["sort f"]],
+      ["declare -p A; local b=1; readonly c=2; typeset d; unset e", []],
+      ["local y=$(cat f)", ["cat f"]],
+      ["[ -f x ] && echo yes", ["echo yes"]],
+      ["[[ a > b ]] || echo no", ["echo no"]],
+      ["cd src && ls; pushd a; popd; X=1 cd b", ["ls"]],
+      ["if [ -f x ]; then echo a; elif false; then echo b; else echo c; fi", ["echo a", "false", "echo b", "echo c"]],
+      ["if ! git diff --quiet; then echo dirty; fi", ["git diff --quiet", "echo dirty"]],
+      ["for f in $(ls); do wc -l $f; done", ["wc -l $f", "ls"]],
+      ["for ((i = 0; i < 3; i++)); do echo $i; done", ["echo $i"]],
+      ["while read -r line; do echo $line; done < list", ["read -r line", "echo $line"]],
+      ["until false; do break; done", ["false", "break"]],
+      ["select x in a b; do echo $x; done", ["echo $x"]],
+      ["{ echo a; echo b; } | sort", ["echo a", "echo b", "sort"]],
+      ["f() { echo hi; }; function g { echo ho; }", ["echo hi", "echo ho"]],
+      ["X=1 git status", ["X=1 git status"]],
+      ["time ls", ["time ls"]],
+    ] as const) {
+      expect({ line, commands: simpleCommands(line) }).toEqual({ line, commands: [...expected] })
+    }
+  })
 })
