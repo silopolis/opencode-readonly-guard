@@ -4,10 +4,14 @@ import {
   containerWrites,
   ipWrites,
   journalctlWrites,
+  lspciWrites,
   mountLists,
   pacmanWrites,
+  psEnvironment,
+  ssWrites,
   systemctlWrites,
   virshWrites,
+  xxdOutput,
 } from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
@@ -376,6 +380,9 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
     if (name === "pacman") return pacmanWrites(args)
     if (containerNames.has(name)) return containerWrites(name, args, containerWrite)
     if (name === "virsh") return virshWrites(args)
+    if (name === "lspci") return lspciWrites(args)
+    if (name === "ss") return ssWrites(args)
+    if (name === "ps") return psEnvironment(args)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null
@@ -410,6 +417,10 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
     if (name === "uniq") {
       const output = uniqOutput(args)
       if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "uniq INPUT OUTPUT writes a file"
+    }
+    if (name === "xxd") {
+      const output = xxdOutput(args)
+      if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "xxd INFILE OUTFILE writes a file"
     }
     if (name === "tar") {
       const first = args[0] ?? ""
@@ -637,7 +648,9 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
       case "notes":
         return rest[0] && !["list", "show"].includes(rest[0]) ? `git notes ${rest[0]} modifies notes` : null
       case "reflog":
-        return ["expire", "delete"].includes(rest[0] ?? "") ? "git reflog expire/delete modifies the reflog" : null
+        return ["expire", "delete", "write", "drop"].includes(rest[0] ?? "")
+          ? `git reflog ${rest[0]} modifies the reflog`
+          : null
       case "symbolic-ref":
         return has("-d", "--delete") || positional.length >= 2 ? "git symbolic-ref modifies refs" : null
       case "hash-object":

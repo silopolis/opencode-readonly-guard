@@ -82,6 +82,200 @@ export function systemctlWrites(args: readonly string[]): string | null {
   return verb && !SYSTEMCTL_READ.test(verb) ? `systemctl ${verb} changes system state` : null
 }
 
+/**
+ * The short options of a getopt command line, without their values: `-nnq` gives n, n, q; `-s 00:1f.3 -k` gives s,
+ * k. A letter of `withValue` takes the rest of its word or the next word. GNU getopt permutes, so options after an
+ * operand count too; `--` ends the options. Long options are skipped.
+ */
+function shortOptions(args: readonly string[], withValue: string): string[] {
+  const letters: string[] = []
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") break
+    if (arg.startsWith("--") || !arg.startsWith("-") || arg === "-") continue
+    for (let c = 1; c < arg.length; c++) {
+      letters.push(arg[c])
+      if (withValue.includes(arg[c])) {
+        if (c === arg.length - 1) j++
+        break
+      }
+    }
+  }
+  return letters
+}
+
+/**
+ * xxd's options that take a value, with the long spellings after which the value is the next word: `-c8` and
+ * `-c 8`, but `-cols 8`, `-cols8 8` and `-cols=8 8` (xxd.c compares the start of the word only).
+ */
+const XXD_WITH_VALUE: Readonly<Record<string, readonly string[]>> = {
+  c: ["ols"],
+  g: ["roup"],
+  o: ["ffset"],
+  s: ["kip", "eek"],
+  l: ["en"],
+  n: ["ame"],
+}
+
+/**
+ * The OUTFILE of `xxd [options] [infile [outfile]]`, in every mode (`-r` patches it, the others truncate it). xxd
+ * reads options up to the first operand or `--`, without bundles; `--name` is `-name`; an option is known by its
+ * first letter (`-autoskip` is `-a`, `-capitalize` is `-C`'s long form, any other `-c…` is a column count).
+ */
+export function xxdOutput(args: readonly string[]): string | undefined {
+  let j = 0
+  for (; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") {
+      j++
+      break
+    }
+    const option = arg.startsWith("--") ? arg.slice(1) : arg
+    if (!option.startsWith("-") || option.length < 2) break // an operand, `-` (standard input) included
+    const letter = option[1]
+    const rest = option.slice(2)
+    if (letter === "R") {
+      if (!rest) j++
+    } else if (!(letter === "c" && rest.startsWith("apitalize"))) {
+      const spellings = XXD_WITH_VALUE[letter]
+      if (spellings && (!rest || spellings.some((spelling) => rest.startsWith(spelling)))) j++
+    }
+  }
+  return args.slice(j)[1]
+}
+
+/** procps-ng ps (src/ps/parser.c): the options that take the rest of the word or the next word as a value. */
+const PS_SYSV_WITH_VALUE = "CDGJORUgopqstuz"
+const PS_BSD_WITH_VALUE = "OUkopqt"
+/** The BSD letters ps accepts (`L` and `V` only alone); any other letter makes a BSD parse fail. */
+const PS_BSD_LETTERS = /^[HMOSTUXZacefghjklmnopqrstuvwx]$/
+const PS_GNU_WITH_VALUE = new Set([
+  "Group",
+  "User",
+  "cols",
+  "columns",
+  "date-format",
+  "delimiter",
+  "format",
+  "group",
+  "lines",
+  "pid",
+  "ppid",
+  "quick-pid",
+  "rows",
+  "sid",
+  "sort",
+  "tty",
+  "user",
+  "width",
+])
+/**
+ * Command lines with `-e` that never fall back to BSD `e`: these words only, checked in every combination of up to
+ * three of them with a marker process (procps-ng 4.0.7).
+ */
+const PS_CHECKED_FLAGS = new Set(["-e", "-ef", "-eF", "-ely", "-elf", "-ejH", "-eLf", "-eH", "-ew", "-eww", "-efww"])
+const PS_CHECKED_EXTRA = new Set(["-f", "-F", "-w", "-ww", "-H", "-l"])
+const PS_CHECKED_FORMAT = new Set(["-o", "-O", "-eo", "-eO"])
+const PS_CHECKED_GNU = new Set(["forest", "sort", "no-headers", "headers", "cols", "width", "format"])
+
+/**
+ * Does a reading of ps's arguments reach the BSD letter `e`, and does it fail on a letter BSD syntax refuses?
+ * Words without a dash are BSD options; `-xyz` is read as SysV options, or as BSD ones when `dashAsBsd` (ps's
+ * second-chance parse). GNU `--name` options read the same in both and are skipped with their values.
+ */
+function psReading(args: readonly string[], dashAsBsd: boolean): { e: boolean; fails: boolean } {
+  let e = false
+  let fails = false
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg.startsWith("--")) {
+      const option = arg.slice(2)
+      if (!/[=:]/.test(option) && PS_GNU_WITH_VALUE.has(option)) j++
+      continue
+    }
+    const dash = arg.startsWith("-")
+    const letters = dash ? arg.slice(1) : arg
+    if (!/^[A-Za-z]/.test(letters)) continue // process, group and session lists
+    const bsd = !dash || dashAsBsd
+    for (let c = 0; c < letters.length; c++) {
+      const letter = letters[c]
+      if (bsd && /\d/.test(letter)) break // a process list ends the word
+      if (bsd && letter === "e") e = true
+      if (bsd && !PS_BSD_LETTERS.test(letter)) fails = true
+      if ((bsd ? PS_BSD_WITH_VALUE : PS_SYSV_WITH_VALUE).includes(letter)) {
+        if (c === letters.length - 1) j++
+        break
+      }
+    }
+  }
+  return { e, fails }
+}
+
+/** Is this one of the `-e` command lines checked never to fall back to BSD `e` (see `PS_CHECKED_FLAGS`)? */
+function psCheckedShape(args: readonly string[]): boolean {
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg.startsWith("--")) {
+      const [name, value] = arg.slice(2).split(/=(.*)/s)
+      if (!PS_CHECKED_GNU.has(name)) return false
+      if (value === undefined && PS_GNU_WITH_VALUE.has(name) && ++j >= args.length) return false
+    } else if (PS_CHECKED_FORMAT.has(arg)) {
+      if (++j >= args.length) return false
+    } else if (!PS_CHECKED_FLAGS.has(arg) && !PS_CHECKED_EXTRA.has(arg)) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * ps prints the environment of processes with BSD `e` (`ps e`, `ps auxe`, no dash) and with the `environ` format.
+ * `-e` (all processes) is fine, but when ps cannot parse a command line it parses it again as BSD options, where
+ * `-e` is `e`: `ps -e -x -o pid,args` shows every environment. So a dash word with `e` only passes in the checked
+ * shapes, or when the BSD reading would fail anyway (`ps -C herdr`: BSD has no `C`).
+ */
+export function psEnvironment(args: readonly string[]): string | null {
+  if (args.some((arg) => /environ/i.test(arg))) return "ps -o environ prints the environment of processes"
+  if (psReading(args, false).e) return "ps e (BSD syntax) prints the environment of processes"
+  const second = psReading(args, true)
+  if (second.e && !second.fails && !psCheckedShape(args)) {
+    return "ps re-reads options it cannot parse as BSD ones, where -e is BSD e, which prints the environment of processes: use -e only with -f, -F, -l, -H, -w, -o/-O FORMAT, --sort, --forest, or use ps aux"
+  }
+  return null
+}
+
+/** ss's short options that take a value (`f: A: D: F: N:` in ss.c). */
+const SS_WITH_VALUE = "fADFN"
+
+/**
+ * `ss -K`/`--kill` closes the sockets it lists, `ss -D`/`--diag FILE` writes a raw dump to FILE. getopt permutes,
+ * so they count after the filter too, in a bundle (`-tK`) or abbreviated (`--k`: no other long option starts with
+ * k; `--d` is `--diag` once `--dccp` is gone, as in iproute2's main branch).
+ */
+export function ssWrites(args: readonly string[]): string | null {
+  for (const arg of args) {
+    if (arg === "--") break
+    if (!arg.startsWith("--")) continue
+    const name = arg.slice(2).split("=")[0]
+    if (name && "kill".startsWith(name)) return "ss -K/--kill closes sockets"
+    if (name && "diag".startsWith(name)) return "ss -D/--diag writes a raw socket dump to a file"
+  }
+  const letters = shortOptions(args, SS_WITH_VALUE)
+  if (letters.includes("K")) return "ss -K/--kill closes sockets"
+  if (letters.includes("D")) return "ss -D/--diag writes a raw socket dump to a file"
+  return null
+}
+
+/** lspci's options that take a value: `s: d: i: p:` (lspci.c) and pciutils' generic `A: O: H: F:`. */
+const LSPCI_WITH_VALUE = "sdipAOHF"
+
+/** `lspci -q`, `-qq` and `-Q` look IDs up over DNS and save them to the ID cache file (`~/.cache/pci-ids`). */
+export function lspciWrites(args: readonly string[]): string | null {
+  return shortOptions(args, LSPCI_WITH_VALUE).some((letter) => letter === "q" || letter === "Q")
+    ? "lspci -q/-Q looks IDs up over DNS and writes them to the ID cache file"
+    : null
+}
+
 /** `mount`, `mount -l`, `mount [-l] -t TYPE`: the listing forms of mount(8). Anything else mounts or remounts. */
 export function mountLists(args: readonly string[]): boolean {
   const rest = args.filter((arg) => arg !== "-l")

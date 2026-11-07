@@ -269,6 +269,27 @@ describe("analyze", () => {
     }
   })
 
+  test("git reflog: expire, delete, write and drop change the reflog; show, list and exists read it", () => {
+    for (const command of [
+      "git reflog expire --all",
+      "git reflog delete HEAD@{1}",
+      "git reflog write refs/heads/x 0000 1111 msg",
+      "git reflog drop --all",
+      "git reflog drop refs/heads/x",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("git reflog") })
+    }
+    for (const command of [
+      "git reflog",
+      "git reflog -n 5",
+      "git reflog show --date=iso HEAD",
+      "git reflog list",
+      "git reflog exists refs/heads/main",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git ls-remote: --upload-pack and --exec run a command", () => {
     for (const command of [
       "git ls-remote --upload-pack='touch /tmp/x' .",
@@ -396,6 +417,175 @@ describe("analyze", () => {
       "systemctl status --mach=box sshd",
     ]) {
       expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("separate") })
+    }
+  })
+
+  test("xxd: a second operand is an output file in every mode; option values are parsed like xxd.c", () => {
+    for (const command of [
+      "xxd in out",
+      "xxd -r in out",
+      "xxd -r -p dump.txt out.bin",
+      "xxd -i in out.h",
+      "xxd -c 8 in out",
+      "xxd -c8 in out",
+      "xxd -cols 8 in out",
+      "xxd --cols 8 in out",
+      "xxd -g 2 -l 64 -s 16 -o 0 in out",
+      "xxd -seek +16 in out",
+      "xxd -n name -i in out.h",
+      "xxd -R always in out",
+      "xxd -capitalize -i in out",
+      "xxd -- -in out",
+      "xxd - out",
+      "xxd in -c",
+      "xxd in out extra",
+      "xxd -cols=8 x in out",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("xxd") })
+    }
+    for (const command of [
+      "xxd",
+      "xxd in",
+      "xxd -l 64 in",
+      "xxd -c 8 in",
+      "xxd -c8 -g1 in",
+      "xxd -cols 8 in",
+      "xxd -seek 16 -len 32 in",
+      "xxd -s -16 in",
+      "xxd -r -p dump.txt",
+      "xxd -p in -",
+      "xxd in /dev/null",
+      "xxd -cols=8 in out",
+      "xxd -R auto -C -i in",
+      "xxd -- in",
+      "xxd -",
+      "cat in | xxd -p",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ss: -K/--kill closes sockets and -D/--diag writes a dump, in any bundle or abbreviation", () => {
+    for (const command of [
+      "ss -K dst 10.0.0.1",
+      "ss -tK",
+      "ss -tnKp state established",
+      "ss --kill",
+      "ss --ki dport = :22",
+      "ss --k",
+      "ss state established -K",
+      "ss -f inet -K4",
+      "ss -D /tmp/dump",
+      "ss -D/tmp/dump",
+      "ss -tiD dump",
+      "ss --diag=/tmp/dump",
+      "ss --di /tmp/dump",
+      "ss --d=dump",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("ss -") })
+    }
+    for (const command of [
+      "ss",
+      "ss -tlnp",
+      "ss -s",
+      "ss -tan state established '( dport = :ssh )'",
+      "ss -A tcp,udp -n",
+      "ss -AK",
+      "ss -N blue -tln",
+      "ss -F filter.txt",
+      "ss -E -t",
+      "ss --tcp --listening --numeric --processes",
+      "ss --info --memory --extended",
+      "ss --family=inet6",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ps: BSD e and the environ format print environments; -e is all processes", () => {
+    for (const command of [
+      "ps e",
+      "ps aux e",
+      "ps auxe",
+      "ps eww",
+      "ps axe -o pid,args",
+      "ps -p 1 e",
+      "ps -f e",
+      "rtk ps aux e",
+      "ps -o pid,environ -p 1",
+      "ps -p 1 -o environ:40",
+      "ps --format=ENVIRON",
+      "ps -eo pid,environ",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("environment") })
+    }
+    for (const command of [
+      "ps",
+      "ps aux",
+      "ps auxf",
+      "ps axjf",
+      "ps -aux",
+      "ps aux --sort=-%mem",
+      "ps -ef",
+      "ps -eF",
+      "ps -ely",
+      "ps -eLf",
+      "ps -ejH",
+      "ps -eww -o args",
+      "ps -ef --forest",
+      "ps -e -o pid,args",
+      "ps -eo pid,ppid,etime,args --sort=-etime",
+      "ps -eo pid,comm --sort pid --no-headers",
+      "ps -e --format pid,args --cols 200",
+      "ps -p 1 -o pid,etime,args",
+      "ps -o pid= -p 123",
+      "ps -fp 123",
+      "ps -T -p 123",
+      "ps --ppid 1 -o pid,cmd",
+      "ps -u steve",
+      "ps -C herdr -o pid,args",
+      "ps o pid,etime,args",
+      "ps p 123 o pid,args",
+      "ps t e",
+      "rtk ps aux",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
+  test("ps: when its first parse fails, ps re-reads -e as BSD e, so -e only passes in the checked shapes", () => {
+    // procps-ng retries a command line it cannot parse as BSD options: `ps -e -x` (no SysV -x) then shows every
+    // environment. Checked with a marker process: `ps -ef -t`, `ps -e -x -o pid,args`, `ps -e -T --forest` leak.
+    for (const command of [
+      "ps -ef -t",
+      "ps -e -x -o pid,args",
+      "ps -e -T --forest",
+      "ps -ef -o pid,args --pid 1",
+      "ps -eS",
+      "ps -u eve",
+      "ps -s x -e",
+      "ps -e -p 1",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("BSD e") })
+    }
+  })
+
+  test("lspci: -q and -Q write the ID cache, in any bundle; option values are not options", () => {
+    for (const command of ["lspci -q", "lspci -qq", "lspci -Q", "lspci -nnq", "lspci -vkQ", "lspci -s 00:02.0 -q"]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("lspci -q") })
+    }
+    for (const command of [
+      "lspci",
+      "lspci -nnk",
+      "lspci -vvv -s 00:1f.3",
+      "lspci -d 8086: -mm",
+      "lspci -iq",
+      "lspci -i q.ids",
+      "lspci -F dump.txt -tv",
+      "lspci -O help",
+      "lspci -A linux-sysfs -G",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
     }
   })
 
@@ -890,23 +1080,62 @@ describe("statements that export variables to later commands", () => {
     ])
   })
 
-  test("harmless variables, listing and un-exporting pass", () => {
+  test("harmless variables, printing named variables and un-exporting pass", () => {
     passesFor([
       "export GIT_OPTIONAL_LOCKS=0; git status",
       "export LC_ALL=C",
       "export LANG=C.UTF-8 TZ=UTC LC_COLLATE=C",
       "export NO_COLOR=1 TERM=dumb COLUMNS=200",
       "export PYTHONDONTWRITEBYTECODE=1",
-      "export",
-      "export -p",
       "export -n RG_DEMO",
       "declare -p RG_DEMO",
-      "declare -f",
+      "declare -p RG_DEMO RG_OTHER",
+      "declare -f rg_demo",
       "declare +x RG_DEMO",
       "declare -a list=(a b)",
       "local line=x",
       "readonly limit=5",
+      "typeset -p RG_DEMO",
     ])
+  })
+
+  test("a declaration without a name lists every variable, the environment included", () => {
+    // opencode never prompts for declarations, so `export -p` would print every secret in the environment unasked
+    for (const command of [
+      "export",
+      "export -p",
+      "export -n",
+      "export -f",
+      "export --",
+      "declare",
+      "declare -p",
+      "declare -x",
+      "declare -px",
+      "declare +x",
+      "declare -f",
+      "declare -F",
+      "declare -A",
+      "declare -p --",
+      "typeset",
+      "typeset -p",
+      "typeset -x",
+      "readonly",
+      "readonly -p",
+      "local",
+      "local -p",
+      "integer",
+      "builtin export -p",
+      "command declare -px",
+      "export -p | grep -i token",
+      "true; export",
+      "if true; then declare -p; fi",
+      "echo $(export -p)",
+      "bash -c 'export -p'",
+      "typeset -m 'RG*'",
+      "typeset -pm '*'",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("environment") })
+    }
   })
 
   test("allexport and keyword mode are blocked", () => {

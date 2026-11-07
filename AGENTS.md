@@ -51,14 +51,16 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
   `environment.ts`: statements that export variables to later commands (`export`, `set -a`, namerefs, a new value
-  for an exported variable), which opencode never prompts for. `programs.ts`: its argument parsers for system tools
-  (systemctl, journalctl, ip, mount, pacman, docker/podman, virsh), which follow each program's own option rules
-  (abbreviations, bundles, values).
-- `wildcard.ts`: opencode's pattern matching, last match wins. `decide.ts`: allow, ask or block for a command line.
+  for an exported variable) or list them all (`export -p`), which opencode never prompts for. `programs.ts`: its
+  argument parsers for system tools (systemctl, journalctl, ip, mount, pacman, docker/podman, virsh, lspci, ss, xxd,
+  ps), which follow each program's own option rules (abbreviations, bundles, values).
+- `wildcard.ts`: opencode's pattern matching, last match wins. `decide.ts`: allow, ask or block for a command line,
+  over the stages opencode builds a pattern for (`simpleCommands` in `shell.ts`).
 - `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list, ending with the help layer (exact
-  `<program> <subcommand> --help` commands). A file that cannot be read is replaced by the copy `embed.ts` builds in
-  (a Bun macro: `bun build` and `bun` itself replace its call with the files' text). `inject.ts`: finds the read-only
-  agents and writes their rules into opencode's config.
+  `<program> <subcommand> --help` and `git help <subcommand>` commands) and the redirection twins (`<exact rule> 2>&1`,
+  `2>/dev/null`). A file that cannot be read is replaced by the copy `embed.ts` builds in (a Bun macro: `bun build`
+  and `bun` itself replace its call with the files' text). `inject.ts`: finds the read-only agents and writes their
+  rules into opencode's config.
 - `classify.ts`: the safety check for patterns (learned rules, the `allow` option, `vet`).
 - `sources.ts`: presets (`herdr-ui`) and the merge of options, store and herdr's file. `options.ts`: plugin options
   and default paths.

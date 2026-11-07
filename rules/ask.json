@@ -22,6 +22,33 @@
     },
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
     { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
+    { "pattern": "ps *environ*", "reason": "ps -o environ prints the environment of processes (blocked by the guard)" },
+    {
+      "pattern": "rtk ps *environ*",
+      "reason": "ps -o environ prints the environment of processes (blocked by the guard)"
+    },
+    { "pattern": "ss *-K*", "reason": "ss -K closes the sockets it lists (blocked by the guard)" },
+    {
+      "pattern": "ss *--k*",
+      "reason": "ss --kill closes the sockets it lists (any abbreviation; blocked by the guard)"
+    },
+    { "pattern": "ss *-D*", "reason": "ss -D FILE writes a raw socket dump to FILE (blocked by the guard)" },
+    {
+      "pattern": "ss *--d*",
+      "reason": "ss --diag=FILE writes a raw socket dump to FILE (any abbreviation; blocked by the guard)"
+    },
+    {
+      "pattern": "lspci *-q*",
+      "reason": "lspci -q/-qq look IDs up over DNS and write the ID cache file (blocked by the guard)"
+    },
+    {
+      "pattern": "lspci *-Q*",
+      "reason": "lspci -Q looks every ID up over DNS and writes the ID cache file (blocked by the guard)"
+    },
+    {
+      "pattern": "lsof *-D*",
+      "reason": "lsof -D b|u builds or updates a device cache file, where the platform has one (not on Linux)"
+    },
     {
       "pattern": "git ls-remote *--u*",
       "reason": "git ls-remote --upload-pack=CMD runs CMD (any abbreviation; blocked when CMD writes)"

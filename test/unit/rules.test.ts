@@ -54,9 +54,9 @@ describe("shared rule files", () => {
 
   test("commands the rtk plugin rewrites have their rtk form too", () => {
     const patterns = loadRules().allow.map(({ pattern }) => pattern)
-    // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff
+    // what `rtk rewrite` turns into `rtk …` (rtk 1.1): git status/log/diff/show/branch/worktree, du, df, diff, ps
     const rewritten = patterns.filter((pattern) =>
-      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff) |systemctl status |docker (ps|images|logs) )/.test(
+      /^(git (status|log|diff|show|branch|worktree)(\*| |$)|(du|df|diff|ps) |systemctl status |docker (ps|images|logs) )/.test(
         pattern,
       ),
     )
@@ -201,10 +201,14 @@ describe("the help layer", () => {
     }
   })
 
-  test("holds exact `<subcommand> --help` commands only", () => {
+  test("holds exact `<subcommand> --help` and `git help <subcommand>` commands only", () => {
     for (const pattern of help) {
-      expect({ pattern, exact: !/[*?]/.test(pattern) && pattern.endsWith(" --help") }).toEqual({ pattern, exact: true })
+      const exact = !/[*?]/.test(pattern) && (pattern.endsWith(" --help") || /^git help [a-z-]+$/.test(pattern))
+      expect({ pattern, exact }).toEqual({ pattern, exact: true })
     }
+    expect(help).toContain("git help commit")
+    expect(help).toContain("git help stash")
+    expect(help).not.toContain("rtk git help commit")
   })
 
   test("never shadows an ask-listed flag", () => {
@@ -244,6 +248,64 @@ describe("the help layer", () => {
   })
 })
 
+const isTwin = (pattern: string): boolean => / 2>(&1|\/dev\/null)$/.test(pattern)
+
+describe("redirection twins", () => {
+  const rules = loadRules()
+  const bash = buildBashRules(rules)
+  const twins = bash.filter(([pattern]) => isTwin(pattern))
+
+  test("an exact allowed command is allowed with 2>&1 or 2>/dev/null, the text opencode matches", () => {
+    for (const command of [
+      "herdr --help 2>&1",
+      "herdr --version 2>/dev/null",
+      "mise set --help 2>&1",
+      "git help commit 2>/dev/null",
+      "node --version 2>&1",
+      "git branch -vv 2>&1",
+      "set -euo pipefail 2>/dev/null",
+    ]) {
+      expect({ command, action: evaluate(command, bash) }).toEqual({ command, action: "allow" })
+    }
+  })
+
+  test("only those two forms, never after a wildcard rule's own text, never to a file", () => {
+    for (const command of [
+      "herdr --help 2>err.txt",
+      "herdr --help > out.txt",
+      "herdr --help 1>&2",
+      "herdr --help 2> /dev/null",
+      "node --version 2>&1 2>&1",
+      "node --version --require ./x.js 2>&1",
+    ]) {
+      expect({ command, action: evaluate(command, bash) }).toEqual({ command, action: "ask" })
+    }
+    expect(twins.length).toBeGreaterThan(100)
+    for (const [pattern, action] of twins) {
+      expect({ pattern, action, exact: !/[*?]/.test(pattern) }).toEqual({ pattern, action: "allow", exact: true })
+    }
+  })
+
+  test("a twin has its base's verdict: the base is allowed, and no ask rule matches the twin", () => {
+    const ask = rules.ask.map(({ pattern }) => pattern)
+    for (const [pattern] of twins) {
+      const base = pattern.replace(/ 2>(&1|\/dev\/null)$/, "")
+      expect({ pattern, base: evaluate(base, bash) }).toEqual({ pattern, base: "allow" })
+      expect({ pattern, ask: ask.filter((rule) => wildcardMatch(pattern, rule)) }).toEqual({ pattern, ask: [] })
+    }
+  })
+
+  test("learned exact rules get twins; an agent's own ask or deny is never overridden", () => {
+    expect(evaluate("vmstat 1 3 2>&1", buildBashRules(rules, ["vmstat 1 3"]))).toBe("allow")
+    expect(evaluate("vmstat 1 3 2>&1", buildBashRules(rules, ["vmstat *"]))).toBe("allow")
+    const own = buildBashRules(rules, [], [["node --version", "ask"]])
+    expect(evaluate("node --version 2>&1", own)).toBe("ask")
+    const denied = buildBashRules(rules, [], [["node --version 2>&1", "deny"]])
+    expect(evaluate("node --version 2>&1", denied)).toBe("deny")
+    expect(evaluate("node --version 2>/dev/null", denied)).toBe("allow")
+  })
+})
+
 describe("buildBashRules", () => {
   const rules = loadRules()
 
@@ -251,20 +313,21 @@ describe("buildBashRules", () => {
     expect(buildBashRules(rules)[0]).toEqual(["*", "ask"])
   })
 
-  test("ask flags come after allow and learned rules, so they override them; only exact help follows", () => {
+  test("ask flags come after allow and learned rules, so they override them; only exact help and twins follow", () => {
     const bash = buildBashRules(rules, ["find *"])
     const help = new Set(helpPatterns(rules))
-    const lastAllow = bash.findLastIndex(([pattern, action]) => action === "allow" && !help.has(pattern))
+    const late = (pattern: string) => help.has(pattern) || isTwin(pattern)
+    const lastAllow = bash.findLastIndex(([pattern, action]) => action === "allow" && !late(pattern))
     const firstAsk = bash.findIndex(([pattern]) => rules.ask.some((rule) => rule.pattern === pattern))
     const lastAsk = bash.findLastIndex(([pattern]) => rules.ask.some((rule) => rule.pattern === pattern))
     expect(firstAsk).toBeGreaterThan(lastAllow)
-    expect(bash.slice(lastAsk + 1).every(([pattern, action]) => action === "allow" && help.has(pattern))).toBe(true)
+    expect(bash.slice(lastAsk + 1).every(([pattern, action]) => action === "allow" && late(pattern))).toBe(true)
     expect(evaluate("find . -delete", bash)).toBe("ask")
   })
 
   test("learned rules allow more", () => {
-    expect(evaluate("uptime", buildBashRules(rules))).toBe("ask")
-    expect(evaluate("uptime", buildBashRules(rules, ["uptime *"]))).toBe("allow")
+    expect(evaluate("vmstat 1 3", buildBashRules(rules))).toBe("ask")
+    expect(evaluate("vmstat 1 3", buildBashRules(rules, ["vmstat *"]))).toBe("allow")
   })
 
   test("an agent's own rule is moved after the shared ones", () => {

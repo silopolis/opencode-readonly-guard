@@ -1,5 +1,15 @@
 import { spawn, spawnSync } from "node:child_process"
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import {
+  closeSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -121,6 +131,7 @@ export function sandbox({
       env[name] = join(dir, "xdg", sub)
     }
   }
+  let runs = 0
   const write = (path: string, content: string) => {
     mkdirSync(dirname(join(project, path)), { recursive: true })
     writeFileSync(join(project, path), content)
@@ -152,14 +163,22 @@ export function sandbox({
       writeFileSync(join(herdrDir, "readonly-guard.json"), JSON.stringify(data))
     },
     opencode: (args, timeout = 120_000) => {
-      const result = spawnSync("opencode", args, {
-        cwd: project,
-        env,
-        encoding: "utf8",
-        timeout,
-        stdio: ["ignore", "pipe", "pipe"],
-      })
-      return { status: result.status, stdout: result.stdout, stderr: result.stderr }
+      // stdout to a file: opencode (Bun) loses the end of a large output written to a pipe just before it exits
+      const file = join(dir, `stdout-${++runs}`)
+      const fd = openSync(file, "w")
+      try {
+        const result = spawnSync("opencode", args, {
+          cwd: project,
+          env,
+          encoding: "utf8",
+          timeout,
+          stdio: ["ignore", fd, "pipe"],
+        })
+        return { status: result.status, stdout: readFileSync(file, "utf8"), stderr: result.stderr }
+      } finally {
+        closeSync(fd)
+        rmSync(file, { force: true })
+      }
     },
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   }

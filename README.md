@@ -8,11 +8,12 @@ shell command, so a model that ignores the reminder can still `rm`, `sed -i` or 
 - **Write guard.** Before opencode evaluates any permission rule, the full command line is parsed and refused if it
   writes: redirections in any position, `tee` to a file, `rm`/`cp`/`mv`/…, `sed -i`, `git commit`, `npm install`,
   `find -delete`, `curl -o`, and wrappers around them (`sudo`, `env`, `xargs`, `bash -c`, `$(…)`). It also refuses
-  to export environment variables to the commands that follow, which opencode never prompts for. The model gets an
-  error that tells it to return the data in its reply instead.
+  to export environment variables to the commands that follow and to list every variable (`export -p`, `declare`),
+  which opencode never prompts for, and the `ps` forms that print process environments (`ps e`, `-o environ`). The
+  model gets an error that tells it to return the data in its reply instead.
 - **Shared allowlist.** Read-only agents ask before running anything except a vetted list of read-only commands
-  (`ls`, `cat`, `rg`, `sort`, `echo`, `git log`, `git branch -a`, `systemctl status`, `docker ps`, `ip addr`,
-  `herdr agent list`, …). The list lives in
+  (`ls`, `cat`, `rg`, `sort`, `echo`, `sha256sum`, `readlink -f`, `ps aux`, `ss -tlnp`, `git log`, `git branch -a`,
+  `git describe`, `systemctl status`, `docker ps`, `ip addr`, `herdr agent list`, …). The list lives in
   [`rules/`](rules) as plain JSON that anyone can extend.
 - **Reviewed learning.** An "always" answer in a read-only agent is only logged as a candidate. `/guard-review` shows
   candidates with safe pattern options, and a rule is added only after you confirm the exact pattern.
@@ -116,9 +117,12 @@ For every read-only agent the plugin writes this ordered bash rule list into the
 5. the always-ask flags, [`rules/ask.json`](rules/ask.json): `find -delete/-exec`, `rg --pre`, `git … --output`,
    `sort --compress-program`, `git ls-remote --upload-pack`, …
 6. the help layer: exact `<program> <subcommand> --help` commands for git, herdr, npm and mise (`git commit --help`,
-   `herdr worktree create --help`), derived from [`rules/commands.json`](rules/commands.json). They only print help;
-   the layer holds no wildcard, never covers an ask-listed flag, and never overrides a deny or an exact rule of the
-   agent's own.
+   `herdr worktree create --help`) and `git help <subcommand>`, derived from
+   [`rules/commands.json`](rules/commands.json). They only print help; the layer holds no wildcard, never covers an
+   ask-listed flag, and never overrides a deny or an exact rule of the agent's own.
+7. the redirection twins: `<command> 2>&1` and `<command> 2>/dev/null` for every exact command allowed above
+   (`herdr --help 2>&1`), because opencode matches a command together with its redirections. A twin is only added
+   where no rule but `*` matches it, so it never overrides an ask flag, a deny or an agent's own rule.
 
 Because the flags come after every allow rule, a broad learned rule such as `find *` never silences `find . -delete`.
 
@@ -235,6 +239,10 @@ upstream issue (they are in [TODO.md](TODO.md)).
   the redirections of later pipeline stages (`a | b > f`), `{ …; } > f` and `( … ) > f` are invisible to patterns.
   Glob rules therefore cannot stop those writes; a parser in `tool.execute.before` can.
 - Commands inside `$(…)`, backticks and `<(…)` are checked as separate commands.
+- Only tree-sitter `command` nodes get a pattern, and `cd`, `chdir`, `pushd` and `popd` are skipped. Declarations
+  (`export`, `declare`, `local`, `readonly`, `typeset`), `unset`, bare assignments (`B=/x`), `[ ]`, `[[ ]]` and
+  `(( ))` never prompt, whatever they do: without the write guard, `export -p` prints the whole environment in plan
+  mode unasked. The guard is the only check on them.
 
 **"Always" answers**
 

@@ -311,14 +311,67 @@ export function parseShell(src: string): ParsedShell {
   return { cmds, subs }
 }
 
+/** Reserved words in front of a command: `if cmd`, `then cmd`, `do cmd`, `! cmd`, `{ cmd`. */
+const LEADING_RESERVED = new Set(["if", "then", "elif", "else", "do", "while", "until", "!", "{"])
+/** Words that start a statement opencode builds no pattern for, up to the end of the simple command. */
+const NOT_COMMANDS = new Set([
+  "for", // `for x in a b` (the body follows `do`)
+  "select",
+  "case", // `case $x in` (a pattern in a later clause is still taken for a command: it asks, see TODO.md)
+  "fi",
+  "done",
+  "esac",
+  "}",
+  "[", // tree-sitter parses `[ … ]` and `[[ … ]]` as test_command
+  "[[",
+  "export", // declaration_command
+  "declare",
+  "typeset",
+  "local",
+  "readonly",
+  "unset", // unset_command
+  "cd", // opencode skips these four
+  "chdir",
+  "pushd",
+  "popd",
+])
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/
+const ARRAY_ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*\+?=\(/
+
 /**
- * Every simple command in the input as the text opencode's permission rules would see it (approximately:
- * words joined by single spaces, redirections omitted), including those inside command substitutions.
+ * The text opencode builds a permission pattern for from one simple command, or undefined when it builds none.
+ * opencode makes one pattern per tree-sitter `command` node: reserved words around it are not part of it, and
+ * declarations, bare assignments, `[ ]`, `[[ ]]`, loop headers and `cd` are not command nodes at all (`cd` is
+ * skipped on purpose).
+ */
+function promptedText(words: readonly string[]): string | undefined {
+  let k = 0
+  for (;;) {
+    if (LEADING_RESERVED.has(words[k])) k++
+    else if (words[k] === "function")
+      k += 2 // `function name {`
+    else break
+  }
+  const rest = words.slice(k)
+  if (!rest.length || NOT_COMMANDS.has(rest[0])) return undefined
+  if (rest.length === 1 && /^[A-Za-z_][\w-]*\($/.test(rest[0])) return undefined // `name()` before a body
+  const name = rest.findIndex((word) => !ASSIGNMENT.test(word))
+  if (name < 0) return undefined // `B=/x`, `x=$(( … ))`
+  if (rest.slice(0, name).some((word) => ARRAY_ASSIGNMENT.test(word))) return undefined // `arr=(a b)`: its elements
+  if (["cd", "chdir", "pushd", "popd"].includes(rest[name])) return undefined // `X=1 cd dir`
+  return rest.join(" ")
+}
+
+/**
+ * Every simple command in the input that opencode would build a permission pattern for, as the text its rules
+ * would see (approximately: words joined by single spaces, redirections omitted), including those inside command
+ * substitutions. Statements that never prompt are left out (see `promptedText`); the write guard still judges
+ * them all.
  */
 export function simpleCommands(src: string, depth = 0): string[] {
   if (depth > 5) return []
   const parsed = parseShell(src)
-  const out = parsed.cmds.filter((cmd) => cmd.words.length).map((cmd) => cmd.words.join(" "))
+  const out = parsed.cmds.flatMap((cmd) => promptedText(cmd.words) ?? [])
   for (const sub of parsed.subs) out.push(...simpleCommands(sub, depth + 1))
   return out
 }

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { EXIT, runCli, type CliIo } from "../../src/commands.js"
+import { EXIT, runCli, systemIo, type CliIo } from "../../src/commands.js"
 import { createLog } from "../../src/log.js"
 
 let dir: string
@@ -66,8 +66,8 @@ describe("check", () => {
     expect(cli("check", "ls -la")).toBe(EXIT.allow)
     expect(stdout).toBe("allow\n")
     stdout = ""
-    expect(cli("check", "uptime")).toBe(EXIT.ask)
-    expect(stdout).toBe("ask    needs approval: uptime\n")
+    expect(cli("check", "tokei")).toBe(EXIT.ask)
+    expect(stdout).toBe("ask    needs approval: tokei\n")
     stdout = ""
     expect(cli("check", "ls", ">", "f")).toBe(EXIT.block)
     expect(stdout).toBe('block  write redirection "> f"\n')
@@ -79,9 +79,9 @@ describe("check", () => {
   })
 
   test("learned rules from the store are taken into account, unless --no-store", () => {
-    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["uptime *"] }))
-    expect(cli("check", "uptime")).toBe(EXIT.allow)
-    expect(cli("check", "--no-store", "uptime")).toBe(EXIT.ask)
+    writeFileSync(join(dir, "store.json"), JSON.stringify({ allow: ["tokei *"] }))
+    expect(cli("check", "tokei")).toBe(EXIT.allow)
+    expect(cli("check", "--no-store", "tokei")).toBe(EXIT.ask)
   })
 
   test("inside herdr the UI commands are allowed, anywhere else they ask", () => {
@@ -123,7 +123,7 @@ describe("check", () => {
 
 describe("vet", () => {
   test("accepts and refuses patterns", () => {
-    expect(cli("vet", "uptime", "*")).toBe(0)
+    expect(cli("vet", "tokei", "*")).toBe(0)
     expect(stdout).toContain("ok")
     expect(cli("vet", "rm *")).toBe(1)
     expect(stdout).toContain("refused")
@@ -160,11 +160,11 @@ describe("review", () => {
       reply: "always",
       permission: "bash",
       agent: "plan",
-      patterns: ["uptime"],
-      always: ["uptime *"],
+      patterns: ["tokei"],
+      always: ["tokei *"],
     })
     expect(cli("review")).toBe(0)
-    expect(stdout).toContain("1. `uptime`")
+    expect(stdout).toContain("1. `tokei`")
   })
 
   test("--store and --log-dir override the environment", () => {
@@ -194,5 +194,30 @@ describe("install", () => {
   test("local install by default", () => {
     cli("install")
     expect(ran).toEqual([["opencode", ["plugin", "opencode-readonly-guard"]]])
+  })
+})
+
+describe("systemIo", () => {
+  // opencode is a Bun program: a Bun child that exits right after a large write to a pipe loses the rest of it.
+  // `opencode debug config` lost the end of its JSON that way once the read-only agents carried ~2000 rules.
+  test("exec captures all of a large output written just before the child exits", () => {
+    const size = 4 << 20
+    const script = `process.stdout.write("x".repeat(${size})); process.stderr.write("done"); process.exit(3)`
+    const result = systemIo().exec(process.execPath, ["-e", script], { cwd: tmpdir(), env: { PATH: process.env.PATH } })
+    expect({ status: result.status, length: result.stdout.length, stderr: result.stderr }).toEqual({
+      status: 3,
+      length: size,
+      stderr: "done",
+    })
+  })
+
+  test("exec reports a program that cannot be started", () => {
+    const result = systemIo().exec("readonly-guard-no-such-program", [], {
+      cwd: tmpdir(),
+      env: { PATH: process.env.PATH },
+    })
+    expect(result.status).toBeNull()
+    expect(result.stdout).toBe("")
+    expect(result.error).toBeTruthy()
   })
 })

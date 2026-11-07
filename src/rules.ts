@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import type { RuleFile } from "./embed.js"
 import { embedRules } from "./embed.js" with { type: "macro" }
 import { describeError } from "./log.js"
-import { evaluate, type Action, type RuleEntry } from "./wildcard.js"
+import { compileWildcard, type Action, type RuleEntry } from "./wildcard.js"
 
 export interface PatternRule {
   pattern: string
@@ -192,22 +192,24 @@ const HERDR_ASK_PATH = /^herdr ([a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*){0,2})(?: \*)
 /**
  * Every exact `<program> <subcommand> --help` the help layer may allow: git's subcommands (`git.write`, `git.read`
  * and `subcommandHelp.git`), herdr's paths (`herdr.read`, `herdr.write` and its `herdr <path> *` ask rules), npm's and
- * mise's `subcommandHelp` lists, and the `rtk …` form of the git, npm and mise ones. The write guard does not block
- * them (a sole trailing `--help` only prints help).
+ * mise's `subcommandHelp` lists, and the `rtk …` form of the git, npm and mise ones; plus `git help <subcommand>`,
+ * which `git <subcommand> --help` runs (rtk does not rewrite it). The write guard does not block them (a sole
+ * trailing `--help` only prints help).
  */
 export function helpCommands(rules: Pick<RuleSet, "commands" | "ask">): string[] {
   const { git, herdr, subcommandHelp } = rules.commands
   const { ask } = rules
   const askPaths = ask.flatMap(({ pattern }) => HERDR_ASK_PATH.exec(pattern)?.[1] ?? [])
+  const gitSubcommands = [...git.write, ...git.read, ...subcommandHelp.git]
   const rewrittenByRtk = [
-    ...[...git.write, ...git.read, ...subcommandHelp.git].map((sub) => `git ${sub}`),
+    ...gitSubcommands.map((sub) => `git ${sub}`),
     ...subcommandHelp.npm.map((sub) => `npm ${sub}`),
     ...subcommandHelp.mise.map((path) => `mise ${path}`),
   ]
   // not the UI subcommands: outside herdr nothing about them may be allowed (see the herdr-ui preset)
   const herdrPaths = [...herdr.read, ...herdr.write, ...askPaths].map((path) => `herdr ${path}`)
   const all = [...rewrittenByRtk, ...rewrittenByRtk.map((command) => `rtk ${command}`), ...herdrPaths]
-  return [...new Set(all.map((command) => `${command} --help`))]
+  return [...new Set([...all.map((command) => `${command} --help`), ...gitSubcommands.map((sub) => `git help ${sub}`)])]
 }
 
 /**
@@ -216,7 +218,50 @@ export function helpCommands(rules: Pick<RuleSet, "commands" | "ask">): string[]
  */
 export function helpPatterns(rules: RuleSet, before: readonly RuleEntry[] = baseRules(rules)): string[] {
   const listed = new Set(before.map(([pattern]) => pattern))
-  return helpCommands(rules).filter((command) => !listed.has(command) && evaluate(command, before) === "ask")
+  const lastMatch = lastMatchingRule(before)
+  return helpCommands(rules).filter((command) => !listed.has(command) && (lastMatch(command)?.[1] ?? "ask") === "ask")
+}
+
+/**
+ * `evaluate` for many commands against one rule list: the last rule that matches a command, or undefined. `evaluate`
+ * compiles every pattern again for each command; this indexes the exact patterns and compiles the wildcard ones once.
+ */
+function lastMatchingRule(rules: readonly RuleEntry[]): (command: string) => RuleEntry | undefined {
+  const position = new Map(rules.map(([pattern], at) => [pattern, at]))
+  const wildcards = rules.flatMap(([pattern], at) =>
+    /[*?]/.test(pattern) ? [{ at, test: compileWildcard(pattern) }] : [],
+  )
+  return (command) => {
+    let found = position.get(command) ?? -1
+    for (let k = wildcards.length - 1; k >= 0 && wildcards[k].at > found; k--) {
+      if (wildcards[k].test(command)) {
+        found = wildcards[k].at
+        break
+      }
+    }
+    return rules[found]
+  }
+}
+
+/** Redirections that neither write nor change what runs, in the spelling commands mostly use. */
+export const TWIN_REDIRECTIONS = ["2>&1", "2>/dev/null"] as const
+
+/**
+ * The redirection twins: `<command> 2>&1` and `<command> 2>/dev/null` for every exact command the rules allow.
+ * opencode matches a command together with its redirections (`herdr --help 2>&1`), which an exact rule misses and a
+ * wildcard rule (`ls *`) already matches. A twin is added only where nothing but the catch-all `*` matches it, so
+ * it never overrides an ask flag, a deny or an agent's own rule, and only for a base the whole list allows.
+ */
+export function redirectionTwins(before: readonly RuleEntry[]): string[] {
+  const lastMatch = lastMatchingRule(before)
+  const exact = before.flatMap(([pattern, action]) => (action === "allow" && !/[*?]/.test(pattern) ? [pattern] : []))
+  return [...new Set(exact)]
+    .filter((command) => lastMatch(command)?.[1] === "allow")
+    .flatMap((command) => TWIN_REDIRECTIONS.map((redirection) => `${command} ${redirection}`))
+    .filter((twin) => {
+      const rule = lastMatch(twin)
+      return rule !== undefined && rule[0] === "*" && rule[1] === "ask"
+    })
 }
 
 function baseRules(rules: RuleSet, learned: readonly string[] = [], own: readonly RuleEntry[] = []): RuleEntry[] {
@@ -236,7 +281,8 @@ function baseRules(rules: RuleSet, learned: readonly string[] = [], own: readonl
 /**
  * Ordered bash rules for a read-only agent. Later rules win, so the order is:
  * ask by default, shared allowlist, learned rules, the agent's own rules, the always-ask flags, then the help layer
- * (exact `<program> <subcommand> --help` commands only, see `helpPatterns`).
+ * (exact `<program> <subcommand> --help` commands only, see `helpPatterns`) and the redirection twins of every
+ * exact allowed command (see `redirectionTwins`).
  * Re-adding a pattern moves it to its new position instead of keeping the old one.
  */
 export function buildBashRules(
@@ -245,5 +291,6 @@ export function buildBashRules(
   own: readonly RuleEntry[] = [],
 ): RuleEntry[] {
   const before = baseRules(rules, learned, own)
-  return [...before, ...helpPatterns(rules, before).map((pattern): RuleEntry => [pattern, "allow"])]
+  const helped = [...before, ...helpPatterns(rules, before).map((pattern): RuleEntry => [pattern, "allow"])]
+  return [...helped, ...redirectionTwins(helped).map((pattern): RuleEntry => [pattern, "allow"])]
 }

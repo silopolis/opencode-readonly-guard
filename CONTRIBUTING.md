@@ -27,7 +27,8 @@ the JSON Schemas in [`rules/schema/`](rules/schema) and checked by the unit test
 
 Pattern syntax is opencode's: `*` matches anything, `?` one character, and a trailing ` *` also matches the bare
 command. The **last matching rule wins**, which is why `ask.json` is applied after every allow rule (only the exact
-`--help` commands of the help layer follow it).
+`--help` commands of the help layer and the `2>&1` / `2>/dev/null` twins of exact rules follow it, both generated).
+An exact rule therefore also covers its command followed by `2>&1` or `2>/dev/null`; do not add those by hand.
 
 ### Adding a command to the allowlist
 
@@ -70,14 +71,16 @@ Other files:
 - **`commands.json` → `subcommandHelp`:** extra git subcommands, and npm and mise subcommand paths, whose exact
   `<program> <subcommand> --help` is allowed by the help layer, after `ask.json` (git also gets `git.write` and
   `git.read`, herdr its `read` and `write` paths and its `herdr <path> *` ask rules; git, npm and mise get the `rtk`
-  form). The write guard treats a sole trailing `--help` after the subcommand path as a help request. The unit tests
-  check that every derived command is allowed and that none matches an ask-listed flag.
+  form, and git `git help <subcommand>`). The write guard treats a sole trailing `--help` after the subcommand path
+  as a help request. The unit tests check that every derived command is allowed and that none matches an ask-listed
+  flag.
 - **`commands.json` → `wildcardSafe`:** commands for which `/guard-review` may offer `cmd *`. Only add a command whose
   every read-only use is harmless and whose write options are covered by `ask.json` or the analyzer.
 
 Behaviour that depends on arguments (`tee`, `sed -i`, `find -exec`, `curl -o`, `git branch <name>`, …) lives in
 `src/analyze.ts`, and for system tools with their own option rules (`systemctl`, `journalctl`, `ip`, `pacman`,
-`docker`/`podman`, `virsh`) in `src/programs.ts`; add a unit test in `test/unit/analyze.test.ts` and a case in
+`docker`/`podman`, `virsh`, `lspci`, `ss`, `xxd`, `ps`) in `src/programs.ts`; add a unit test in
+`test/unit/analyze.test.ts` and a case in
 `cases.json`. Check the program's real behaviour (its sources, or a run against a scratch target such as
 `virsh -c test:///default`) rather than its manual alone.
 
