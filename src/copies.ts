@@ -57,3 +57,52 @@ export function registerCopy(instance: object, info: CopyInfo): Copy {
   }
   return { active: () => inCharge() === info, modules: () => copies.map((copy) => copy.module), tools }
 }
+
+/** A copy of the plugin that could not start (its rule files cannot be read). */
+export interface FailedCopyInfo {
+  /** The file the copy was loaded from. */
+  module: string
+  /** Why it could not start. */
+  error: string
+  /** Did it keep the write guard (`commands.json` could be read)? */
+  writeGuard: boolean
+}
+
+export interface FailedCopy {
+  /**
+   * Must this copy fail closed? Only when no copy started in its instance, and it is the failed copy loaded last
+   * among those that kept the write guard (or among all of them, if none did).
+   */
+  inCharge(): boolean
+}
+
+/**
+ * Where the copies that failed are recorded. A key of its own, so that the copies key keeps its shape and copies
+ * built before failures were recorded still see the others; a copy that started under either version counts.
+ */
+const FAILED = Symbol.for("opencode-readonly-guard.failed.v1")
+
+function failures(): WeakMap<object, FailedCopyInfo[]> {
+  const holder = globalThis as { [FAILED]?: unknown }
+  if (!(holder[FAILED] instanceof WeakMap)) holder[FAILED] = new WeakMap<object, FailedCopyInfo[]>()
+  return holder[FAILED] as WeakMap<object, FailedCopyInfo[]>
+}
+
+/**
+ * Record a copy that failed to start. Asked at config time, once every copy has started (or not): a copy that
+ * started, loaded before or after, is in charge and the failed ones stay passive; otherwise the failed copy loaded
+ * last fails closed, so that read-only agents are not left with opencode's defaults.
+ */
+export function registerFailedCopy(instance: object, info: FailedCopyInfo): FailedCopy {
+  const all = failures()
+  const failed = all.get(instance) ?? []
+  all.set(instance, failed)
+  failed.push(info)
+  const chosen = () => failed.findLast((copy) => copy.writeGuard) ?? failed.at(-1)
+  return { inCharge: () => !registry().get(instance)?.length && chosen() === info }
+}
+
+/** The copies that failed to start in an opencode instance, in load order. */
+export function failedCopies(instance: object): FailedCopyInfo[] {
+  return [...(failures().get(instance) ?? [])]
+}

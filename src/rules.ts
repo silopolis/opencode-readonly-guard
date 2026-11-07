@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs"
+import type { RuleFile } from "./embed.js"
+import { embedRules } from "./embed.js" with { type: "macro" }
+import { describeError } from "./log.js"
 import { evaluate, type Action, type RuleEntry } from "./wildcard.js"
 
 export interface PatternRule {
@@ -21,10 +24,33 @@ export interface Commands {
   rtkReadSubcommands: string[]
 }
 
+/** A rule file that could not be read, replaced by the copy built into the plugin. */
+export interface RuleFallback {
+  file: RuleFile
+  error: string
+}
+
 export interface RuleSet {
   allow: PatternRule[]
   ask: PatternRule[]
   commands: Commands
+  /** The files read from the built-in copy, because the file next to the plugin could not be read. */
+  fallbacks?: RuleFallback[]
+}
+
+/**
+ * The rule files as they were when the plugin was built (run from source: when this module was loaded). They stand in
+ * for a file next to the plugin that cannot be read, so that a corrupt or missing file does not leave read-only
+ * agents without their rules or the write guard.
+ */
+export const BUILTIN_RULES: Readonly<Record<RuleFile, string>> = embedRules()
+
+/** Where the rule files come from. */
+export interface RuleSources {
+  /** A rule file next to the plugin, parsed. Throws when it cannot be read. */
+  read(file: RuleFile): unknown
+  /** The copy that replaces a file that cannot be read or has the wrong shape. */
+  builtin?: Partial<Readonly<Record<RuleFile, string>>>
 }
 
 const RULES_DIR = new URL("../rules/", import.meta.url)
@@ -111,15 +137,52 @@ function commands(raw: unknown): Commands {
   }
 }
 
-let cached: RuleSet | undefined
+const FILES_ON_DISK: RuleSources = { read: readJson, builtin: BUILTIN_RULES }
 
-/** Load the shared rule files shipped with the package (`rules/*.json`). */
-export function loadRules(): RuleSet {
-  cached ??= {
-    allow: patternRules(readJson("allow.json"), "allow.json"),
-    ask: patternRules(readJson("ask.json"), "ask.json"),
-    commands: commands(readJson("commands.json")),
+/** Read one rule file, or its built-in copy (recorded in `fallbacks`) if the file cannot be read or has the wrong shape. */
+function readFile<T>(sources: RuleSources, file: RuleFile, parse: (raw: unknown) => T, fallbacks: RuleFallback[]): T {
+  try {
+    return parse(sources.read(file))
+  } catch (error) {
+    const copy = sources.builtin?.[file]
+    if (copy === undefined) throw error
+    fallbacks.push({ file, error: describeError(error) })
+    return parse(JSON.parse(copy))
   }
+}
+
+/** Read `commands.json` alone: the write guard needs nothing else. */
+export function readCommands(sources: RuleSources = FILES_ON_DISK): { commands: Commands; fallbacks: RuleFallback[] } {
+  const fallbacks: RuleFallback[] = []
+  return { commands: readFile(sources, "commands.json", commands, fallbacks), fallbacks }
+}
+
+/** Read every rule file. */
+export function readRuleSet(sources: RuleSources = FILES_ON_DISK): RuleSet {
+  const fallbacks: RuleFallback[] = []
+  return {
+    allow: readFile(sources, "allow.json", (raw) => patternRules(raw, "allow.json"), fallbacks),
+    ask: readFile(sources, "ask.json", (raw) => patternRules(raw, "ask.json"), fallbacks),
+    commands: readFile(sources, "commands.json", commands, fallbacks),
+    fallbacks,
+  }
+}
+
+let cached: RuleSet | undefined
+let cachedCommands: Commands | undefined
+
+/** Load `rules/commands.json` alone: the write guard needs nothing else, so it can run when another file is broken. */
+export function loadCommands(): Commands {
+  cachedCommands ??= readCommands().commands
+  return cachedCommands
+}
+
+/**
+ * Load the shared rule files shipped with the package (`rules/*.json`). A file that cannot be read is replaced by the
+ * copy built into the plugin, and listed in `fallbacks`.
+ */
+export function loadRules(): RuleSet {
+  cached ??= readRuleSet()
   return cached
 }
 

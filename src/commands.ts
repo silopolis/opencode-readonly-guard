@@ -3,19 +3,38 @@ import { spawnSync } from "node:child_process"
 import { classifyPattern, normalizePattern } from "./classify.js"
 import { PLUGIN_ID } from "./constants.js"
 import { decide } from "./decide.js"
+import { doctor, formatReport } from "./doctor.js"
 import { createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { review } from "./review.js"
-import { buildBashRules, helpPatterns, loadRules } from "./rules.js"
+import { buildBashRules, helpPatterns, loadRules, type RuleSet } from "./rules.js"
 import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
+
+export interface ExecOptions {
+  cwd: string
+  env: NodeJS.ProcessEnv
+  timeout?: number
+}
+
+export interface ExecResult {
+  status: number | null
+  stdout: string
+  stderr: string
+  /** Set when the program could not be started (not found) or was killed (timeout). */
+  error?: string
+}
 
 export interface CliIo {
   out(text: string): void
   err(text: string): void
   env: NodeJS.ProcessEnv
+  /** The working directory. */
+  cwd: string
   /** Run a program with inherited stdio and return its exit status. */
   run(command: string, args: string[]): number
+  /** Run a program and capture its output. */
+  exec(command: string, args: string[], options: ExecOptions): ExecResult
 }
 
 export const EXIT = { allow: 0, ask: 1, block: 2, usage: 64 } as const
@@ -32,6 +51,9 @@ Commands:
   review [--limit N] [--store F] [--log-dir D]
                                           Print the guard log summary (what /guard-review shows).
   install [-g] [--force]                  Install the plugin into opencode ('opencode plugin ${PLUGIN_ID}').
+  doctor [--json]                         Start opencode here without a model and report whether the guard is
+                                          active: plugin entries, guarded agents, startup errors.
+                                          Exit status: 0 active, 1 not active.
 
 Options:
   -h, --help       Show this help.
@@ -61,6 +83,13 @@ function takeValue(args: string[], name: string): string | undefined {
   return value
 }
 
+/** The shared rules, with a warning for each file replaced by the copy built into the tool. */
+function rulesFor(io: CliIo): RuleSet {
+  const rules = loadRules()
+  for (const { error } of rules.fallbacks ?? []) io.err(`warning: ${error}; using the copy built into the tool\n`)
+  return rules
+}
+
 function check(args: string[], io: CliIo): number {
   const json = takeFlag(args, "--json")
   const noStore = takeFlag(args, "--no-store")
@@ -69,7 +98,7 @@ function check(args: string[], io: CliIo): number {
     io.err("check: missing command\n")
     return EXIT.usage
   }
-  const rules = loadRules()
+  const rules = rulesFor(io)
   const options = resolveOptions({}, io.env)
   // --no-store means the shared rules only: no store, and no presets either
   const learned = noStore
@@ -100,7 +129,7 @@ function vet(args: string[], io: CliIo): number {
 }
 
 function printRules(args: string[], io: CliIo): number {
-  const rules = loadRules()
+  const rules = rulesFor(io)
   const help = helpPatterns(rules)
   if (takeFlag(args, "--json")) {
     io.out(`${JSON.stringify({ allow: rules.allow, ask: rules.ask, help }, null, 2)}\n`)
@@ -125,13 +154,24 @@ function printReview(args: string[], io: CliIo): number {
     `${review({
       store: loadStore(options.storeFile),
       events: createLog(options.logDir).read(),
-      rules: loadRules(),
+      rules: rulesFor(io),
       limit,
       options,
       herdr: loadHerdrRules(options),
     })}\n`,
   )
   return 0
+}
+
+function printDoctor(args: string[], io: CliIo): number {
+  const json = takeFlag(args, "--json")
+  if (args.length) {
+    io.err(`doctor: unexpected argument ${args[0]}\n`)
+    return EXIT.usage
+  }
+  const report = doctor(io)
+  io.out(json ? `${JSON.stringify(report, null, 2)}\n` : formatReport(report))
+  return report.active ? 0 : 1
 }
 
 function install(args: string[], io: CliIo): number {
@@ -165,6 +205,8 @@ export function runCli(argv: readonly string[], io: CliIo): number {
         return printReview(args, io)
       case "install":
         return install(args, io)
+      case "doctor":
+        return printDoctor(args, io)
       default:
         io.err(`unknown command: ${command}\n\n${HELP}`)
         return EXIT.usage
@@ -181,6 +223,23 @@ export function systemIo(): CliIo {
     out: (text) => void process.stdout.write(text),
     err: (text) => void process.stderr.write(text),
     env: process.env,
+    cwd: process.cwd(),
     run: (command, args) => spawnSync(command, args, { stdio: "inherit" }).status ?? 1,
+    exec: (command, args, { cwd, env, timeout }) => {
+      const result = spawnSync(command, args, {
+        cwd,
+        env,
+        timeout,
+        encoding: "utf8",
+        maxBuffer: 256 * 1024 * 1024, // the resolved config holds every agent's rules
+        stdio: ["ignore", "pipe", "pipe"],
+      })
+      return {
+        status: result.status,
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+        error: result.error?.message,
+      }
+    },
   }
 }
