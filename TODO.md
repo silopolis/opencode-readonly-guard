@@ -5,7 +5,8 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
 ## Release
 
 - [ ] Publish to npm (`opencode-readonly-guard` is free). `publishConfig` already asks for provenance; add a release
-      workflow (tag → CI → `npm publish --provenance`) and drop the "not published yet" notes from the README.
+      workflow (tag → CI → `npm publish --provenance`) and drop the "not published yet" notes from the README. Then
+      let `doctor` import-check npm entries (see "Loading").
 - [ ] Push the first tag (`v0.1.0`) and cut GitHub release notes from `CHANGELOG.md`.
 - [ ] Test on older 1.18.x releases to confirm the `>=1.18.29` lower bound, and widen CI to a small opencode matrix.
 - [ ] Submit the plugin to the opencode ecosystem list.
@@ -110,9 +111,11 @@ Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
 
 ## Learning and review
 
-- [ ] Check in a real TUI that the "always" warning toast is shown (only the API call is covered by tests).
+- [ ] Check in a real TUI that the toasts are shown: the "always" warning, and "failed to start" (sent during startup;
+      tests cover the API call, and a probe against `opencode serve` showed it on the global event stream).
 - [ ] Make the review smarter: merge near-duplicate candidates, group by command, propose removals of unused rules.
-- [ ] A `doctor` subcommand: show which agents are treated as read-only and the resolved rules.
+- [x] A `doctor` subcommand: show which agents are treated as read-only and the resolved rules
+      (`opencode-readonly-guard doctor`, `src/doctor.ts`; `--json` includes each agent's bash rules).
 - [ ] Event log: optional redaction (commands can contain secrets), configurable retention, file permissions 0600.
 
 ## Interplay with other plugins
@@ -134,8 +137,15 @@ Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
 - [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
       a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
       tool arguments, is a legacy path that makes every argument required and validates none.
-- [ ] Detect and report a plugin that fails to load instead of being dropped silently (for example a startup
-      self-check, or documented `doctor` output). opencode logs nothing about it, even at `DEBUG`.
+- [x] Detect and report a plugin that fails to load instead of being dropped silently. A rule file that cannot be read
+      is replaced by the copy built into the plugin (`src/embed.ts`), with an `error` event and a toast; a copy that
+      fails in its config hook fails closed (read-only agents ask before every command, the write guard stays on); a
+      copy that started takes over and lists a failed one in `init.failed`. A copy that cannot be imported runs no
+      code: `opencode-readonly-guard doctor` finds it, and names an npm entry outside its `engines.opencode` range
+      (covered by `test/integration/builtin.test.ts` and `doctor.test.ts`).
+  - [ ] npm entries are not import-checked (opencode installs them in its own cache); doctor only reports whether
+        such a copy started. Do it once the package is published (see "Release"), and test it against the real
+        package: an unpublished name must never appear in a config.
 - [x] Add an integration test that loads the built plugin from a directory without `node_modules` (the packed
       tarball, unpacked as is).
 

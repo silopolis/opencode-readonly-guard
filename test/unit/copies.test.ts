@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { registerCopy, type CopyInfo } from "../../src/copies.js"
+import { failedCopies, registerCopy, registerFailedCopy, type CopyInfo } from "../../src/copies.js"
 
 // The contract between installed copies of the plugin: changing it means old and new copies no longer see each other.
 const KEY = Symbol.for("opencode-readonly-guard.copies.v1")
-const holder = globalThis as { [KEY]?: unknown }
-const saved = holder[KEY]
-afterEach(() => void (holder[KEY] = saved))
+const FAILED = Symbol.for("opencode-readonly-guard.failed.v1")
+const holder = globalThis as { [KEY]?: unknown; [FAILED]?: unknown }
+const saved = { copies: holder[KEY], failed: holder[FAILED] }
+afterEach(() => {
+  holder[KEY] = saved.copies
+  holder[FAILED] = saved.failed
+})
 
 const info = (module: string, answer = module): CopyInfo => ({
   module,
@@ -56,5 +60,54 @@ describe("copies of the plugin", () => {
     registerCopy(instance, info("file:///project/dist/index.js", "project"))
     expect(await first.tools.probe.execute({}, context)).toBe("project for build")
     expect(first.tools.probe.description).toBe("probe")
+  })
+})
+
+const failure = (module: string, writeGuard = true) => ({ module, error: "cannot load allow.json", writeGuard })
+
+describe("copies that failed to start", () => {
+  test("the failed copy loaded last fails closed, as long as no copy started", () => {
+    const instance = {}
+    const first = registerFailedCopy(instance, failure("file:///global/dist/index.js"))
+    expect(first.inCharge()).toBe(true)
+    const second = registerFailedCopy(instance, failure("file:///project/dist/index.js"))
+    expect([first.inCharge(), second.inCharge()]).toEqual([false, true])
+    expect(failedCopies(instance).map((copy) => copy.module)).toEqual([
+      "file:///global/dist/index.js",
+      "file:///project/dist/index.js",
+    ])
+    expect(registerFailedCopy({}, failure("file:///other/dist/index.js")).inCharge()).toBe(true)
+  })
+
+  test("among failed copies, the last one that kept its write guard is preferred", () => {
+    const instance = {}
+    const guarded = registerFailedCopy(instance, failure("file:///global/dist/index.js"))
+    const unguarded = registerFailedCopy(instance, failure("file:///project/dist/index.js", false))
+    expect([guarded.inCharge(), unguarded.inCharge()]).toEqual([true, false])
+
+    const none = {}
+    registerFailedCopy(none, failure("file:///global/dist/index.js", false))
+    expect(registerFailedCopy(none, failure("file:///project/dist/index.js", false)).inCharge()).toBe(true)
+  })
+
+  test("a copy that started, loaded before or after, takes over", () => {
+    const after = {}
+    const failedFirst = registerFailedCopy(after, failure("file:///global/dist/index.js"))
+    const healthy = registerCopy(after, info("file:///project/dist/index.js"))
+    expect([failedFirst.inCharge(), healthy.active()]).toEqual([false, true])
+
+    const before = {}
+    registerCopy(before, info("file:///global/dist/index.js"))
+    expect(registerFailedCopy(before, failure("file:///project/dist/index.js")).inCharge()).toBe(false)
+    expect(failedCopies(before)).toEqual([failure("file:///project/dist/index.js")])
+  })
+
+  test("failures are kept under their own versioned key, and copies built earlier still count as started", () => {
+    const instance = {}
+    // a copy built before failures were recorded: it only knows the copies key
+    holder[KEY] = new WeakMap([[instance, [info("file:///old/dist/index.js")]]])
+    expect(registerFailedCopy(instance, failure("file:///new/dist/index.js")).inCharge()).toBe(false)
+    expect(holder[FAILED]).toBeInstanceOf(WeakMap)
+    expect(failedCopies({})).toEqual([])
   })
 })

@@ -19,10 +19,17 @@ run = ["bun install --frozen-lockfile", "hk install --mise"]
 
 [tasks.build]
 description = "Bundle src/ into dist/ (plugin and CLI), with type declarations"
-sources = ["src/**/*.ts", "tsconfig*.json", "bun.lock", "package.json"]
+sources = [
+  "rules/*.json",
+  "src/**/*.ts",
+  "tsconfig*.json",
+  "bun.lock",
+  "package.json",
+]
 outputs = ["dist/**/*"]
 # The "build" script in package.json (also run by `npm pack`). It bundles zod into dist/, so that a checkout loaded as
-# `file://…` needs no node_modules: opencode drops a plugin that fails to import without a word.
+# `file://…` needs no node_modules: opencode drops a plugin that fails to import without a word. It also bundles a copy
+# of rules/*.json (src/embed.ts), used when a rule file cannot be read: a rule change must rebuild.
 run = "bun run build"
 
 [tasks.typecheck]

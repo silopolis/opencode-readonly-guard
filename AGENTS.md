@@ -45,7 +45,9 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
 - `plugin.ts`: the opencode hooks: `config` (inject the rules, register `/guard-review`), `tool.execute.before` (the
   write guard), `event` (log prompts and answers), `chat.params` (which agent owns a session). Every hook returns at
   once unless its copy is in charge. `copies.ts`: how copies of the plugin in one opencode instance (a global and a
-  project entry) agree that the one loaded last runs; a new hook must check `copy.active()` too.
+  project entry) agree that the one loaded last runs; a new hook must check `copy.active()` too. A copy that fails in
+  its config hook, or cannot read its rules even from the built-in copy, fails closed (`failClosed` in `inject.ts`)
+  unless a copy that started is in charge.
 - `shell.ts`: POSIX-ish tokenizer (simple commands, redirections, substitutions); what it cannot parse is blocked.
 - `analyze.ts`: the write guard: redirections, wrappers, `sed -i`, `find -delete`, git and package-manager writes, …
   `environment.ts`: statements that export variables to later commands (`export`, `set -a`, namerefs, a new value
@@ -56,24 +58,30 @@ under the shared rules, and `bun src/cli.ts vet '<pattern>'` runs the safety che
   over the stages opencode builds a pattern for (`simpleCommands` in `shell.ts`).
 - `rules.ts`: loads `rules/*.json` and builds the ordered bash rule list, ending with the help layer (exact
   `<program> <subcommand> --help` and `git help <subcommand>` commands) and the redirection twins (`<exact rule> 2>&1`,
-  `2>/dev/null`). `inject.ts`: finds the read-only agents and writes their rules into opencode's config.
+  `2>/dev/null`). A file that cannot be read is replaced by the copy `embed.ts` builds in (a Bun macro: `bun build`
+  and `bun` itself replace its call with the files' text). `inject.ts`: finds the read-only agents and writes their
+  rules into opencode's config.
 - `classify.ts`: the safety check for patterns (learned rules, the `allow` option, `vet`).
 - `sources.ts`: presets (`herdr-ui`) and the merge of options, store and herdr's file. `options.ts`: plugin options
   and default paths.
 - `store.ts`: learned rules (`readonly-guard.json`). `log.ts`: the event log (`events.jsonl`, rotated).
 - `review.ts`, `tools.ts`, `command.ts`: the log summary, the `readonly_guard_review` and `readonly_guard_update`
   tools, the `/guard-review` command.
-- `commands.ts`, `cli.ts`: the command-line tool. `constants.ts`: ids and tool names.
+- `commands.ts`, `cli.ts`: the command-line tool. `doctor.ts`: its `doctor` subcommand (runs `opencode debug config`
+  through `CliIo.exec`). `constants.ts`: ids and tool names.
 
 `rules/`: `allow.json`, `ask.json`, `commands.json`, `cases.json` and their JSON Schemas in `schema/` (CONTRIBUTING.md
-describes each file). They ship in the npm package and are read at runtime.
+describes each file). They ship in the npm package and are read at runtime; `dist/` also carries a copy from build
+time, used only when a file cannot be read.
 
 `test/`
 
 - `unit/`: mostly one file per module. `cases.test.ts` runs every case in `rules/cases.json`; `rules.test.ts` checks
   the rule files against each other.
 - `integration/`: the real opencode without a model (`opencode debug config|agent` in a sandbox project), two copies
-  of the plugin in one opencode, and the packed tarball.
+  of the plugin in one opencode, copies with corrupt rule files, `doctor`, and the packed tarball. Broken copies are
+  `file://` copies of the build (`copyPlugin()`); never put an unpublished npm name in a config, opencode would
+  install whatever the registry serves under it.
 - `e2e/`: a real model drives a read-only harness agent; opt-in (`OPENCODE_E2E=1`, set by the mise task).
 - `helpers.ts`: `sandbox()`, a throwaway project with its own XDG directories, store and log (and, with
   `globalPlugin`, its own global config). Use it for anything that starts opencode. `childEnv()`: the caller's

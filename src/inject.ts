@@ -58,10 +58,42 @@ export function isEditDenied(agent: AgentConfig | undefined): boolean {
  * named in `include` are not created. An agent whose bash is fully denied stays that way.
  */
 export function injectRules(config: MutableConfig, input: InjectInput): Set<string> {
+  return applyPolicy(config, input, (own) =>
+    Object.fromEntries(
+      buildBashRules(
+        input.rules,
+        input.learned,
+        own.filter(([pattern]) => pattern !== "*"),
+      ),
+    ),
+  )
+}
+
+/**
+ * The policy of a copy that could not load its rules: every read-only agent asks before every command, and keeps
+ * only its own deny rules (a fully denied bash stays denied). Returns the names of the read-only agents.
+ */
+export function failClosed(config: MutableConfig, input: Pick<InjectInput, "include" | "exclude">): Set<string> {
+  return applyPolicy(config, input, (own) => ({
+    "*": "ask",
+    ...Object.fromEntries(own.filter(([pattern, action]) => pattern !== "*" && action === "deny")),
+  }))
+}
+
+/**
+ * Give every read-only agent the bash rules that `bashFor` builds from the agent's own, unless its bash is fully
+ * denied, and hide the review tools from it; limit plan's subagents and require a confirmation to extend the
+ * allowlist. Returns the names of the read-only agents.
+ */
+function applyPolicy(
+  config: MutableConfig,
+  { include, exclude }: Pick<InjectInput, "include" | "exclude">,
+  bashFor: (own: RuleEntry[]) => PermissionTable,
+): Set<string> {
   config.agent ??= {}
-  const names = new Set<string>([...DEFAULT_READ_ONLY_AGENTS, ...input.include])
+  const names = new Set<string>([...DEFAULT_READ_ONLY_AGENTS, ...include])
   for (const [name, agent] of Object.entries(config.agent)) if (isEditDenied(agent)) names.add(name)
-  for (const name of input.exclude) names.delete(name)
+  for (const name of exclude) names.delete(name)
 
   const readOnly = new Set<string>()
   for (const name of names) {
@@ -71,15 +103,7 @@ export function injectRules(config: MutableConfig, input: InjectInput): Set<stri
     if (agent.disable) continue
     const permission = asTable(agent.permission)
     const own = ownBashRules(permission.bash)
-    if (!own.some(([pattern, action]) => pattern === "*" && action === "deny")) {
-      permission.bash = Object.fromEntries(
-        buildBashRules(
-          input.rules,
-          input.learned,
-          own.filter(([pattern]) => pattern !== "*"),
-        ),
-      )
-    }
+    if (!own.some(([pattern, action]) => pattern === "*" && action === "deny")) permission.bash = bashFor(own)
     permission[TOOL_REVIEW] = "deny"
     permission[TOOL_UPDATE] = "deny"
     agent.permission = permission

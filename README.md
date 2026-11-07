@@ -59,6 +59,16 @@ project's entry wins, and its options replace the global entry's (they are not m
 names the copy in charge (`module`) and every copy loaded (`copies`). A copy built before this rule does not know
 about it and still runs next to the others.
 
+The build carries a copy of `rules/*.json`. A rule file that cannot be read (corrupt, missing) is replaced by that
+copy, so read-only agents keep the full policy and the write guard; an `error` event (`where: "rules"`) names the
+file, the `init` event lists it under `builtin`, and a warning toast says so. A file that reads fine is always used,
+so editing the rules of a checkout needs no build. If the plugin still cannot start (an error while it applies the
+rules), it fails closed: read-only agents ask before every shell command (their own deny rules stay), the write guard
+stays on, an `error` event names the reason and a toast says so. These toasts are shown whatever the `toast` option.
+A copy that started, loaded before or after a broken one, is in charge instead, and its `init` event lists the broken
+copy under `failed`. A plugin that opencode cannot even import (a checkout without `dist/`) runs no code and cannot
+report anything: run `opencode-readonly-guard doctor` in the project to check.
+
 ## Using it
 
 **`/guard-review`** (registered by the plugin, runs in `build`) summarizes the log: blocked commands, the most-prompted
@@ -75,6 +85,7 @@ vet <pattern>                           may this pattern be added to the allowli
 rules [--json]                          print the shared allowlist and the always-ask flags
 review [--limit N]                      print the log summary
 install [-g] [--force]                  opencode plugin opencode-readonly-guard
+doctor [--json]                         is the guard active here? (exit status 0 | 1)
 ```
 
 ```console
@@ -85,6 +96,14 @@ block  write redirection "> notes.txt"
 $ opencode-readonly-guard check 'uptime'
 ask    needs approval: uptime
 ```
+
+`doctor` starts opencode in the current directory without a model (`opencode debug config`, the plugin's log for that
+run goes to a temporary directory) and reports: this plugin's entries in the config and which one is in charge, why a
+`file://` copy cannot be imported (`dist/index.js is missing: a checkout that was not built, run mise run build in
+…`), whether opencode's version is in each entry's `engines.opencode` range, which agents carry the guard's rules and
+how many, the errors of that start (a rule file replaced by the built-in copy is a warning), and the last start
+logged for the project. It exits with 1 when the guard is not active, including when it failed closed; `--json`
+prints the report.
 
 ## How the policy is built
 
@@ -188,7 +207,9 @@ Set them with the tuple form: `["opencode-readonly-guard", { … }]`.
 `READONLY_GUARD_STORE` and `READONLY_GUARD_DATA` override the default paths (an explicit option wins). The store file
 is plain JSON and safe to keep in your dotfiles; the event log contains the commands your agents ran, so keep it local.
 The startup `init` event in the log lists the `presets` in effect next to the number of `learned` rules, and the
-copies of the plugin loaded (see [Install](#install)).
+copies of the plugin loaded or `failed`, and the rule files replaced by the built-in copy (`builtin`, see
+[Install](#install)); a copy that fails closed logs an `error` event instead (`where`: `load` or `config`,
+`writeGuard`: whether the write guard is still on).
 
 ## What it does not do
 
@@ -252,10 +273,21 @@ upstream issue (they are in [TODO.md](TODO.md)).
 
 - opencode treats every export of a plugin module as a plugin and calls it. Export only the default definition.
 - A package is loaded from `exports["./server"]`, else `main`. A default export `{ id, server }` is supported since
-  1.18.29. `engines.opencode` is enforced. Peer dependencies such as `@opencode-ai/plugin` are installed for you.
+  1.18.29. `engines.opencode` is enforced for npm packages only (one outside its range is skipped with a
+  `session.error` event); a plugin loaded from a path runs whatever its range says. Peer dependencies such as
+  `@opencode-ai/plugin` are installed for you.
 - That install only happens for npm packages. A plugin loaded from a path (`file://…`) resolves its imports from that
   path, and if one fails (no `node_modules` there) opencode drops the plugin without a log line, even at `DEBUG`, while
-  `opencode debug config` still lists it. This is why `dist/` is a bundle that only imports Node built-ins.
+  `opencode debug config` still lists it. This is why `dist/` is a bundle that only imports Node built-ins. The same
+  goes for a checkout without `dist/` and for a `file://` path that does not exist: `opencode debug config` exits 0
+  with nothing on stderr, and opencode starts as if nothing were wrong. A plugin that fails to import cannot report
+  anything itself; only an outside check can (`opencode-readonly-guard doctor`).
+- A plugin whose `server()` throws is dropped too, with one `failed to load plugin` line in opencode's log; an error
+  in a `config` hook is logged (`plugin config hook failed`) and opencode goes on. Either way the agents keep whatever
+  the config holds at that point, which is why this plugin carries a copy of its rule files, catches its own errors
+  and fails closed.
+- A toast sent while opencode starts (from `server()` or a `config` hook, without awaiting it: the request waits for
+  the instance being started) reaches clients listening to the global event stream, which the TUI does.
 - Plugin entries are merged only when they name the same `file://` URL or npm package (the last one is kept). Two
   specs of the same plugin load two copies of its module. Each gets the same input object, every `server()` runs
   before any `config` hook, global entries before project ones, and `hooks.tool` is read after all of them, which is

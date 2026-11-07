@@ -19,10 +19,12 @@ const io = (env: NodeJS.ProcessEnv = {}): CliIo => ({
     HERDR_CONFIG_PATH: join(dir, "herdr", "config.toml"),
     ...env,
   },
+  cwd: dir,
   run: (command, args) => {
     ran.push([command, args])
     return 0
   },
+  exec: (command) => ({ status: null, stdout: "", stderr: "", error: `${command}: not available in these tests` }),
 })
 const cli = (...argv: string[]) => runCli(argv, io())
 /** Run as if started from a herdr pane. */
@@ -45,6 +47,7 @@ describe("help and version", () => {
   test("--help succeeds", () => {
     expect(cli("--help")).toBe(0)
     expect(stdout).toContain("check [--json]")
+    expect(stdout).toContain("doctor [--json]")
   })
 
   test("--version prints the package version", () => {
