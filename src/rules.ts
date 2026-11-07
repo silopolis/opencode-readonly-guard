@@ -112,13 +112,20 @@ function commands(raw: unknown): Commands {
 }
 
 let cached: RuleSet | undefined
+let cachedCommands: Commands | undefined
+
+/** Load `rules/commands.json` alone: the write guard needs nothing else, so it can run when another file is broken. */
+export function loadCommands(): Commands {
+  cachedCommands ??= commands(readJson("commands.json"))
+  return cachedCommands
+}
 
 /** Load the shared rule files shipped with the package (`rules/*.json`). */
 export function loadRules(): RuleSet {
   cached ??= {
     allow: patternRules(readJson("allow.json"), "allow.json"),
     ask: patternRules(readJson("ask.json"), "ask.json"),
-    commands: commands(readJson("commands.json")),
+    commands: loadCommands(),
   }
   return cached
 }

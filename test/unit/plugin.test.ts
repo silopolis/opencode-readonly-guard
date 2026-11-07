@@ -6,6 +6,7 @@ import { join } from "node:path"
 import type { MutableConfig } from "../../src/inject.js"
 import plugin from "../../src/index.js"
 import { createLog, type LogEvent } from "../../src/log.js"
+import { createServer } from "../../src/plugin.js"
 
 let dir: string
 let toasts: unknown[]
@@ -381,6 +382,135 @@ describe("two copies in one opencode instance", () => {
     const inits = events().filter((event) => event.type === "init")
     expect(inits).toHaveLength(2)
     for (const init of inits) expect(init.copies).toHaveLength(1)
+  })
+})
+
+const corrupt = (file: string) => () => {
+  throw new Error(`readonly-guard: cannot load ${file}`, { cause: new SyntaxError("JSON Parse error: Unexpected EOF") })
+}
+/** A copy with a corrupt `rules/allow.json`: the write guard only needs `commands.json`, which still loads. */
+const LOAD_ERROR = "readonly-guard: cannot load allow.json: JSON Parse error: Unexpected EOF"
+const broken = createServer({ loadRules: corrupt("allow.json") })
+/** A copy with a corrupt `rules/commands.json`: no write guard either. */
+const COMMANDS_ERROR = "readonly-guard: cannot load commands.json: JSON Parse error: Unexpected EOF"
+const unguarded = createServer({ loadCommands: corrupt("commands.json"), loadRules: corrupt("commands.json") })
+
+/** A new opencode instance: every plugin of an instance gets the same input object. */
+const newInstance = () => ({ client, worktree: "/work" }) as unknown as PluginInput
+const paths = () => ({ store: join(dir, "store.json"), logDir: join(dir, "log") })
+
+describe("a copy that cannot load its rules", () => {
+  test("fails closed: read-only agents ask before every command and keep their own deny rules", async () => {
+    const hooks = await broken(newInstance(), paths())
+    const config: MutableConfig = {
+      agent: {
+        explore: { permission: { bash: { "git status": "allow", "rm *": "deny" } } },
+        auditor: { permission: { edit: "deny", bash: { "*": "deny" } } },
+      },
+    }
+    await hooks.config!(config as never)
+    expect(bashRules(config)).toEqual({ "*": "ask" })
+    expect(bashRules(config, "explore")).toEqual({ "*": "ask", "rm *": "deny" })
+    expect(bashRules(config, "auditor")).toEqual({ "*": "deny" })
+    expect(config.agent?.plan?.permission).toMatchObject({ readonly_guard_review: "deny" })
+    // no review tools, no review command: they need the rules
+    expect(hooks.tool).toBeUndefined()
+    expect(config.command).toBeUndefined()
+    expect(events()).toMatchObject([
+      {
+        type: "error",
+        where: "load",
+        error: LOAD_ERROR,
+        writeGuard: true,
+        project: "/work",
+        roAgents: ["plan", "explore", "auditor"],
+      },
+    ])
+  })
+
+  test("with commands.json intact, the write guard still blocks writes in read-only agents", async () => {
+    const hooks = await broken(newInstance(), paths())
+    await hooks.config!({} as never)
+    await useAgent(hooks, "s1", "plan")
+    await expect(bash(hooks, "s1", "ls > f")).rejects.toThrow("[readonly-guard] Blocked in read-only agent")
+    await bash(hooks, "s1", "git log")
+    sessions.s2 = { agent: "explore" } // no model call seen: the session's agent is asked for
+    await expect(bash(hooks, "s2", "rm -rf x")).rejects.toThrow("Blocked")
+    await useAgent(hooks, "s3", "build")
+    await bash(hooks, "s3", "ls > f")
+    expect(events().map((event) => event.type)).toEqual(["error", "blocked", "call", "blocked"])
+  })
+
+  test("without commands.json, read-only agents still ask for everything but the write guard is off", async () => {
+    const hooks = await unguarded(newInstance(), paths())
+    const config: MutableConfig = {}
+    await hooks.config!(config as never)
+    expect(bashRules(config)).toEqual({ "*": "ask" })
+    await useAgent(hooks, "s1", "plan")
+    await bash(hooks, "s1", "ls > f")
+    expect(events()).toMatchObject([{ type: "error", where: "load", error: COMMANDS_ERROR, writeGuard: false }])
+  })
+
+  test("of two failed copies, the one that kept the write guard is in charge", async () => {
+    const input = newInstance()
+    const copies = [await broken(input, paths()), await unguarded(input, paths())]
+    for (const hooks of copies) await hooks.config!({} as never)
+    await trigger(copies, "chat.params", { sessionID: "s1", agent: "plan" } as never, {} as never)
+    await expect(
+      trigger(
+        copies,
+        "tool.execute.before",
+        { tool: "bash", sessionID: "s1", callID: "c1" },
+        { args: { command: "ls > f" } },
+      ),
+    ).rejects.toThrow("Blocked")
+    expect(events().filter((event) => event.type === "error")).toMatchObject([{ error: LOAD_ERROR, writeGuard: true }])
+  })
+
+  test("a copy that started, loaded after it, is in charge and names the failed one", async () => {
+    const input = newInstance()
+    const copies = [await broken(input, paths()), await plugin.server(input, paths())]
+    const config: MutableConfig = {}
+    for (const hooks of copies) await hooks.config!(config as never)
+    expect(bashRules(config)["git log*"]).toBe("allow")
+    expect(events().filter((event) => event.type === "error")).toEqual([])
+    const inits = events().filter((event) => event.type === "init")
+    expect(inits).toHaveLength(1)
+    expect(inits[0].failed).toEqual([{ module: expect.stringContaining("plugin.ts"), error: LOAD_ERROR }])
+    // the failed copy is passive: its write guard does not log the calls a second time
+    await trigger(copies, "chat.params", { sessionID: "s1", agent: "plan" } as never, {} as never)
+    await trigger(
+      copies,
+      "tool.execute.before",
+      { tool: "bash", sessionID: "s1", callID: "c1" },
+      { args: { command: "ls" } },
+    )
+    expect(events().filter((event) => event.type === "call")).toHaveLength(1)
+    expect(inits[0].copies).toHaveLength(1)
+  })
+
+  test("a copy that started, loaded before it, stays in charge", async () => {
+    const input = newInstance()
+    const copies = [await plugin.server(input, paths()), await broken(input, paths())]
+    const config: MutableConfig = {}
+    for (const hooks of copies) await hooks.config!(config as never)
+    expect(bashRules(config)["git log*"]).toBe("allow")
+    expect(events().filter((event) => event.type === "error")).toEqual([])
+    expect(events().find((event) => event.type === "init")?.failed).toMatchObject([{ error: LOAD_ERROR }])
+  })
+
+  test("two failed copies fail closed once", async () => {
+    const input = newInstance()
+    const copies = [await broken(input, paths()), await broken(input, paths())]
+    const config: MutableConfig = {}
+    for (const hooks of copies) await hooks.config!(config as never)
+    expect(bashRules(config)).toEqual({ "*": "ask" })
+    expect(events().map((event) => [event.type, event.where])).toEqual([["error", "load"]])
+  })
+
+  test("a copy that started alone lists no failure", async () => {
+    await start()
+    expect(events().find((event) => event.type === "init")?.failed).toEqual([])
   })
 })
 

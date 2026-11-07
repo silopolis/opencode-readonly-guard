@@ -70,6 +70,17 @@ export function injectRules(config: MutableConfig, input: InjectInput): Set<stri
 }
 
 /**
+ * The policy of a copy that could not load its rules: every read-only agent asks before every command, and keeps
+ * only its own deny rules (a fully denied bash stays denied). Returns the names of the read-only agents.
+ */
+export function failClosed(config: MutableConfig, input: Pick<InjectInput, "include" | "exclude">): Set<string> {
+  return applyPolicy(config, input, (own) => ({
+    "*": "ask",
+    ...Object.fromEntries(own.filter(([pattern, action]) => pattern !== "*" && action === "deny")),
+  }))
+}
+
+/**
  * Give every read-only agent the bash rules that `bashFor` builds from the agent's own, unless its bash is fully
  * denied, and hide the review tools from it; limit plan's subagents and require a confirmation to extend the
  * allowlist. Returns the names of the read-only agents.
