@@ -115,6 +115,30 @@ function writeGuard(
   }
 }
 
+/**
+ * Tell the user that the guard could not start. Not awaited: during startup the request waits for the opencode
+ * instance that is being started. A TUI receives it (it listens to the global event stream before the instance boots).
+ */
+function warnFailure(client: PluginInput["client"], reason: string, guarded: boolean): void {
+  const effect = guarded
+    ? "Read-only agents ask before every command until it is fixed."
+    : "Read-only agents ask before every command, and the write guard is OFF, until it is fixed."
+  try {
+    client.tui
+      .showToast({
+        body: {
+          title: "readonly-guard failed to start",
+          message: `${reason}. ${effect} Run \`opencode-readonly-guard doctor\`.`,
+          variant: "error",
+          duration: 15000,
+        },
+      })
+      .catch(() => undefined)
+  } catch {
+    // the error event in the log is the lasting record
+  }
+}
+
 /** The agent lists of the options and the store. */
 function agentLists(options: ResolvedOptions, onStoreError?: (error: Error) => void) {
   const store = loadStore(options.storeFile, onStoreError ?? (() => undefined))
@@ -182,6 +206,7 @@ function failedCopy(
         roAgents: [...names],
         module: import.meta.url,
       })
+      warnFailure(pluginInput.client, reason, !!guard)
     },
 
     "chat.params": async (input) => {
@@ -256,15 +281,17 @@ function startedCopy(
         const names = failClosed(config as MutableConfig, agentLists(options))
         readOnly.clear()
         for (const name of names) readOnly.add(name)
+        const reason = describeError(error)
         guardLog.write({
           type: "error",
           where: "config",
-          error: describeError(error),
+          error: reason,
           writeGuard: true,
           project: worktree,
           roAgents: [...names],
           module: import.meta.url,
         })
+        warnFailure(client, reason, true)
       }
     },
 

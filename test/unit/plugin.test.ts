@@ -514,6 +514,59 @@ describe("a copy that cannot load its rules", () => {
   })
 })
 
+/** The text of the toasts shown so far. */
+const toastMessages = () => toasts.map((toast) => (toast as { body: { message: string; variant: string } }).body)
+
+describe("the user is told once when the guard could not start", () => {
+  test("a copy that fails closed shows one toast that names the reason and doctor", async () => {
+    await (
+      await broken(newInstance(), paths())
+    ).config!({} as never)
+    expect(toastMessages()).toMatchObject([
+      {
+        variant: "error",
+        message:
+          `${LOAD_ERROR}. Read-only agents ask before every command until it is fixed. ` +
+          "Run `opencode-readonly-guard doctor`.",
+      },
+    ])
+  })
+
+  test("the toast says when the write guard is off", async () => {
+    await (
+      await unguarded(newInstance(), paths())
+    ).config!({} as never)
+    expect(toastMessages()).toHaveLength(1)
+    expect(toastMessages()[0].message).toContain("and the write guard is OFF")
+  })
+
+  test("a failed config hook shows it too", async () => {
+    await (
+      await plugin.server(newInstance(), paths())
+    ).config!({ command: "not a table" } as never)
+    expect(toastMessages()).toHaveLength(1)
+    expect(toastMessages()[0].message).toContain("ask before every command")
+  })
+
+  test("two failed copies show one toast; a copy that started shows none", async () => {
+    const input = newInstance()
+    const failed = [await broken(input, paths()), await broken(input, paths())]
+    for (const hooks of failed) await hooks.config!({} as never)
+    expect(toasts).toHaveLength(1)
+    const mixed = newInstance()
+    const copies = [await broken(mixed, paths()), await plugin.server(mixed, paths())]
+    for (const hooks of copies) await hooks.config!({} as never)
+    expect(toasts).toHaveLength(1)
+  })
+
+  test("startup does not wait for the toast: the request waits for the instance that is starting", async () => {
+    const stuck = { ...client, tui: { showToast: () => new Promise(() => undefined) } }
+    const hooks = await broken({ client: stuck, worktree: "/work" } as unknown as PluginInput, paths())
+    await hooks.config!({} as never)
+    expect(events()).toMatchObject([{ type: "error", where: "load" }])
+  })
+})
+
 describe("a config hook that fails", () => {
   test("fails closed and keeps the write guard", async () => {
     const hooks = await plugin.server(newInstance(), paths())
