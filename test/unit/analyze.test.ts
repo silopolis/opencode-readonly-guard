@@ -1080,23 +1080,62 @@ describe("statements that export variables to later commands", () => {
     ])
   })
 
-  test("harmless variables, listing and un-exporting pass", () => {
+  test("harmless variables, printing named variables and un-exporting pass", () => {
     passesFor([
       "export GIT_OPTIONAL_LOCKS=0; git status",
       "export LC_ALL=C",
       "export LANG=C.UTF-8 TZ=UTC LC_COLLATE=C",
       "export NO_COLOR=1 TERM=dumb COLUMNS=200",
       "export PYTHONDONTWRITEBYTECODE=1",
-      "export",
-      "export -p",
       "export -n RG_DEMO",
       "declare -p RG_DEMO",
-      "declare -f",
+      "declare -p RG_DEMO RG_OTHER",
+      "declare -f rg_demo",
       "declare +x RG_DEMO",
       "declare -a list=(a b)",
       "local line=x",
       "readonly limit=5",
+      "typeset -p RG_DEMO",
     ])
+  })
+
+  test("a declaration without a name lists every variable, the environment included", () => {
+    // opencode never prompts for declarations, so `export -p` would print every secret in the environment unasked
+    for (const command of [
+      "export",
+      "export -p",
+      "export -n",
+      "export -f",
+      "export --",
+      "declare",
+      "declare -p",
+      "declare -x",
+      "declare -px",
+      "declare +x",
+      "declare -f",
+      "declare -F",
+      "declare -A",
+      "declare -p --",
+      "typeset",
+      "typeset -p",
+      "typeset -x",
+      "readonly",
+      "readonly -p",
+      "local",
+      "local -p",
+      "integer",
+      "builtin export -p",
+      "command declare -px",
+      "export -p | grep -i token",
+      "true; export",
+      "if true; then declare -p; fi",
+      "echo $(export -p)",
+      "bash -c 'export -p'",
+      "typeset -m 'RG*'",
+      "typeset -pm '*'",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("environment") })
+    }
   })
 
   test("allexport and keyword mode are blocked", () => {

@@ -90,6 +90,7 @@ export function createEnvironmentCheck(rules: EnvironmentRules, environment: Env
     let exportMode = name === "export"
     let unexport = false
     let functions = false
+    let byPattern = false
     const names: string[] = []
     let options = true
     for (const arg of args) {
@@ -103,9 +104,15 @@ export function createEnvironmentCheck(rules: EnvironmentRules, environment: Env
         if (letters.includes("x") || letters.includes("T")) exportMode = true
         if (name === "export" && letters.includes("n")) unexport = true
         if (name === "export" && letters.includes("f")) functions = true
+        if (letters.includes("m")) byPattern = true
       } else if (!(options && arg.startsWith("+"))) {
         names.push(arg)
       }
+    }
+    // opencode never prompts for a declaration, and without a name one prints every variable it covers
+    if (byPattern) return `${name} -m prints every variable whose name matches, the environment included`
+    if (!names.length) {
+      return `${name} without a name prints every variable it covers, the environment and its secrets included: name the variables (declare -p NAME)`
     }
     if (unexport) return null
     if (functions && names.length) return `export -f hands shell functions to ${LATER}`
