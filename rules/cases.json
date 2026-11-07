@@ -279,6 +279,8 @@
     { "command": "free -m -s 1 -c 3", "verdict": "allow" },
     { "command": "lscpu -J", "verdict": "allow" },
     { "command": "lsusb -t", "verdict": "allow" },
+    { "command": "lspci -nnk", "verdict": "allow" },
+    { "command": "lspci -vv -s 00:02.0", "verdict": "allow" },
     { "command": "groups", "verdict": "allow" },
     { "command": "users", "verdict": "allow" },
     { "command": "who -b", "verdict": "allow" },
@@ -620,7 +622,9 @@
     { "command": "herdr pane run w1:p2 rm -rf build", "verdict": "block", "reason": "herdr pane run" },
     { "command": "herdr pane run w1:p2 'echo hi > notes.txt'", "verdict": "block", "reason": "herdr pane run" },
     { "command": "base64 -d blob.txt > blob.bin", "verdict": "block", "reason": "write redirection" },
-    { "command": "zcat a.gz > a", "verdict": "block", "reason": "write redirection" }
+    { "command": "zcat a.gz > a", "verdict": "block", "reason": "write redirection" },
+    { "command": "lspci -q", "verdict": "block", "reason": "lspci -q" },
+    { "command": "lspci -nnQ", "verdict": "block", "reason": "lspci -q" }
   ],
   "patterns": [
     { "pattern": "cat *", "ok": true },

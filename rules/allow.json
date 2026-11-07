@@ -34,6 +34,10 @@
     { "pattern": "free *", "reason": "memory usage (-s N repeats until the tool's timeout)" },
     { "pattern": "lscpu *", "reason": "CPU information (-s DIR reads another system root)" },
     { "pattern": "lsusb *", "reason": "list USB devices" },
+    {
+      "pattern": "lspci *",
+      "reason": "list PCI devices (-F/-i/-p read files; -q/-Q write the ID cache: ask.json and the guard)"
+    },
     { "pattern": "groups *", "reason": "print the groups of a user" },
     { "pattern": "users *", "reason": "print the logged-in users" },
     { "pattern": "who *", "reason": "print who is logged in (a FILE operand is read)" },

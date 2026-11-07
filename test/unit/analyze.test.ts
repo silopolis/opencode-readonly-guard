@@ -399,6 +399,25 @@ describe("analyze", () => {
     }
   })
 
+  test("lspci: -q and -Q write the ID cache, in any bundle; option values are not options", () => {
+    for (const command of ["lspci -q", "lspci -qq", "lspci -Q", "lspci -nnq", "lspci -vkQ", "lspci -s 00:02.0 -q"]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("lspci -q") })
+    }
+    for (const command of [
+      "lspci",
+      "lspci -nnk",
+      "lspci -vvv -s 00:1f.3",
+      "lspci -d 8086: -mm",
+      "lspci -iq",
+      "lspci -i q.ids",
+      "lspci -F dump.txt -tv",
+      "lspci -O help",
+      "lspci -A linux-sysfs -G",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("mount: listing the mounts is a read, anything else still modifies", () => {
     for (const command of ["mount", "mount -l", "mount -t ext4", "mount -l -t btrfs", "mount | grep fuse"]) {
       expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })

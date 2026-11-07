@@ -82,6 +82,38 @@ export function systemctlWrites(args: readonly string[]): string | null {
   return verb && !SYSTEMCTL_READ.test(verb) ? `systemctl ${verb} changes system state` : null
 }
 
+/**
+ * The short options of a getopt command line, without their values: `-nnq` gives n, n, q; `-s 00:1f.3 -k` gives s,
+ * k. A letter of `withValue` takes the rest of its word or the next word. GNU getopt permutes, so options after an
+ * operand count too; `--` ends the options. Long options are skipped.
+ */
+function shortOptions(args: readonly string[], withValue: string): string[] {
+  const letters: string[] = []
+  for (let j = 0; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") break
+    if (arg.startsWith("--") || !arg.startsWith("-") || arg === "-") continue
+    for (let c = 1; c < arg.length; c++) {
+      letters.push(arg[c])
+      if (withValue.includes(arg[c])) {
+        if (c === arg.length - 1) j++
+        break
+      }
+    }
+  }
+  return letters
+}
+
+/** lspci's options that take a value: `s: d: i: p:` (lspci.c) and pciutils' generic `A: O: H: F:`. */
+const LSPCI_WITH_VALUE = "sdipAOHF"
+
+/** `lspci -q`, `-qq` and `-Q` look IDs up over DNS and save them to the ID cache file (`~/.cache/pci-ids`). */
+export function lspciWrites(args: readonly string[]): string | null {
+  return shortOptions(args, LSPCI_WITH_VALUE).some((letter) => letter === "q" || letter === "Q")
+    ? "lspci -q/-Q looks IDs up over DNS and writes them to the ID cache file"
+    : null
+}
+
 /** `mount`, `mount -l`, `mount [-l] -t TYPE`: the listing forms of mount(8). Anything else mounts or remounts. */
 export function mountLists(args: readonly string[]): boolean {
   const rest = args.filter((arg) => arg !== "-l")

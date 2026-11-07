@@ -23,6 +23,14 @@
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
     { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
     {
+      "pattern": "lspci *-q*",
+      "reason": "lspci -q/-qq look IDs up over DNS and write the ID cache file (blocked by the guard)"
+    },
+    {
+      "pattern": "lspci *-Q*",
+      "reason": "lspci -Q looks every ID up over DNS and writes the ID cache file (blocked by the guard)"
+    },
+    {
       "pattern": "lsof *-D*",
       "reason": "lsof -D b|u builds or updates a device cache file, where the platform has one (not on Linux)"
     },
