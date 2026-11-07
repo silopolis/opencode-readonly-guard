@@ -55,12 +55,35 @@ and the project follows [Semantic Versioning](https://semver.org/).
   or abbreviated, where the ask rules cannot see it.
 - Exact `<program> <subcommand> --help` commands for git, herdr, npm and mise are allowed, after the always-ask flags
   (`git commit --help`, `herdr worktree create --help`); `opencode-readonly-guard rules` reports them.
+- Standard utilities: text tools (`fold`, `nl`, `tac`, `rev`, `paste`, `expand`, `unexpand`, `fmt`, `column`, `seq`,
+  `cmp`), checksums (`md5sum`, `sha*sum`, `b2sum`, `cksum`), dumps (`od`, `hexdump`, `xxd`, `base64`), compressed
+  reads (`zcat`, `bzcat`, `xzcat`, `zgrep`), `readlink`, `realpath`, system information (`nproc`, `arch`, `uptime`,
+  `free`, `lscpu`, `lsusb`, `lspci`, `groups`, `users`, `who`, `w`, `last`, `lastb`, `netstat`, `ss`, `lsof`, `ps`,
+  `locale`), shell builtins (`type`, `test`, `true`, `false`, `sleep`, `shift`, `continue`, `break`, `read`, and
+  exact `set -e`/`-u`/`-x`/`-o pipefail`/`-euo pipefail` forms), `git cat-file|describe`, `git reflog [show|list]`,
+  the `git help` listings and `git help <subcommand>`, the exact `--version` of bash, tree-sitter, kitty, tmux,
+  ImageMagick, LuaJIT, uv and shellcheck, with `rtk ps`. Their dangerous options ask and the write guard blocks
+  them: `xxd INFILE OUTFILE` (any mode), `ss -K/--kill` and `-D/--diag FILE`, `lspci -q/-Q` (they write the ID
+  cache), and the `ps` forms that print process environments: BSD `e` (`ps auxe`), the `environ` format, and `-e`
+  outside the checked forms (when ps fails to parse a command line, it parses it again as BSD options, where `-e` is
+  `e`).
+- Exact allowed commands are also allowed followed by `2>&1` or `2>/dev/null` (`herdr --help 2>&1`), which opencode
+  matches as part of the command: generated after the help layer, never over an ask flag, a deny or an agent's own
+  rule.
 
 ### Fixed
 
 - The write guard blocks commands that export environment variables to later commands (opencode does not prompt for
   them), except variables that only select a language or a format (`LANG`, `LC_*`, `TZ`, `GIT_OPTIONAL_LOCKS`, …,
   listed in `commands.json` → `environment`).
+- Declarations without a variable name (`export`, `export -p`, `declare`, `declare -px`, `typeset -p`, `readonly`,
+  `local`) and zsh's `typeset -m` printed every variable, the environment and its secrets included, in read-only
+  agents without a prompt: opencode builds no pattern for declarations. The write guard blocks them; naming the
+  variables (`declare -p NAME`) still works.
+- `opencode-readonly-guard check` and `rules/cases.json` asked about statements opencode never prompts for: bare
+  assignments, declarations, `unset`, `[ ]`, `[[ ]]`, loop headers, `if`/`then`/`do`/`!`/`{` and `cd`. They are left
+  out now, as in opencode (checked against tree-sitter-bash); the write guard still judges them.
+- The write guard missed `git reflog write` and `git reflog drop` (git 2.55), which change the reflog.
 - The write guard blocked a sole trailing `--help` (`herdr worktree create --help`, `npm install --help`) like the
   subcommand itself.
 - The write guard missed writes: `git remote -v add|rename|remove`, `git branch -v|--sort|--format NAME` and

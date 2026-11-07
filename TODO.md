@@ -56,6 +56,11 @@ Open points for the plugin, roughly by importance. Rules to add are tracked by p
       today (opencode builds a pattern for them, and none is allowed); if one is ever allowed, the guard must look
       into it first, as it does for `export`.
 - [ ] Classification gaps found in the log: `git history` and `git backfill` are not in `git.write`.
+- [ ] Left as prompts after a check in an empty HOME: `cargo --version` and `rustc --version` (the rustup proxies
+      download a toolchain), `go version` (it writes telemetry counters under `~/.config/go`).
+- [ ] The pattern check drops wildcards before it asks the guard, so a write that depends on an operand's position
+      is invisible in a wildcard pattern (`uniq * out`, `xxd * out` look like one operand). The guard still blocks
+      the command at run time; vetting could expand each `*` into a sample operand instead.
 - [ ] Bundled short options that carry a remote target slip past glob ask rules. The guard blocks them where it
       matters (`systemctl -aH`), but a general approach (normalizing option bundles before matching) waits for the
       2.x permission hook.
@@ -67,21 +72,23 @@ text includes the redirections of that command (`herdr --help 2>&1`); `cd`, `pus
 declarations (`export`, `local`, …), bare assignments (`B=/x`), `[ ]`, `[[ ]]` and `(( ))` are not command nodes, so
 they never prompt (the write guard judges them since the exported-variables fix).
 
-Can be done with globs now (rog-utilities, PR 1.4 `feat/rules-utilities`):
+Done with globs (PR 1.4 `feat/rules-utilities`):
 
-- [ ] Builtins that prompt but run nothing: `shift *`, `continue *`, `break *`, `true *`, `false *`, `:`, `read *`
-      (the guard blocks `read` into an exported variable). `set`: exact forms only (`set -e`, `-u`, `-x`,
-      `-o pipefail`, `-euo pipefail`, …), never bare `set` (it prints every variable, the environment included),
-      never `set -a`/`-k`/`-o allexport` (blocked by the guard).
-- [ ] `2>&1` and `2>/dev/null` twins of exact allow rules, generated in `src/rules.ts` like the help layer: exact
-      text only, the same verdict as the base rule, never a wildcard and never a file target. Wildcard rules
-      (`ls *`) already match a trailing redirection.
+- [x] Builtins that prompt but run nothing: `shift *`, `continue *`, `break *`, `true *`, `false *`, `read *` (the
+      guard blocks `read` into an exported variable), and `set` in exact forms only.
+  - [ ] `:` (`: ${X:=v}`) still asks: allow patterns must start with a letter (`rules.test.ts`), and `:` is not worth
+        an exception.
+- [x] `2>&1` and `2>/dev/null` twins of every exact allowed command, generated in `src/rules.ts` after the help layer.
+      Other spellings (`2> /dev/null`, `>/dev/null 2>&1`) still ask, see below.
 
-Can be done in code now (no permission change):
+Done in code (no permission change):
 
-- [ ] `decide()` and `opencode-readonly-guard check` still report "ask" for stages opencode never prompts for
-      (`B=/x`, `export LC_ALL=C`, `[[ … ]]`, `cd x`): skip them there too, so `check`, `cases.json` and the review
-      match opencode. The write guard keeps judging them.
+- [x] `decide()` and `opencode-readonly-guard check` leave out the stages opencode never prompts for (bare
+      assignments, declarations, `unset`, `[ ]`, `[[ ]]`, loop headers, reserved words, `cd`), checked against
+      tree-sitter-bash. The write guard keeps judging them, and blocks declarations that list every variable
+      (`export -p`, `declare`), which opencode never prompts for.
+  - [ ] A pattern in a later `case` clause (`b) cmd ;;`) is still taken for a command, so `check` asks for `case`
+        statements that opencode allows: the tokenizer does not keep the `)` that ends a pattern.
 
 Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
 
