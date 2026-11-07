@@ -7,6 +7,7 @@ import {
   lspciWrites,
   mountLists,
   pacmanWrites,
+  ssWrites,
   systemctlWrites,
   virshWrites,
   xxdOutput,
@@ -379,6 +380,7 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
     if (containerNames.has(name)) return containerWrites(name, args, containerWrite)
     if (name === "virsh") return virshWrites(args)
     if (name === "lspci") return lspciWrites(args)
+    if (name === "ss") return ssWrites(args)
     if (name === "tee") {
       const bad = args.filter((arg) => !arg.startsWith("-")).find((file) => !SAFE_TARGETS.has(file))
       return bad ? `tee writes to "${bad}"` : null

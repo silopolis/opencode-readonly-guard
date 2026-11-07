@@ -46,6 +46,10 @@
     { "pattern": "lastb *", "reason": "list failed logins (-f FILE reads another log)" },
     { "pattern": "netstat *", "reason": "network connections, routes and interface statistics" },
     {
+      "pattern": "ss *",
+      "reason": "list sockets (-K/--kill and -D/--diag FILE are in ask.json and blocked by the guard)"
+    },
+    {
       "pattern": "lsof *",
       "reason": "list open files (-F selects output fields; -D, the device cache, asks and does not exist on Linux)"
     },

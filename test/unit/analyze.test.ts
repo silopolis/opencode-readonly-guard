@@ -444,6 +444,43 @@ describe("analyze", () => {
     }
   })
 
+  test("ss: -K/--kill closes sockets and -D/--diag writes a dump, in any bundle or abbreviation", () => {
+    for (const command of [
+      "ss -K dst 10.0.0.1",
+      "ss -tK",
+      "ss -tnKp state established",
+      "ss --kill",
+      "ss --ki dport = :22",
+      "ss --k",
+      "ss state established -K",
+      "ss -f inet -K4",
+      "ss -D /tmp/dump",
+      "ss -D/tmp/dump",
+      "ss -tiD dump",
+      "ss --diag=/tmp/dump",
+      "ss --di /tmp/dump",
+      "ss --d=dump",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("ss -") })
+    }
+    for (const command of [
+      "ss",
+      "ss -tlnp",
+      "ss -s",
+      "ss -tan state established '( dport = :ssh )'",
+      "ss -A tcp,udp -n",
+      "ss -AK",
+      "ss -N blue -tln",
+      "ss -F filter.txt",
+      "ss -E -t",
+      "ss --tcp --listening --numeric --processes",
+      "ss --info --memory --extended",
+      "ss --family=inet6",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("lspci: -q and -Q write the ID cache, in any bundle; option values are not options", () => {
     for (const command of ["lspci -q", "lspci -qq", "lspci -Q", "lspci -nnq", "lspci -vkQ", "lspci -s 00:02.0 -q"]) {
       expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("lspci -q") })

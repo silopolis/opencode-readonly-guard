@@ -144,6 +144,28 @@ export function xxdOutput(args: readonly string[]): string | undefined {
   return args.slice(j)[1]
 }
 
+/** ss's short options that take a value (`f: A: D: F: N:` in ss.c). */
+const SS_WITH_VALUE = "fADFN"
+
+/**
+ * `ss -K`/`--kill` closes the sockets it lists, `ss -D`/`--diag FILE` writes a raw dump to FILE. getopt permutes,
+ * so they count after the filter too, in a bundle (`-tK`) or abbreviated (`--k`: no other long option starts with
+ * k; `--d` is `--diag` once `--dccp` is gone, as in iproute2's main branch).
+ */
+export function ssWrites(args: readonly string[]): string | null {
+  for (const arg of args) {
+    if (arg === "--") break
+    if (!arg.startsWith("--")) continue
+    const name = arg.slice(2).split("=")[0]
+    if (name && "kill".startsWith(name)) return "ss -K/--kill closes sockets"
+    if (name && "diag".startsWith(name)) return "ss -D/--diag writes a raw socket dump to a file"
+  }
+  const letters = shortOptions(args, SS_WITH_VALUE)
+  if (letters.includes("K")) return "ss -K/--kill closes sockets"
+  if (letters.includes("D")) return "ss -D/--diag writes a raw socket dump to a file"
+  return null
+}
+
 /** lspci's options that take a value: `s: d: i: p:` (lspci.c) and pciutils' generic `A: O: H: F:`. */
 const LSPCI_WITH_VALUE = "sdipAOHF"
 

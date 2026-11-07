@@ -22,6 +22,16 @@
     },
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
     { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
+    { "pattern": "ss *-K*", "reason": "ss -K closes the sockets it lists (blocked by the guard)" },
+    {
+      "pattern": "ss *--k*",
+      "reason": "ss --kill closes the sockets it lists (any abbreviation; blocked by the guard)"
+    },
+    { "pattern": "ss *-D*", "reason": "ss -D FILE writes a raw socket dump to FILE (blocked by the guard)" },
+    {
+      "pattern": "ss *--d*",
+      "reason": "ss --diag=FILE writes a raw socket dump to FILE (any abbreviation; blocked by the guard)"
+    },
     {
       "pattern": "lspci *-q*",
       "reason": "lspci -q/-qq look IDs up over DNS and write the ID cache file (blocked by the guard)"
