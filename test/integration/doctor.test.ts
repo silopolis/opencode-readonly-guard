@@ -73,26 +73,20 @@ describe.skipIf(!hasOpencode)("doctor against the real opencode", () => {
     expect(run.stdout).toContain("Guard NOT active: no copy of the plugin started")
   })
 
-  test("a copy that failed closed: exit status 1, with the reason and the state of the write guard", () => {
+  test("a copy with a corrupt rule file is active with the copy built into it, and the error is reported", () => {
     const broken = copy((dir) => writeFileSync(join(dir, "rules", "commands.json"), "{ not json"))
     const box = track(sandbox({ plugin: broken.spec }))
     const run = doctor(box, "--json")
-    expect(run.status).toBe(1)
+    expect(run.status).toBe(0)
     const report = JSON.parse(run.stdout) as {
       active: boolean
-      reason: string
       entries: { state: string }[]
-      agents: { name: string; guarded: boolean; note?: string; bash: Record<string, string> }[]
+      startup: { builtin?: string[] }
+      problems: { where: string; file?: string }[]
     }
-    expect(report.active).toBe(false)
-    expect(report.reason).toContain("failed closed (load): readonly-guard: cannot load commands.json")
-    expect(report.reason).toContain("the write guard is off")
-    expect(report.entries.map((entry) => entry.state)).toEqual(["failed closed"])
-    expect(report.agents).toContainEqual({
-      name: "plan",
-      guarded: true,
-      note: "asks before every command",
-      bash: { "*": "ask" },
-    })
+    expect(report.active).toBe(true)
+    expect(report.entries.map((entry) => entry.state)).toEqual(["in charge"])
+    expect(report.startup.builtin).toEqual(["commands.json"])
+    expect(report.problems).toMatchObject([{ where: "rules", file: "commands.json" }])
   })
 })

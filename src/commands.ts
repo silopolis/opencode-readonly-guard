@@ -7,7 +7,7 @@ import { doctor, formatReport } from "./doctor.js"
 import { createLog } from "./log.js"
 import { resolveOptions } from "./options.js"
 import { review } from "./review.js"
-import { buildBashRules, helpPatterns, loadRules } from "./rules.js"
+import { buildBashRules, helpPatterns, loadRules, type RuleSet } from "./rules.js"
 import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 
@@ -83,6 +83,13 @@ function takeValue(args: string[], name: string): string | undefined {
   return value
 }
 
+/** The shared rules, with a warning for each file replaced by the copy built into the tool. */
+function rulesFor(io: CliIo): RuleSet {
+  const rules = loadRules()
+  for (const { error } of rules.fallbacks ?? []) io.err(`warning: ${error}; using the copy built into the tool\n`)
+  return rules
+}
+
 function check(args: string[], io: CliIo): number {
   const json = takeFlag(args, "--json")
   const noStore = takeFlag(args, "--no-store")
@@ -91,7 +98,7 @@ function check(args: string[], io: CliIo): number {
     io.err("check: missing command\n")
     return EXIT.usage
   }
-  const rules = loadRules()
+  const rules = rulesFor(io)
   const options = resolveOptions({}, io.env)
   // --no-store means the shared rules only: no store, and no presets either
   const learned = noStore
@@ -122,7 +129,7 @@ function vet(args: string[], io: CliIo): number {
 }
 
 function printRules(args: string[], io: CliIo): number {
-  const rules = loadRules()
+  const rules = rulesFor(io)
   const help = helpPatterns(rules)
   if (takeFlag(args, "--json")) {
     io.out(`${JSON.stringify({ allow: rules.allow, ask: rules.ask, help }, null, 2)}\n`)
@@ -147,7 +154,7 @@ function printReview(args: string[], io: CliIo): number {
     `${review({
       store: loadStore(options.storeFile),
       events: createLog(options.logDir).read(),
-      rules: loadRules(),
+      rules: rulesFor(io),
       limit,
       options,
       herdr: loadHerdrRules(options),

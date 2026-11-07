@@ -6,7 +6,7 @@ import { failedCopies, registerCopy, registerFailedCopy } from "./copies.js"
 import { failClosed, injectRules, type MutableConfig } from "./inject.js"
 import { clip, createLog, describeError, type GuardLog } from "./log.js"
 import { resolveOptions, type ResolvedOptions } from "./options.js"
-import { loadCommands, loadRules, type Commands, type RuleSet } from "./rules.js"
+import { loadCommands, loadRules, type Commands, type RuleFallback, type RuleSet } from "./rules.js"
 import { effectiveRules, loadHerdrRules } from "./sources.js"
 import { loadStore } from "./store.js"
 import { createTools } from "./tools.js"
@@ -109,27 +109,34 @@ function writeGuard(
 }
 
 /**
- * Tell the user that the guard could not start. Not awaited: during startup the request waits for the opencode
+ * Tell the user about a broken installation. Not awaited: during startup the request waits for the opencode
  * instance that is being started. A TUI receives it (it listens to the global event stream before the instance boots).
  */
-function warnFailure(client: PluginInput["client"], reason: string, guarded: boolean): void {
-  const effect = guarded
-    ? "Read-only agents ask before every command until it is fixed."
-    : "Read-only agents ask before every command, and the write guard is OFF, until it is fixed."
+function startupToast(client: PluginInput["client"], title: string, message: string, variant: "warning" | "error") {
   try {
     client.tui
       .showToast({
-        body: {
-          title: "readonly-guard failed to start",
-          message: `${reason}. ${effect} Run \`opencode-readonly-guard doctor\`.`,
-          variant: "error",
-          duration: 15000,
-        },
+        body: { title, message: `${message} Run \`opencode-readonly-guard doctor\`.`, variant, duration: 15000 },
       })
       .catch(() => undefined)
   } catch {
     // the error event in the log is the lasting record
   }
+}
+
+/** Tell the user that the guard could not start and failed closed. */
+function warnFailure(client: PluginInput["client"], reason: string, guarded: boolean): void {
+  const effect = guarded
+    ? "Read-only agents ask before every command until it is fixed."
+    : "Read-only agents ask before every command, and the write guard is OFF, until it is fixed."
+  startupToast(client, "readonly-guard failed to start", `${reason}. ${effect}`, "error")
+}
+
+/** Tell the user that a rule file could not be read and the copy built into the plugin replaced it. */
+function warnFallback(client: PluginInput["client"], fallbacks: readonly RuleFallback[]): void {
+  const reasons = fallbacks.map((fallback) => fallback.error).join("; ")
+  const effect = "Until the file is fixed, the copy of the rules built into the plugin applies."
+  startupToast(client, "readonly-guard: a rule file cannot be read", `${reasons}. ${effect}`, "warning")
 }
 
 /** The agent lists of the options and the store. */
@@ -237,7 +244,10 @@ function startedCopy(
   })
   const guard = writeGuard(analyzer, sessions, readOnly, guardLog, worktree)
 
+  const fallbacks = rules.fallbacks ?? []
+
   const applyPolicy = (config: MutableConfig) => {
+    for (const { file, error } of fallbacks) guardLog.write({ type: "error", where: "rules", file, error })
     for (const warning of options.warnings) guardLog.write({ type: "error", where: "options", error: warning })
     const { store, include, exclude } = agentLists(options, (error) =>
       guardLog.write({ type: "error", where: "store", error: String(error.cause ?? error) }),
@@ -260,6 +270,7 @@ function startedCopy(
       module: import.meta.url,
       copies: copy.modules(),
       failed: failedCopies(pluginInput).map(({ module, error }) => ({ module, error })),
+      builtin: fallbacks.map(({ file }) => file),
     })
   }
 
@@ -269,6 +280,7 @@ function startedCopy(
       if (!copy.active()) return
       try {
         applyPolicy(config as MutableConfig)
+        if (fallbacks.length) warnFallback(client, fallbacks)
       } catch (error) {
         // opencode would log it and go on, with read-only agents half configured or not at all: fail closed
         const names = failClosed(config as MutableConfig, agentLists(options))

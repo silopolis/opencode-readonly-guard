@@ -1,12 +1,13 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { MutableConfig } from "../../src/inject.js"
 import plugin from "../../src/index.js"
 import { createLog, type LogEvent } from "../../src/log.js"
 import { createServer } from "../../src/plugin.js"
+import { BUILTIN_RULES, readCommands, readRuleSet, type RuleSources } from "../../src/rules.js"
 
 let dir: string
 let toasts: unknown[]
@@ -385,21 +386,91 @@ describe("two copies in one opencode instance", () => {
   })
 })
 
+const unreadable = (file: string) =>
+  new Error(`readonly-guard: cannot load ${file}`, { cause: new SyntaxError("JSON Parse error: Unexpected EOF") })
 const corrupt = (file: string) => () => {
-  throw new Error(`readonly-guard: cannot load ${file}`, { cause: new SyntaxError("JSON Parse error: Unexpected EOF") })
+  throw unreadable(file)
 }
-/** A copy with a corrupt `rules/allow.json`: the write guard only needs `commands.json`, which still loads. */
-const LOAD_ERROR = "readonly-guard: cannot load allow.json: JSON Parse error: Unexpected EOF"
-const broken = createServer({ loadRules: corrupt("allow.json") })
-/** A copy with a corrupt `rules/commands.json`: no write guard either. */
-const COMMANDS_ERROR = "readonly-guard: cannot load commands.json: JSON Parse error: Unexpected EOF"
-const unguarded = createServer({ loadCommands: corrupt("commands.json"), loadRules: corrupt("commands.json") })
+
+/** The rule files on disk with `files` unreadable, and the copy built into the plugin. */
+const diskWithout = (...files: string[]): RuleSources => ({
+  read: (file) => {
+    if (files.includes(file)) throw unreadable(file)
+    return JSON.parse(readFileSync(new URL(`../../rules/${file}`, import.meta.url), "utf8"))
+  },
+  builtin: BUILTIN_RULES,
+})
+/** A copy of the plugin whose `files` next to it cannot be read: it falls back to the copy built into it. */
+const withBuiltin = (...files: string[]) =>
+  createServer({
+    loadCommands: () => readCommands(diskWithout(...files)).commands,
+    loadRules: () => readRuleSet(diskWithout(...files)),
+  })
 
 /** A new opencode instance: every plugin of an instance gets the same input object. */
 const newInstance = () => ({ client, worktree: "/work" }) as unknown as PluginInput
 const paths = () => ({ store: join(dir, "store.json"), logDir: join(dir, "log") })
 
-describe("a copy that cannot load its rules", () => {
+describe("a rule file that cannot be read", () => {
+  test("allow.json: the copy built into the plugin applies in full, and the write guard blocks writes", async () => {
+    const hooks = await withBuiltin("allow.json")(newInstance(), paths())
+    const config: MutableConfig = {}
+    await hooks.config!(config as never)
+    expect(bashRules(config)["git log*"]).toBe("allow")
+    expect(bashRules(config)["*-delete*"]).toBe("ask")
+    expect(Object.keys(hooks.tool ?? {})).toHaveLength(2)
+    expect(config.command?.["guard-review"]).toBeDefined()
+    await useAgent(hooks, "s1", "plan")
+    await expect(bash(hooks, "s1", "ls > f")).rejects.toThrow("Blocked")
+    expect(events().filter((event) => event.type !== "blocked")).toMatchObject([
+      { type: "error", where: "rules", file: "allow.json", error: LOAD_ERROR },
+      { type: "init", builtin: ["allow.json"], roAgents: ["plan", "explore"] },
+    ])
+  })
+
+  test("commands.json: the same, the write guard still knows every writing command", async () => {
+    const hooks = await withBuiltin("commands.json", "ask.json")(newInstance(), paths())
+    await hooks.config!({} as never)
+    await useAgent(hooks, "s1", "explore")
+    await expect(bash(hooks, "s1", "rm -rf x")).rejects.toThrow('"rm" modifies files')
+    await expect(bash(hooks, "s1", "git commit -m x")).rejects.toThrow("Blocked")
+    expect(events().find((event) => event.type === "init")?.builtin).toEqual(["ask.json", "commands.json"])
+  })
+
+  test("one toast names the file and says what applies instead", async () => {
+    await (
+      await withBuiltin("allow.json")(newInstance(), paths())
+    ).config!({} as never)
+    expect(toastMessages().map((toast) => toast.variant)).toEqual(["warning"])
+    const [{ message }] = toastMessages()
+    expect(message).toContain(LOAD_ERROR)
+    expect(message).toContain("the copy of the rules built into the plugin applies")
+    expect(message).toContain("opencode-readonly-guard doctor")
+  })
+
+  test("a passive copy's broken file is neither logged nor shown", async () => {
+    const input = newInstance()
+    const copies = [await withBuiltin("allow.json")(input, paths()), await plugin.server(input, paths())]
+    for (const hooks of copies) await hooks.config!({} as never)
+    expect(events().map((event) => event.type)).toEqual(["init"])
+    expect(events()[0].builtin).toEqual([])
+    expect(toasts).toEqual([])
+  })
+
+  test("files that can be read use no copy", async () => {
+    await start()
+    expect(events().find((event) => event.type === "init")?.builtin).toEqual([])
+    expect(toasts).toEqual([])
+  })
+})
+
+/** Copies whose rule files cannot be read, and whose build carries no copy of them (the backstop). */
+const LOAD_ERROR = "readonly-guard: cannot load allow.json: JSON Parse error: Unexpected EOF"
+const broken = createServer({ loadRules: corrupt("allow.json") })
+const COMMANDS_ERROR = "readonly-guard: cannot load commands.json: JSON Parse error: Unexpected EOF"
+const unguarded = createServer({ loadCommands: corrupt("commands.json"), loadRules: corrupt("commands.json") })
+
+describe("a copy that cannot load its rules, not even from the built-in copy", () => {
   test("fails closed: read-only agents ask before every command and keep their own deny rules", async () => {
     const hooks = await broken(newInstance(), paths())
     const config: MutableConfig = {
