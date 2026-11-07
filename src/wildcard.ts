@@ -6,14 +6,19 @@ export type RuleEntry = readonly [pattern: string, action: Action]
  * command (`ls *` matches `ls`). Backslashes are treated as path separators.
  */
 export function wildcardMatch(input: string, pattern: string): boolean {
-  const text = input.replaceAll("\\", "/")
+  return compileWildcard(pattern)(input)
+}
+
+/** `wildcardMatch` for one pattern, compiled once: for code that matches many commands against the same rules. */
+export function compileWildcard(pattern: string): (input: string) => boolean {
   let source = pattern
     .replaceAll("\\", "/")
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".")
   if (source.endsWith(" .*")) source = source.slice(0, -3) + "( .*)?"
-  return new RegExp(`^${source}$`, "s").test(text)
+  const regex = new RegExp(`^${source}$`, "s")
+  return (input) => regex.test(input.replaceAll("\\", "/"))
 }
 
 /** The action of the last matching rule (opencode evaluates permission rules in order, last match wins). */
