@@ -99,8 +99,13 @@ change and its cases in `rules/cases.json` go in the same commit. `/add-rule <co
   the rtk plugin. Everything else asks, including `mise run build`, `setup`, the integration and e2e tests, `:::` task
   lists and `--output`. Widen it in your own config, not here.
 - `.opencode/commands/`: `/check` (run `mise run check`, fix or report) and `/add-rule <command>`.
-- The plugin itself is not loaded from this config yet. A global install no longer runs next to a project entry (the
-  project's copy wins), but a checkout without a build must first be shown to fail soft, see TODO.md "Loading".
+- `"plugin": ["."]` loads the plugin from this checkout's own `dist/` (dogfooding): a session started in a checkout
+  or worktree is guarded by that checkout's build, see "Hazards". Without a build the entry is skipped without a
+  word. In read-only agents (`plan`, `explore`) the plugin's rules come after the `permission` block above, so its
+  `"*": "ask"` wins there: only the shared allowlist runs without a prompt, and the check tasks, `bun src/cli.ts` and
+  `gh` ask; `build` keeps them. If you also configure the plugin globally, the project's entry is in charge here and
+  its options (none) replace your global entry's options. `bun src/cli.ts doctor` shows which copy guards a
+  directory (`test/integration/dogfood.test.ts` pins all of this).
 
 ## Dependency updates
 
@@ -120,10 +125,19 @@ Renovate (`renovate.json`) opens grouped weekly pull requests for npm and `bun.l
 ## Hazards
 
 - **`dist/` is live.** It is gitignored build output, and opencode loads it from any checkout that a config names as
-  `file:///path/to/checkout`. `mise run build`, and every task that depends on it (`test:integration`, `test:e2e`,
-  `pack`), replaces the plugin for every opencode session that starts with that checkout configured (one that starts
-  during the build gets no plugin at all). Build in your own clone or worktree, never in a checkout that other
+  `file:///path/to/checkout`, this repository's own `opencode.json` included (`"."`, the checkout it sits in).
+  `mise run build`, and every task that depends on it (`test:integration`, `test:e2e`, `pack`), replaces the plugin
+  for every opencode session that starts afterwards with that checkout configured: the sessions started in that
+  checkout, and every directory whose config names it (a global `file://` entry to the main checkout). Sessions
+  already running keep the copy they loaded. Build in your own clone or worktree, never in a checkout that other
   sessions load. Unit tests and `bun src/cli.ts` do not need `dist/`.
+- **A worktree's build guards that worktree.** Its sessions load its `dist/`, work in progress included, and that
+  copy is in charge over a global entry to the main checkout (the project's entry is loaded last). A build there
+  only reaches sessions started in that worktree, but a build that loads and misbehaves (blocks too much, asks for
+  nothing) misguards them; `bun src/cli.ts doctor` names the copy in charge. While the worktree has no `dist/` (never
+  built, or a session starting mid-build: the build deletes it first), its entry is skipped without a word and the
+  global copy guards it, or nothing does without one. A worktree built before copies agreed on one (#8) runs next to
+  the global copy: rebuild it.
 - **Never touch the user's real store, log or config.** By default the plugin reads `readonly-guard.json` and writes
   `events.jsonl` under the XDG directories. Tests go through `sandbox()`, or set `READONLY_GUARD_STORE` and
   `READONLY_GUARD_DATA` to temporary paths. The same goes for running opencode by hand: `opencode debug config` loads

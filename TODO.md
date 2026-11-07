@@ -134,6 +134,12 @@ Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
         the injected rules for the agent's own. The integration test catches it on an opencode bump; a fix would
         keep each agent's pre-injection permission in the shared registry.
   - [ ] Copies built before the guard do not take part and still run next to a new one.
+- [x] A checkout that loads its own build (`"plugin": ["."]`) fails soft: without `dist/` opencode skips the entry
+      without a word and starts (a session opens, `doctor` names the missing build); a global `file://` entry to the
+      same checkout loads one copy (opencode merges the same spec; with a trailing slash the two entries import the
+      same module, one init); a worktree's own build is in charge over a global entry to the main checkout, which
+      guards the worktree while it has no build. The rules are injected once in every case. Covered by
+      `test/integration/dogfood.test.ts`.
 - [x] Load without the runtime dependency: when loaded from a path, the plugin must not need `@opencode-ai/plugin` in
       a `node_modules`. The build bundles it (and zod) into `dist/index.js`; opencode's other way, plain JSON Schema
       tool arguments, is a legacy path that makes every argument required and validates none.
@@ -154,8 +160,8 @@ Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
 - [x] opencode project config for contributors: an `AGENTS.md` with the commands and conventions, `opencode.json`
       with a `permission` setup that allows the check tasks and read-only `git`/`gh`, and the project commands
       `/check` and `/add-rule` in `.opencode/commands/`.
-  - [ ] Load the repository's own plugin from `dist/` for dogfooding. A global copy no longer runs next to it (the
-        project's copy wins); what remains is proving that a checkout without a build fails soft, see "Loading".
+  - [x] Load the repository's own plugin from `dist/` for dogfooding: `"plugin": ["."]` in `opencode.json`. A
+        session started in a checkout or worktree is guarded by its build (see AGENTS.md "Hazards").
 - [x] Automated dependency updates: Renovate (`renovate.json`; Dependabot handles neither `mise.toml` nor bun) for
       npm and `bun.lock`, `mise.toml` (opencode included), `hk.pkl` and the GitHub Actions (pinned to SHAs), with
       grouped minor/patch updates and `build(deps):` / `ci(deps):` commits.
