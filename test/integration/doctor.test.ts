@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test"
-import { spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { copyPlugin, hasOpencode, repoRoot, requireBuild, sandbox, type Sandbox } from "../helpers.js"
+import { copyPlugin, hasOpencode, requireBuild, runDoctor, sandbox, type Sandbox } from "../helpers.js"
 
 setDefaultTimeout(180_000)
 
@@ -27,17 +26,7 @@ function track(box: Sandbox): Sandbox {
   return box
 }
 
-/** The built command-line tool, run with node like the installed bin, in the sandbox's project. */
-function doctor(box: Sandbox, ...args: string[]) {
-  requireBuild()
-  const run = spawnSync("node", [join(repoRoot, "dist", "cli.js"), "doctor", ...args], {
-    cwd: box.project,
-    env: box.env,
-    encoding: "utf8",
-    timeout: 170_000,
-  })
-  return { status: run.status, stdout: run.stdout, stderr: run.stderr }
-}
+const doctor = runDoctor
 
 describe.skipIf(!hasOpencode)("doctor against the real opencode", () => {
   test("active: exit status 0, the copy in charge and the guarded agents, the user's log untouched", () => {

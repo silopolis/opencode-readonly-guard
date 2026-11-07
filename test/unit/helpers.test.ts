@@ -106,9 +106,19 @@ test("a global plugin entry goes to the sandbox's own config directory, never th
   expect(() => sandbox({ globalPlugin: pluginUrl, realHome: true })).toThrow("globalPlugin")
   const plain = sandbox()
   try {
-    expect(existsSync(join(plain.env.XDG_CONFIG_HOME!, "opencode", "opencode.json"))).toBe(false)
+    const file = join(plain.env.XDG_CONFIG_HOME!, "opencode", "opencode.json")
+    expect(existsSync(file)).toBe(false)
+    // written later, once the project's path is known (a global entry to the checkout under test)
+    plain.writeGlobalPlugin(`file://${plain.project}`)
+    expect(JSON.parse(readFileSync(file, "utf8"))).toMatchObject({ plugin: [`file://${plain.project}`] })
   } finally {
     plain.cleanup()
+  }
+  const real = sandbox({ realHome: true })
+  try {
+    expect(() => real.writeGlobalPlugin(pluginUrl)).toThrow("own config directory")
+  } finally {
+    real.cleanup()
   }
 })
 

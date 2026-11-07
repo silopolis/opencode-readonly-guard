@@ -58,6 +58,8 @@ export interface Sandbox {
   writeStore(data: unknown): void
   /** Pre-fill the rules file in herdr's config directory (only read when the sandbox runs `herdr: true`). */
   writeHerdrFile(data: unknown): void
+  /** Write the sandbox's global config with this plugin entry (for a spec only known once the sandbox exists). */
+  writeGlobalPlugin(spec: PluginSpec): void
   /** Run opencode in the project with the sandbox environment. */
   opencode(args: string[], timeout?: number): Run
   cleanup(): void
@@ -145,11 +147,14 @@ export function sandbox({
     { cwd: project, env },
   )
   write("opencode.json", configWith(plugin))
-  if (globalPlugin) {
+  const writeGlobalPlugin = (spec: PluginSpec) => {
+    // the real home's config is the user's: never write to it
+    if (realHome) throw new Error("sandbox: a global plugin needs the sandbox's own config directory")
     const global = join(env.XDG_CONFIG_HOME!, "opencode")
     mkdirSync(global, { recursive: true })
-    writeFileSync(join(global, "opencode.json"), configWith(globalPlugin))
+    writeFileSync(join(global, "opencode.json"), configWith(spec))
   }
+  if (globalPlugin) writeGlobalPlugin(globalPlugin)
   return {
     dir,
     project,
@@ -162,6 +167,7 @@ export function sandbox({
       mkdirSync(herdrDir, { recursive: true })
       writeFileSync(join(herdrDir, "readonly-guard.json"), JSON.stringify(data))
     },
+    writeGlobalPlugin,
     opencode: (args, timeout = 120_000) => {
       // stdout to a file: opencode (Bun) loses the end of a large output written to a pipe just before it exits
       const file = join(dir, `stdout-${++runs}`)
@@ -191,10 +197,10 @@ interface Rule {
 }
 
 /**
- * The ids of the tools opencode registers, one per registration (duplicates included): `opencode serve` in the
- * project, then `GET /experimental/tool/ids`. No debug command lists them; `debug agent` merges duplicates.
+ * Start `opencode serve` in the project, give `use` its address, and stop it. Requests must name the project in an
+ * `x-opencode-directory` header.
  */
-export async function registeredToolIds(box: Sandbox, timeout = 120_000): Promise<string[]> {
+export async function withServer<T>(box: Sandbox, use: (url: string) => Promise<T>, timeout = 120_000): Promise<T> {
   // port 0: opencode takes its default port if it is free, another one otherwise, and prints the address
   const child = spawn("opencode", ["serve", "--port", "0", "--hostname", "127.0.0.1"], {
     cwd: box.project,
@@ -214,13 +220,41 @@ export async function registeredToolIds(box: Sandbox, timeout = 120_000): Promis
       child.stderr.on("data", read)
       child.on("exit", (status) => reject(new Error(`opencode serve exited (${status}): ${output}`)))
     })
-    const response = await fetch(`${url}/experimental/tool/ids`, { headers: { "x-opencode-directory": box.project } })
-    if (!response.ok) throw new Error(`GET /experimental/tool/ids: ${response.status} ${await response.text()}`)
-    return (await response.json()) as string[]
+    return await use(url)
   } finally {
     clearTimeout(timer)
     child.kill("SIGTERM")
   }
+}
+
+/**
+ * The ids of the tools opencode registers, one per registration (duplicates included): `opencode serve` in the
+ * project, then `GET /experimental/tool/ids`. No debug command lists them; `debug agent` merges duplicates.
+ */
+export async function registeredToolIds(box: Sandbox, timeout = 120_000): Promise<string[]> {
+  return withServer(
+    box,
+    async (url) => {
+      const response = await fetch(`${url}/experimental/tool/ids`, {
+        headers: { "x-opencode-directory": box.project },
+      })
+      if (!response.ok) throw new Error(`GET /experimental/tool/ids: ${response.status} ${await response.text()}`)
+      return (await response.json()) as string[]
+    },
+    timeout,
+  )
+}
+
+/** `opencode-readonly-guard doctor`: the built command-line tool, run with node like the installed bin, in the project. */
+export function runDoctor(box: Sandbox, ...args: string[]): Run {
+  requireBuild()
+  const run = spawnSync("node", [join(repoRoot, "dist", "cli.js"), "doctor", ...args], {
+    cwd: box.project,
+    env: box.env,
+    encoding: "utf8",
+    timeout: 170_000,
+  })
+  return { status: run.status, stdout: run.stdout, stderr: run.stderr }
 }
 
 /** The resolved permission rules of an agent, as `opencode debug agent <name>` prints them. */
