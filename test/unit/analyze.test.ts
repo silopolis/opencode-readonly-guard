@@ -399,6 +399,51 @@ describe("analyze", () => {
     }
   })
 
+  test("xxd: a second operand is an output file in every mode; option values are parsed like xxd.c", () => {
+    for (const command of [
+      "xxd in out",
+      "xxd -r in out",
+      "xxd -r -p dump.txt out.bin",
+      "xxd -i in out.h",
+      "xxd -c 8 in out",
+      "xxd -c8 in out",
+      "xxd -cols 8 in out",
+      "xxd --cols 8 in out",
+      "xxd -g 2 -l 64 -s 16 -o 0 in out",
+      "xxd -seek +16 in out",
+      "xxd -n name -i in out.h",
+      "xxd -R always in out",
+      "xxd -capitalize -i in out",
+      "xxd -- -in out",
+      "xxd - out",
+      "xxd in -c",
+      "xxd in out extra",
+      "xxd -cols=8 x in out",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("xxd") })
+    }
+    for (const command of [
+      "xxd",
+      "xxd in",
+      "xxd -l 64 in",
+      "xxd -c 8 in",
+      "xxd -c8 -g1 in",
+      "xxd -cols 8 in",
+      "xxd -seek 16 -len 32 in",
+      "xxd -s -16 in",
+      "xxd -r -p dump.txt",
+      "xxd -p in -",
+      "xxd in /dev/null",
+      "xxd -cols=8 in out",
+      "xxd -R auto -C -i in",
+      "xxd -- in",
+      "xxd -",
+      "cat in | xxd -p",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("lspci: -q and -Q write the ID cache, in any bundle; option values are not options", () => {
     for (const command of ["lspci -q", "lspci -qq", "lspci -Q", "lspci -nnq", "lspci -vkQ", "lspci -s 00:02.0 -q"]) {
       expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("lspci -q") })

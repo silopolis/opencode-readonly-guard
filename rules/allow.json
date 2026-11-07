@@ -100,6 +100,7 @@
       "reason": "dump files in octal and other formats (--output-duplicates asks because of the --output rule)"
     },
     { "pattern": "hexdump *", "reason": "dump files in hexadecimal (-f reads a format file)" },
+    { "pattern": "xxd *", "reason": "hex dump or reverse it (an OUTFILE operand is blocked by the guard)" },
     { "pattern": "base64 *", "reason": "encode or decode base64 to standard output (no output file option)" },
     { "pattern": "zcat *", "reason": "print gzip-compressed files (always to standard output)" },
     { "pattern": "bzcat *", "reason": "print bzip2-compressed files (always to standard output, even with -z or -f)" },

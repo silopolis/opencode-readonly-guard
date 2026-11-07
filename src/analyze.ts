@@ -9,6 +9,7 @@ import {
   pacmanWrites,
   systemctlWrites,
   virshWrites,
+  xxdOutput,
 } from "./programs.js"
 import { loadRules, type Commands } from "./rules.js"
 import { parseShell, type Redirection } from "./shell.js"
@@ -412,6 +413,10 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
     if (name === "uniq") {
       const output = uniqOutput(args)
       if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "uniq INPUT OUTPUT writes a file"
+    }
+    if (name === "xxd") {
+      const output = xxdOutput(args)
+      if (output !== undefined && output !== "-" && !SAFE_TARGETS.has(output)) return "xxd INFILE OUTFILE writes a file"
     }
     if (name === "tar") {
       const first = args[0] ?? ""

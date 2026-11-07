@@ -523,6 +523,7 @@
     "b2sum",
     "cksum",
     "hexdump",
+    "xxd",
     "od",
     "base64",
     "strings",

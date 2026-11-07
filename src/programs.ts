@@ -104,6 +104,46 @@ function shortOptions(args: readonly string[], withValue: string): string[] {
   return letters
 }
 
+/**
+ * xxd's options that take a value, with the long spellings after which the value is the next word: `-c8` and
+ * `-c 8`, but `-cols 8`, `-cols8 8` and `-cols=8 8` (xxd.c compares the start of the word only).
+ */
+const XXD_WITH_VALUE: Readonly<Record<string, readonly string[]>> = {
+  c: ["ols"],
+  g: ["roup"],
+  o: ["ffset"],
+  s: ["kip", "eek"],
+  l: ["en"],
+  n: ["ame"],
+}
+
+/**
+ * The OUTFILE of `xxd [options] [infile [outfile]]`, in every mode (`-r` patches it, the others truncate it). xxd
+ * reads options up to the first operand or `--`, without bundles; `--name` is `-name`; an option is known by its
+ * first letter (`-autoskip` is `-a`, `-capitalize` is `-C`'s long form, any other `-c…` is a column count).
+ */
+export function xxdOutput(args: readonly string[]): string | undefined {
+  let j = 0
+  for (; j < args.length; j++) {
+    const arg = args[j]
+    if (arg === "--") {
+      j++
+      break
+    }
+    const option = arg.startsWith("--") ? arg.slice(1) : arg
+    if (!option.startsWith("-") || option.length < 2) break // an operand, `-` (standard input) included
+    const letter = option[1]
+    const rest = option.slice(2)
+    if (letter === "R") {
+      if (!rest) j++
+    } else if (!(letter === "c" && rest.startsWith("apitalize"))) {
+      const spellings = XXD_WITH_VALUE[letter]
+      if (spellings && (!rest || spellings.some((spelling) => rest.startsWith(spelling)))) j++
+    }
+  }
+  return args.slice(j)[1]
+}
+
 /** lspci's options that take a value: `s: d: i: p:` (lspci.c) and pciutils' generic `A: O: H: F:`. */
 const LSPCI_WITH_VALUE = "sdipAOHF"
 
