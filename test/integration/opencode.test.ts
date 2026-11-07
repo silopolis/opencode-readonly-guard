@@ -13,6 +13,9 @@ afterEach(() => box.cleanup())
 const bash = (rules: ReturnType<typeof agentRules>) => rules.filter((rule) => rule.permission === "bash")
 const lastFor = (rules: ReturnType<typeof agentRules>, permission: string) =>
   rules.findLast((rule) => rule.permission === permission)
+/** The generated rules that follow the ask flags: exact help commands and the redirection twins of exact rules. */
+const afterTheAskFlags = (pattern: string) =>
+  pattern.endsWith(" --help") || /^git help [a-z-]+$/.test(pattern) || / 2>(&1|\/dev\/null)$/.test(pattern)
 
 describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
   test("is listed in the resolved config, with the review command", () => {
@@ -39,14 +42,18 @@ describe.skipIf(!hasOpencode)("plugin loaded by opencode", () => {
       expect(patterns).toContain("herdr agent prompt *=ask")
       expect(patterns).not.toContain("herdr tab rename *=allow")
       expect(patterns).not.toContain("herdr notification show *=allow")
-      // the ask flags come after every allow rule, so they win; only exact `<subcommand> --help` rules follow them
+      // the ask flags come after every allow rule, so they win; only exact help commands (`<subcommand> --help`,
+      // `git help <subcommand>`) and the `2>&1` / `2>/dev/null` twins of exact rules follow them
       const list = bash(rules)
       const lastWildcard = list.findLastIndex((rule) => /[*?]/.test(rule.pattern))
       expect(list[lastWildcard]?.action).toBe("ask")
       const after = list.slice(lastWildcard + 1)
       expect(after.length).toBeGreaterThan(50)
-      expect(after.every((rule) => rule.action === "allow" && rule.pattern.endsWith(" --help"))).toBe(true)
+      expect(after.filter((rule) => rule.action !== "allow" || !afterTheAskFlags(rule.pattern))).toEqual([])
       expect(patterns).toContain("herdr worktree create --help=allow")
+      expect(patterns).toContain("git help commit=allow")
+      expect(patterns).toContain("herdr --help 2>&1=allow")
+      expect(patterns).toContain("mise set --help 2>/dev/null=allow")
       expect(lastFor(rules, "readonly_guard_review")?.action).toBe("deny")
     }
   })
