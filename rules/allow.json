@@ -182,6 +182,10 @@
     },
     { "pattern": "git reflog", "reason": "show the reflog of HEAD (expire, delete, write and drop are blocked)" },
     { "pattern": "git reflog show*", "reason": "show a reflog (--output is in ask.json)" },
+    {
+      "pattern": "git reflog -*",
+      "reason": "show a reflog with log options (after an option, expire/delete/write/drop are taken for revisions)"
+    },
     { "pattern": "git reflog list", "reason": "list the references that have a reflog" },
     { "pattern": "git help", "reason": "list the common git commands" },
     { "pattern": "git help -a", "reason": "list every git command (-w/-i/-m open a browser, info or man: they ask)" },
