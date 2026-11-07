@@ -51,7 +51,8 @@ Other ways:
 | mise (CLI)  | `mise use -g npm:opencode-readonly-guard`                                         |
 | From source | `git clone … && mise run setup build`, then `"plugin": ["file:///path/to/clone"]` |
 
-> The package is not published to npm yet (see [TODO.md](TODO.md)). Until then, use the from-source route.
+> The package is not published to npm yet (see [TODO.md](TODO.md)). Until then, use the from-source route. A session
+> started inside the clone loads its build anyway, through the repository's own config (see [Development](#development)).
 
 Configured more than once (a global and a project entry, or two checkouts), the plugin runs once: the copy loaded
 last is in charge and the others stay passive. opencode loads the global config before the project's, so the
@@ -317,6 +318,12 @@ mise run test:integration   # builds, then drives the real opencode without a mo
 mise run test:e2e           # opt-in, real model: E2E_MODEL=anthropic/claude-haiku-5-5
 mise tasks                  # all tasks
 ```
+
+The repository's own `opencode.json` loads the plugin from the checkout's `dist/` (`"plugin": ["."]`), so opencode
+sessions started in a checkout or worktree are guarded by its build, work in progress included. Until
+`mise run build` has run there, the entry is skipped without a word and a global install, if any, guards instead;
+`bun src/cli.ts doctor` says which copy is in charge. [AGENTS.md](AGENTS.md) ("Hazards") explains what a build
+changes for running and new sessions.
 
 Code style follows opencode: TypeScript (strict, NodeNext), no semicolons, 120 columns, oxlint, prettier. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for adding rules and test cases.
