@@ -36,7 +36,7 @@ describe("injectRules", () => {
   test("plan and explore are always read-only, even when absent from the config", () => {
     const config: MutableConfig = {}
     expect([...run(config)].toSorted()).toEqual(["explore", "plan"])
-    expect(evaluate("uptime", bash(config, "explore"))).toBe("ask")
+    expect(evaluate("tokei", bash(config, "explore"))).toBe("ask")
     expect(evaluate("ls -la", bash(config, "plan"))).toBe("allow")
   })
 
@@ -62,8 +62,8 @@ describe("injectRules", () => {
 
   test("learned rules allow more but ask flags still win", () => {
     const config: MutableConfig = {}
-    run(config, { learned: ["uptime *", "find *"] })
-    expect(evaluate("uptime", bash(config, "plan"))).toBe("allow")
+    run(config, { learned: ["tokei *", "find *"] })
+    expect(evaluate("tokei", bash(config, "plan"))).toBe("allow")
     expect(evaluate("find . -delete", bash(config, "plan"))).toBe("ask")
   })
 
@@ -86,7 +86,7 @@ describe("injectRules", () => {
     }
     run(config)
     expect(config.agent?.explore?.permission).toMatchObject({ "*": "allow" })
-    expect(evaluate("uptime", bash(config, "plan"))).toBe("ask")
+    expect(evaluate("tokei", bash(config, "plan"))).toBe("ask")
   })
 
   test("disabled agents are skipped", () => {

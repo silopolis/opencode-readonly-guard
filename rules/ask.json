@@ -23,6 +23,10 @@
     { "pattern": "sort *-T*", "reason": "sort -T DIR writes temporary files into DIR" },
     { "pattern": "date *-s*", "reason": "date -s/--set sets the system clock (blocked by the guard)" },
     {
+      "pattern": "lsof *-D*",
+      "reason": "lsof -D b|u builds or updates a device cache file, where the platform has one (not on Linux)"
+    },
+    {
       "pattern": "git ls-remote *--u*",
       "reason": "git ls-remote --upload-pack=CMD runs CMD (any abbreviation; blocked when CMD writes)"
     },
