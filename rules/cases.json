@@ -719,7 +719,7 @@
     { "pattern": "set -euo pipefail", "ok": true },
     { "pattern": "ps *", "ok": true },
     { "pattern": "ps e*", "ok": false, "reason": "environment" },
-    { "pattern": "xxd * out.bin", "ok": false, "reason": "xxd INFILE OUTFILE" },
+    { "pattern": "xxd a.bin out.bin", "ok": false, "reason": "xxd INFILE OUTFILE" },
     { "pattern": "", "ok": false, "reason": "empty" }
   ]
 }
