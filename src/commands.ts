@@ -1,5 +1,7 @@
-import { readFileSync } from "node:fs"
+import { closeSync, mkdtempSync, openSync, readFileSync, rmSync } from "node:fs"
 import { spawnSync } from "node:child_process"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { classifyPattern, normalizePattern } from "./classify.js"
 import { PLUGIN_ID } from "./constants.js"
 import { decide } from "./decide.js"
@@ -226,19 +228,29 @@ export function systemIo(): CliIo {
     cwd: process.cwd(),
     run: (command, args) => spawnSync(command, args, { stdio: "inherit" }).status ?? 1,
     exec: (command, args, { cwd, env, timeout }) => {
-      const result = spawnSync(command, args, {
-        cwd,
-        env,
-        timeout,
-        encoding: "utf8",
-        maxBuffer: 256 * 1024 * 1024, // the resolved config holds every agent's rules
-        stdio: ["ignore", "pipe", "pipe"],
-      })
-      return {
-        status: result.status,
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-        error: result.error?.message,
+      // stdout goes to a file, not a pipe: a Bun program (opencode) that exits right after a large write to a pipe
+      // loses what the pipe could not take yet, which cut `opencode debug config` short (every agent's rules)
+      const dir = mkdtempSync(join(tmpdir(), "readonly-guard-exec-"))
+      const file = join(dir, "stdout")
+      const fd = openSync(file, "w")
+      try {
+        const result = spawnSync(command, args, {
+          cwd,
+          env,
+          timeout,
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024,
+          stdio: ["ignore", fd, "pipe"],
+        })
+        return {
+          status: result.status,
+          stdout: readFileSync(file, "utf8"),
+          stderr: result.stderr ?? "",
+          error: result.error?.message,
+        }
+      } finally {
+        closeSync(fd)
+        rmSync(dir, { recursive: true, force: true })
       }
     },
   }

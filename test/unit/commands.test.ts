@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { EXIT, runCli, type CliIo } from "../../src/commands.js"
+import { EXIT, runCli, systemIo, type CliIo } from "../../src/commands.js"
 import { createLog } from "../../src/log.js"
 
 let dir: string
@@ -194,5 +194,30 @@ describe("install", () => {
   test("local install by default", () => {
     cli("install")
     expect(ran).toEqual([["opencode", ["plugin", "opencode-readonly-guard"]]])
+  })
+})
+
+describe("systemIo", () => {
+  // opencode is a Bun program: a Bun child that exits right after a large write to a pipe loses the rest of it.
+  // `opencode debug config` lost the end of its JSON that way once the read-only agents carried ~2000 rules.
+  test("exec captures all of a large output written just before the child exits", () => {
+    const size = 4 << 20
+    const script = `process.stdout.write("x".repeat(${size})); process.stderr.write("done"); process.exit(3)`
+    const result = systemIo().exec(process.execPath, ["-e", script], { cwd: tmpdir(), env: { PATH: process.env.PATH } })
+    expect({ status: result.status, length: result.stdout.length, stderr: result.stderr }).toEqual({
+      status: 3,
+      length: size,
+      stderr: "done",
+    })
+  })
+
+  test("exec reports a program that cannot be started", () => {
+    const result = systemIo().exec("readonly-guard-no-such-program", [], {
+      cwd: tmpdir(),
+      env: { PATH: process.env.PATH },
+    })
+    expect(result.status).toBeNull()
+    expect(result.stdout).toBe("")
+    expect(result.error).toBeTruthy()
   })
 })
