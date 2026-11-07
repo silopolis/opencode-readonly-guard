@@ -201,10 +201,14 @@ describe("the help layer", () => {
     }
   })
 
-  test("holds exact `<subcommand> --help` commands only", () => {
+  test("holds exact `<subcommand> --help` and `git help <subcommand>` commands only", () => {
     for (const pattern of help) {
-      expect({ pattern, exact: !/[*?]/.test(pattern) && pattern.endsWith(" --help") }).toEqual({ pattern, exact: true })
+      const exact = !/[*?]/.test(pattern) && (pattern.endsWith(" --help") || /^git help [a-z-]+$/.test(pattern))
+      expect({ pattern, exact }).toEqual({ pattern, exact: true })
     }
+    expect(help).toContain("git help commit")
+    expect(help).toContain("git help stash")
+    expect(help).not.toContain("rtk git help commit")
   })
 
   test("never shadows an ask-listed flag", () => {

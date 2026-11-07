@@ -269,6 +269,27 @@ describe("analyze", () => {
     }
   })
 
+  test("git reflog: expire, delete, write and drop change the reflog; show, list and exists read it", () => {
+    for (const command of [
+      "git reflog expire --all",
+      "git reflog delete HEAD@{1}",
+      "git reflog write refs/heads/x 0000 1111 msg",
+      "git reflog drop --all",
+      "git reflog drop refs/heads/x",
+    ]) {
+      expect({ command, reason: reason(command) }).toEqual({ command, reason: expect.stringContaining("git reflog") })
+    }
+    for (const command of [
+      "git reflog",
+      "git reflog -n 5",
+      "git reflog show --date=iso HEAD",
+      "git reflog list",
+      "git reflog exists refs/heads/main",
+    ]) {
+      expect({ command, verdict: analyze(command) }).toEqual({ command, verdict: { block: false } })
+    }
+  })
+
   test("git ls-remote: --upload-pack and --exec run a command", () => {
     for (const command of [
       "git ls-remote --upload-pack='touch /tmp/x' .",

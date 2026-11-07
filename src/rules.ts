@@ -129,22 +129,24 @@ const HERDR_ASK_PATH = /^herdr ([a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*){0,2})(?: \*)
 /**
  * Every exact `<program> <subcommand> --help` the help layer may allow: git's subcommands (`git.write`, `git.read`
  * and `subcommandHelp.git`), herdr's paths (`herdr.read`, `herdr.write` and its `herdr <path> *` ask rules), npm's and
- * mise's `subcommandHelp` lists, and the `rtk …` form of the git, npm and mise ones. The write guard does not block
- * them (a sole trailing `--help` only prints help).
+ * mise's `subcommandHelp` lists, and the `rtk …` form of the git, npm and mise ones; plus `git help <subcommand>`,
+ * which `git <subcommand> --help` runs (rtk does not rewrite it). The write guard does not block them (a sole
+ * trailing `--help` only prints help).
  */
 export function helpCommands(rules: Pick<RuleSet, "commands" | "ask">): string[] {
   const { git, herdr, subcommandHelp } = rules.commands
   const { ask } = rules
   const askPaths = ask.flatMap(({ pattern }) => HERDR_ASK_PATH.exec(pattern)?.[1] ?? [])
+  const gitSubcommands = [...git.write, ...git.read, ...subcommandHelp.git]
   const rewrittenByRtk = [
-    ...[...git.write, ...git.read, ...subcommandHelp.git].map((sub) => `git ${sub}`),
+    ...gitSubcommands.map((sub) => `git ${sub}`),
     ...subcommandHelp.npm.map((sub) => `npm ${sub}`),
     ...subcommandHelp.mise.map((path) => `mise ${path}`),
   ]
   // not the UI subcommands: outside herdr nothing about them may be allowed (see the herdr-ui preset)
   const herdrPaths = [...herdr.read, ...herdr.write, ...askPaths].map((path) => `herdr ${path}`)
   const all = [...rewrittenByRtk, ...rewrittenByRtk.map((command) => `rtk ${command}`), ...herdrPaths]
-  return [...new Set(all.map((command) => `${command} --help`))]
+  return [...new Set([...all.map((command) => `${command} --help`), ...gitSubcommands.map((sub) => `git help ${sub}`)])]
 }
 
 /**

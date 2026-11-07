@@ -139,6 +139,26 @@
     { "pattern": "git hash-object*", "reason": "compute an object id (-w writes the object: ask.json and the guard)" },
     { "pattern": "git rev-list*", "reason": "list commits (--output is in ask.json)" },
     { "pattern": "git merge-base*", "reason": "find common ancestors" },
+    {
+      "pattern": "git cat-file*",
+      "reason": "print objects (--textconv/--filters run the configured drivers, as git show and diff do)"
+    },
+    {
+      "pattern": "git describe*",
+      "reason": "name a commit from its nearest tag (--dirty refreshes the index stat cache, as git status does)"
+    },
+    { "pattern": "git reflog", "reason": "show the reflog of HEAD (expire, delete, write and drop are blocked)" },
+    { "pattern": "git reflog show*", "reason": "show a reflog (--output is in ask.json)" },
+    { "pattern": "git reflog list", "reason": "list the references that have a reflog" },
+    { "pattern": "git help", "reason": "list the common git commands" },
+    { "pattern": "git help -a", "reason": "list every git command (-w/-i/-m open a browser, info or man: they ask)" },
+    { "pattern": "git help --all", "reason": "list every git command" },
+    { "pattern": "git help -g", "reason": "list the git guides" },
+    { "pattern": "git help --guides", "reason": "list the git guides" },
+    { "pattern": "git help -c", "reason": "list the configuration variable names" },
+    { "pattern": "git help --config", "reason": "list the configuration variable names" },
+    { "pattern": "git help --user-interfaces", "reason": "list the user-facing interfaces" },
+    { "pattern": "git help --developer-interfaces", "reason": "list the developer interfaces" },
     { "pattern": "git worktree list *", "reason": "list worktrees (the other worktree subcommands are blocked)" },
     {
       "pattern": "git ls-remote*",

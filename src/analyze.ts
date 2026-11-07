@@ -648,7 +648,9 @@ export function createAnalyzer(commands: Commands = loadRules().commands, enviro
       case "notes":
         return rest[0] && !["list", "show"].includes(rest[0]) ? `git notes ${rest[0]} modifies notes` : null
       case "reflog":
-        return ["expire", "delete"].includes(rest[0] ?? "") ? "git reflog expire/delete modifies the reflog" : null
+        return ["expire", "delete", "write", "drop"].includes(rest[0] ?? "")
+          ? `git reflog ${rest[0]} modifies the reflog`
+          : null
       case "symbolic-ref":
         return has("-d", "--delete") || positional.length >= 2 ? "git symbolic-ref modifies refs" : null
       case "hash-object":
