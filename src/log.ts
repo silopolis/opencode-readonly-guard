@@ -28,6 +28,13 @@ export interface GuardLog {
 
 export const clip = (text: string, max = 2000): string => (text.length > max ? `${text.slice(0, max)}…` : text)
 
+/** An error and its cause on one line: `cannot load allow.json: JSON Parse error: …`. */
+export function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const cause = error.cause instanceof Error ? error.cause.message : error.cause
+  return cause === undefined ? error.message : `${error.message}: ${String(cause)}`
+}
+
 /** A JSON-lines event log in `dir/events.jsonl`, rotated to `events.old.jsonl` past `maxBytes`. */
 export function createLog(dir: string, maxBytes = 5 * 1024 * 1024): GuardLog {
   const file = join(dir, "events.jsonl")

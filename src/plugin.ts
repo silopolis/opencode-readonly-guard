@@ -4,7 +4,7 @@ import { registerReviewCommand } from "./command.js"
 import { UTILITY_AGENTS } from "./constants.js"
 import { failedCopies, registerCopy, registerFailedCopy } from "./copies.js"
 import { failClosed, injectRules, type MutableConfig } from "./inject.js"
-import { clip, createLog, type GuardLog } from "./log.js"
+import { clip, createLog, describeError, type GuardLog } from "./log.js"
 import { resolveOptions, type ResolvedOptions } from "./options.js"
 import { loadCommands, loadRules, type Commands, type RuleSet } from "./rules.js"
 import { effectiveRules, loadHerdrRules } from "./sources.js"
@@ -50,13 +50,6 @@ export interface ServerDependencies {
   loadCommands(): Commands
   /** Every rule file: what the policy injected into read-only agents needs. */
   loadRules(): RuleSet
-}
-
-/** An error and its cause on one line: `cannot load allow.json: JSON Parse error: …`. */
-function describeError(error: unknown): string {
-  if (!(error instanceof Error)) return String(error)
-  const cause = error.cause instanceof Error ? error.cause.message : error.cause
-  return cause === undefined ? error.message : `${error.message}: ${String(cause)}`
 }
 
 /** Which agent each session belongs to. */
