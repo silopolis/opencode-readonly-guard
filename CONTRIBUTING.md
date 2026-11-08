@@ -104,6 +104,8 @@ opt-in because they use a real model.
 - Update `CHANGELOG.md` for user-visible changes.
 - The pre-commit hook (hk) runs prettier, oxlint, tsc, actionlint and whitespace checks; CI runs the same plus the
   tests. Please run `mise run check` before pushing.
+- Agents' scratch files, state and the redacted session transcripts in `memory/sessions/` follow the conventions in
+  [AGENTS.md](AGENTS.md) ("State, scratch and transcripts"); contributors can ignore them.
 
 ## Dependency updates
 

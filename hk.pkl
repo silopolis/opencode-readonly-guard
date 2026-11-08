@@ -1,14 +1,19 @@
 amends "package://github.com/jdx/hk/releases/download/v2.11.0/hk@2.11.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v2.11.0/hk@2.11.0#/Builtins.pkl"
 
+// Redacted session transcripts keep what the tools printed (trailing spaces, very long lines, no final newline):
+// the steps that rewrite or reject whitespace leave them alone, and prettier skips them through .prettierignore
+// (which lets memory/sessions/README.md through). The private key and merge conflict checks still read them.
+local transcripts = List("memory/sessions/**")
+
 local linters = new Mapping<String, Step> {
   ["prettier"] = Builtins.prettier
   ["oxlint"] = (Builtins.ox_lint) { depends = "prettier" }
   ["tsc"] = Builtins.tsc
   ["mise"] = Builtins.mise
   ["actionlint"] = Builtins.actionlint
-  ["trailing_whitespace"] = Builtins.trailing_whitespace
-  ["newlines"] = Builtins.newlines
+  ["trailing_whitespace"] = (Builtins.trailing_whitespace) { exclude = transcripts }
+  ["newlines"] = (Builtins.newlines) { exclude = transcripts }
   ["check_merge_conflict"] = Builtins.check_merge_conflict
   ["detect_private_key"] = Builtins.detect_private_key
 }

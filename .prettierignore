@@ -2,3 +2,5 @@ node_modules
 dist
 bun.lock
 *.tgz
+memory/sessions/*
+!memory/sessions/README.md
