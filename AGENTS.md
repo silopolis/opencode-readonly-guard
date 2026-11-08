@@ -87,6 +87,10 @@ time, used only when a file cannot be read.
   `globalPlugin`, its own global config). Use it for anything that starts opencode. `childEnv()`: the caller's
   environment without `GIT_*` and `HERDR_*`, for any other child process (see "Hazards").
 
+`memory/sessions/`: redacted transcripts of the maintainer's work sessions: history, not documentation. Its README.md
+has the naming and the export procedure; prettier and the whitespace hooks skip it (`.prettierignore`, `hk.pkl`), and
+it is not in the npm package. See "State, scratch and transcripts".
+
 ## Changing the rules
 
 Follow "Adding a command to the allowlist" in [CONTRIBUTING.md](CONTRIBUTING.md); do not work from memory. A rule
@@ -106,6 +110,17 @@ change and its cases in `rules/cases.json` go in the same commit. `/add-rule <co
   `gh` ask; `build` keeps them. If you also configure the plugin globally, the project's entry is in charge here and
   its options (none) replace your global entry's options. `bun src/cli.ts doctor` shows which copy guards a
   directory (`test/integration/dogfood.test.ts` pins all of this).
+
+## State, scratch and transcripts
+
+- An agent keeps its durable state (notes, helper scripts) in `.state/<agent>/` and disposable scratch in
+  `.state/<agent>/tmp/`. Both are ignored by git, never published, and private to that agent. `.tmp/` is ignored too.
+- Nothing durable in `/tmp`: it is cleaned after days and lost at reboots.
+- `git clean -X` and `git clean -fdx` delete ignored files, `.state/` included: not in a checkout whose state you keep.
+- A sandbox that runs git or opencode (outside the tests, which use `sandbox()`) needs its own git root (`git init`),
+  or they take the enclosing checkout as the project.
+- Never commit a raw session export. Transcripts go to `memory/sessions/` redacted, by the procedure in its README.md:
+  the repository is public, and what is committed cannot be unpublished.
 
 ## Dependency updates
 
