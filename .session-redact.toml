@@ -1,0 +1,3 @@
+# Settings for the fleet's session redactor. Settings only, never a term: terms live in the maintainer's private store.
+profile = "public"
+check = ["memory/sessions/*.md"]
