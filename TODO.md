@@ -167,6 +167,9 @@ Needs the opencode 2.x permission hook (`permission.hook("evaluate")`):
       grouped minor/patch updates and `build(deps):` / `ci(deps):` commits.
   - [ ] Enable the Renovate GitHub app on the repository, then merge its first "opencode" pull request (the pinned
         opencode bump) once `mise run test:integration` passes against it.
+- [ ] A secrets scanner for `memory/sessions/` that CI can run (hk's `gitleaks` builtin, or `trufflehog`): the
+      redactor's `--check` is local only, its terms being private, so nothing in CI catches a transcript committed
+      without it. Only `detect_private_key` reads transcripts today.
 
 ## Testing
 
