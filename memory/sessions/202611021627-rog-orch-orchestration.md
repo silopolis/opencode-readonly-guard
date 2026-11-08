@@ -1,8 +1,8 @@
 # Orchestrating agent setup and plan mode
 **Session ID:** ses_e6320a0e1ffexOEYp4Zi3QELSa
 **Created:** 11/2/2026, 4:27:27 PM
-**Updated:** 11/8/2026, 6:24:46 AM
-<!-- session-export: through msg_1b99dc49100214T5jWYfssgDSU -->
+**Updated:** 11/8/2026, 9:44:15 AM
+<!-- session-export: through msg_1ba5465a4002mrGqlaDNRQRHqB -->
 <!-- session-children: ses_e62f52903ffeTa4xelPxCnylPV -->
 
 ---
@@ -25087,7 +25087,7 @@ source versions, `mise.toml`, `project/tasks/README.md`,
 ## Assistant (Plan · Claude Opus 5.5 · 17.8s)
 
 _Thinking:_
-The export format here is a hand-written markdown summary covering date, repo, lane, request, research, decisions, actions and outcome, not a raw JSON dump, per DR-016 point 6. Since this repo is public and has no memory/ folder, I still need to decide where the export should live, and one option under consideration is a raw JSON export alongside a darse-style markdown summary.
+The export format here is a hand-written markdown summary covering date, repo, lane, request, research, decisions, actions and outcome, not a raw JSON dump, per DR-016 point 6. Since this repo is public and has no memory/ folder, I still need to decide where the export should live, and one option under consideration is a raw JSON export alongside a [redacted:repo]-style markdown summary.
 
 I'm weighing where the export should go: either a private memory folder in the [redacted:repo] hub, which I'd need to confirm exists and is private, or a new private directory. A memory folder in this public repo doesn't fit, since the session content includes commands and paths. I'll check [redacted:repo]'s sessions naming and visibility read-only.
 
@@ -25417,7 +25417,7 @@ The repo is public, so the export can't go here. [redacted:repo]'s exporter can 
 - **Scratch:** `/tmp/opencode/rog` holds 1.2 GB. `/tmp` is cleaned of files older than 10 days (`systemd-tmpfiles`, next run tomorrow 11:25), so the durable files must move.
 
 ## Steps (in build mode)
-1. **Export this session (sanitized, private).** Use [redacted:repo]'s exporter with `--out-dir` pointing outside any public repo. It writes [redacted:repo]/istc-style markdown named `YYYYMMDDHHMM-<slug>.md`, and also exports my child sessions (the explore subagents). Then scan it for tokens.
+1. **Export this session (sanitized, private).** Use [redacted:repo]'s exporter with `--out-dir` pointing outside any public repo. It writes [redacted:repo]/[redacted:repo]-style markdown named `YYYYMMDDHHMM-<slug>.md`, and also exports my child sessions (the explore subagents). Then scan it for tokens.
 2. **Move the durable files** from `/tmp/opencode/rog/` to a durable private directory:
    - `bin/`: `watch`, `once`, `peek`, `lib-once.sh`, `stages.mjs`, `deploy-main.sh`
    - `tally.mjs`, `box.sh`, `briefs/`, `answers.log`, `signal-notes.md`, `step4-inputs.md`
@@ -25647,7 +25647,7 @@ It prints counts per category and never prints the terms.
 
 ### Configuration layers
 
-The store (`~/.local/share/chezmoi-private`, or `SESSION_REDACT_STORE`) is a git clone of a private GitHub repository, not of this one; its spell lists are also the private tier of the Neovim spell words (README, "Spell checking and word lists").
+The store (`~/.local/share/[redacted:private]`, or `SESSION_REDACT_STORE`) is a git clone of a private GitHub repository, not of this one; its spell lists are also the private tier of the Neovim spell words (README, "Spell checking and word lists").
 Settings and lists are read in layers; for a single setting the later layer wins, and every list is the union of the layers (a layer can add a term and cannot remove one):
 
 | Layer | Where | Holds |
@@ -25693,7 +25693,7 @@ nvim's redaction pipeline has a `public` profile that hides identity, paths, rep
 **Input:**
 ```json
 {
-  "command": "cd ~/.config/nvim && S=${SESSION_REDACT_STORE:-$HOME/.local/share/chezmoi-private}; test -d \"$S\" && echo \"store exists\"; ls \"$S/session-redact\" 2>/dev/null | head; ls -d \"$S\"/*/ 2>/dev/null | xargs -n1 basename | head -12; rtk grep -n -i \"public profile\\|profile == \\\"public\\\"\\|'public'\" scripts/session_redact.py | head -8; python3 scripts/session_redact.py --help 2>&1 | head -30"
+  "command": "cd ~/.config/nvim && S=${SESSION_REDACT_STORE:-$HOME/.local/share/[redacted:private]}; test -d \"$S\" && echo \"store exists\"; ls \"$S/session-redact\" 2>/dev/null | head; ls -d \"$S\"/*/ 2>/dev/null | xargs -n1 basename | head -12; rtk grep -n -i \"public profile\\|profile == \\\"public\\\"\\|'public'\" scripts/session_redact.py | head -8; python3 scripts/session_redact.py --help 2>&1 | head -30"
 }
 ```
 
@@ -25738,7 +25738,7 @@ usage: session_redact.py [--profile P] [--check [FILE...] | --explain] < in > ou
 #!/usr/bin/env python3
 #MISE description="Export and redact the session transcript into memory/sessions/ (through a file, never a pipe)"
 """Usage: mise run session:export [--session ses_...] [--slug S<N>-<change-id>] [--dest DIR] [--no-children]
-Close protocol step. Uses [redacted:repo]'s exporter (ISTC_ROOT, default [redacted:repo]) because it
+Close protocol step. Uses [redacted:repo]'s exporter ([redacted:repo]_ROOT, default [redacted:repo]) because it
 produced the committed S0 and S1 transcripts and handles subagent sessions;
 `opencode export` loses its tail when piped, so the exporter writes files.
 Raw exports contain private data: they go to a mode 0700 scratch directory that is
@@ -25781,9 +25781,9 @@ def main() -> int:
     args = parser.parse_args()
     environ = dict(os.environ)
     root = settings.project_root(environ)
-    exporter = Path(environ.get("ISTC_ROOT", "[redacted:repo]")).expanduser() / "scripts" / "session" / "export.py"
+    exporter = Path(environ.get("[redacted:repo]_ROOT", "[redacted:repo]")).expanduser() / "scripts" / "session" / "export.py"
     if not exporter.is_file():
-        return die(f"[redacted:repo]'s exporter not found at {exporter} (set ISTC_ROOT)")
+        return die(f"[redacted:repo]'s exporter not found at {exporter} (set [redacted:repo]_ROOT)")
     redactor = root / "scripts" / "session_redact.py"
     if not redactor.is_file():
         return die(f"{redactor} not found")
@@ -26110,14 +26110,14 @@ bun.lock
 ["dist","rules","README.md","CHANGELOG.md","LICENSE"]
 --- hk.pkl excludes:
 --- nvim hk excludes for memory:
-store: ~/.local/share/chezmoi-private
+store: ~/.local/share/[redacted:private]
 project file: ~/.config/nvim/.session-redact.toml
 profile: private (project file)
 fleet-names: redact (default)
 identity: auto (default), applied: no
 path-aliases: auto (default), applied: no
 check: memory/sessions/*.md
-layer global: ~/.local/share/chezmoi-private/session-redact
+layer global: ~/.local/share/[redacted:private]/session-redact
   config.toml
   ../nvim/spell/fr.utf-8.add (5 entries)
   redact-terms.txt (9 entries)
@@ -27429,7 +27429,7 @@ I deleted only my own scratch directory, about 1.2 GB, and left the other agents
 ```
 5:  ["prettier"] = Builtins.prettier
 6:  ["oxlint"] = (Builtins.ox_lint) { depends = "prettier" }
-store: ~/.local/share/chezmoi-private
+store: ~/.local/share/[redacted:private]
 project file: none
 profile: private (default)
 
@@ -27468,7 +27468,7 @@ Usage:
   session_redact.py [--profile private|public] --explain
 
 No private term lives in this script, nor in any repository. Terms live in
-the private store (default ~/.local/share/chezmoi-private, a clone of a
+the private store (default ~/.local/share/[redacted:private], a clone of a
 private repository; SESSION_REDACT_STORE overrides it) and are read in
 layers, later layers winning for single settings and adding to the lists:
 
@@ -27593,7 +27593,7 @@ The public profile redacts private repo names, credentials, IPs, emails and non-
 ```json
 {
   "filePath": "[redacted:repo]:.state/rog-orch/briefs/rog-memory.md",
-  "content": "You are rog-memory, a worker agent. Your coordinator is rog-orch (herdr pane wR:p1). You cannot talk to it directly: end each stage with \"READY: ...\" or \"BLOCKED: <question>\" and wait.\n\n## Where you work (header from rog-orch)\n- Repo: opencode-readonly-guard, a PUBLIC opencode plugin. Read AGENTS.md first (commands, style, map, hazards), then CONTRIBUTING.md.\n- Your worktree: [redacted:worktrees_root]/rog-memory, branch chore/memory-sessions (from origin/main bcb2ebc). Dependencies are installed.\n- Storage convention (new, you document it in this PR): per-agent state in `.state/<agent>/` (durable, never published), disposable scratch in `.state/<agent>/tmp/`; both ignored by git. Yours: `.state/rog-memory/`.\n  Nothing durable in /tmp (cleaned after 10 days, lost at reboots). Sandboxes need their OWN git root (see `.state/rog-orch/bin/box.sh` in the main checkout, read-only for you).\n- NEVER touch [redacted:repo] (the main checkout; the fleet loads its dist/). NEVER print the environment (no env, printenv, set, export -p, ps e, `env | grep ...`): your shell holds a GitHub token.\n- Hooks (hk) are active and safe in linked worktrees: commit and push normally; fix what a hook reports, never bypass it.\n- Permission prompts are answered by rog-orch: prefer one-line commands; put multi-line scripts in a file under `.state/rog-memory/tmp/` first. A dialog whose command text is not visible is rejected.\n- Another worker later exports session transcripts into `memory/sessions/` in a separate branch; you only prepare the plumbing. Do not merge anything.\n\n## Goal: one PR, `chore(memory): host redacted session transcripts`\nThis public repo will host redacted session transcripts in `memory/sessions/`, like the fleet's private repos do ([redacted:repo] DR-016, [redacted:repo] DR-014, nvim). Because the repo is PUBLIC, the redaction uses the `public` profile of nvim's redactor (`~/.config/nvim/scripts/session_redact.py`, store `~/.local/share/chezmoi-private`, read its docstring: `sed -n 1,110p`; the public profile also redacts private repo names, credential variable names, IPv4, emails, non-public git hosts and always applies identity and path aliases).\n1. `.gitignore`: add `.state/` and `.tmp/` (the maintainer already has them in `.git/info/exclude` locally).\n2. `.session-redact.toml` at the root: settings only, NEVER a term: `profile = \"public\"`, `check = [\"memory/sessions/*.md\"]`. Run `python3 ~/.config/nvim/scripts/session_redact.py --explain` FROM YOUR WORKTREE ROOT and report what it resolves (profile, which layers, entry counts). If it needs a `terms` directory of the private store for this project (the script stops with status 2 when nothing is configured or a named directory is missing), do NOT create anything in the private store: report it to me as a question and propose the minimum.\n3. `memory/sessions/README.md` (in English, concise): what lives here (redacted transcripts of the maintainer's orchestration/work sessions), naming `YYYYMMDDHHMM-<slug>.md`, the export procedure (1. [redacted:repo] exporter `[redacted:repo]:scripts/session/export.py --sanitize` writing to a 0700 directory under `.state/<agent>/tmp/`, never to the repo; 2. `session_redact.py --profile public < raw > memory/sessions/<name>.md`; 3. `session_redact.py --check`; 4. the maintainer reads the redacted file before it is committed), why raw exports are never committed, and that transcripts are history, not documentation. Keep tool paths relative to the user's setup out of normative text where you can (say \"the fleet's redactor\" and give the path once as an example).\n4. Formatter and hook scopes: `memory/sessions` must not be touched by prettier (`.prettierignore`), oxlint (n/a), the hk steps that rewrite or reject whitespace/newlines (`hk.pkl`: look at each step's `exclude`/`glob` options in hk 2.11 docs https://hk.jdx.dev), but `detect_private_key` and a secrets check should still see it. Prove it: create a throwaway file `memory/sessions/zz-probe.md` with trailing spaces, no final newline and a very long line, run `mise x -- hk check --all` (check mode) and `prettier --check .`, show they pass, then delete the probe. Also confirm that `npm pack --dry-run` does not list `memory/` (package.json `files` is a whitelist) and that `mise run check` passes.\n5. `AGENTS.md`: a short section \"State, scratch and transcripts\" (storage model above: `.state/<agent>/`, `tmp/`, never commit raw exports, `git clean -X/-fdx` deletes them, sandboxes need their own git root, the AGENTS map gets `memory/`), at most ~15 lines. CONTRIBUTING.md: one sentence pointing to it.\n6. No CHANGELOG entry (repository tooling). TODO.md untouched.\n\n## Process\nSTAGE 0: read AGENTS.md, hk.pkl, .prettierignore, package.json \"files\", run `--explain` and `mise run check` for a baseline; reply with a PLAN (max 15 lines) and WAIT for my \"go\". Then: small Conventional Commits, `mise run check` green (integration tests are not needed: no src/ or test change; run `mise run test:integration` only if you touch anything under src/ or test/), push `git push -u origin chore/memory-sessions`, `gh pr create --base main`, description with the evidence of step 4 and the `--explain` result, no merge, reply \"READY: <url>\". CI failures: I send you the log; fix with a new commit (no force-push, no amend).\n"
+  "content": "You are rog-memory, a worker agent. Your coordinator is rog-orch (herdr pane wR:p1). You cannot talk to it directly: end each stage with \"READY: ...\" or \"BLOCKED: <question>\" and wait.\n\n## Where you work (header from rog-orch)\n- Repo: opencode-readonly-guard, a PUBLIC opencode plugin. Read AGENTS.md first (commands, style, map, hazards), then CONTRIBUTING.md.\n- Your worktree: [redacted:worktrees_root]/rog-memory, branch chore/memory-sessions (from origin/main bcb2ebc). Dependencies are installed.\n- Storage convention (new, you document it in this PR): per-agent state in `.state/<agent>/` (durable, never published), disposable scratch in `.state/<agent>/tmp/`; both ignored by git. Yours: `.state/rog-memory/`.\n  Nothing durable in /tmp (cleaned after 10 days, lost at reboots). Sandboxes need their OWN git root (see `.state/rog-orch/bin/box.sh` in the main checkout, read-only for you).\n- NEVER touch [redacted:repo] (the main checkout; the fleet loads its dist/). NEVER print the environment (no env, printenv, set, export -p, ps e, `env | grep ...`): your shell holds a GitHub token.\n- Hooks (hk) are active and safe in linked worktrees: commit and push normally; fix what a hook reports, never bypass it.\n- Permission prompts are answered by rog-orch: prefer one-line commands; put multi-line scripts in a file under `.state/rog-memory/tmp/` first. A dialog whose command text is not visible is rejected.\n- Another worker later exports session transcripts into `memory/sessions/` in a separate branch; you only prepare the plumbing. Do not merge anything.\n\n## Goal: one PR, `chore(memory): host redacted session transcripts`\nThis public repo will host redacted session transcripts in `memory/sessions/`, like the fleet's private repos do ([redacted:repo] DR-016, [redacted:repo] DR-014, nvim). Because the repo is PUBLIC, the redaction uses the `public` profile of nvim's redactor (`~/.config/nvim/scripts/session_redact.py`, store `~/.local/share/[redacted:private]`, read its docstring: `sed -n 1,110p`; the public profile also redacts private repo names, credential variable names, IPv4, emails, non-public git hosts and always applies identity and path aliases).\n1. `.gitignore`: add `.state/` and `.tmp/` (the maintainer already has them in `.git/info/exclude` locally).\n2. `.session-redact.toml` at the root: settings only, NEVER a term: `profile = \"public\"`, `check = [\"memory/sessions/*.md\"]`. Run `python3 ~/.config/nvim/scripts/session_redact.py --explain` FROM YOUR WORKTREE ROOT and report what it resolves (profile, which layers, entry counts). If it needs a `terms` directory of the private store for this project (the script stops with status 2 when nothing is configured or a named directory is missing), do NOT create anything in the private store: report it to me as a question and propose the minimum.\n3. `memory/sessions/README.md` (in English, concise): what lives here (redacted transcripts of the maintainer's orchestration/work sessions), naming `YYYYMMDDHHMM-<slug>.md`, the export procedure (1. [redacted:repo] exporter `[redacted:repo]:scripts/session/export.py --sanitize` writing to a 0700 directory under `.state/<agent>/tmp/`, never to the repo; 2. `session_redact.py --profile public < raw > memory/sessions/<name>.md`; 3. `session_redact.py --check`; 4. the maintainer reads the redacted file before it is committed), why raw exports are never committed, and that transcripts are history, not documentation. Keep tool paths relative to the user's setup out of normative text where you can (say \"the fleet's redactor\" and give the path once as an example).\n4. Formatter and hook scopes: `memory/sessions` must not be touched by prettier (`.prettierignore`), oxlint (n/a), the hk steps that rewrite or reject whitespace/newlines (`hk.pkl`: look at each step's `exclude`/`glob` options in hk 2.11 docs https://hk.jdx.dev), but `detect_private_key` and a secrets check should still see it. Prove it: create a throwaway file `memory/sessions/zz-probe.md` with trailing spaces, no final newline and a very long line, run `mise x -- hk check --all` (check mode) and `prettier --check .`, show they pass, then delete the probe. Also confirm that `npm pack --dry-run` does not list `memory/` (package.json `files` is a whitelist) and that `mise run check` passes.\n5. `AGENTS.md`: a short section \"State, scratch and transcripts\" (storage model above: `.state/<agent>/`, `tmp/`, never commit raw exports, `git clean -X/-fdx` deletes them, sandboxes need their own git root, the AGENTS map gets `memory/`), at most ~15 lines. CONTRIBUTING.md: one sentence pointing to it.\n6. No CHANGELOG entry (repository tooling). TODO.md untouched.\n\n## Process\nSTAGE 0: read AGENTS.md, hk.pkl, .prettierignore, package.json \"files\", run `--explain` and `mise run check` for a baseline; reply with a PLAN (max 15 lines) and WAIT for my \"go\". Then: small Conventional Commits, `mise run check` green (integration tests are not needed: no src/ or test change; run `mise run test:integration` only if you touch anything under src/ or test/), push `git push -u origin chore/memory-sessions`, `gh pr create --base main`, description with the evidence of step 4 and the `--explain` result, no merge, reply \"READY: <url>\". CI failures: I send you the log; fix with a new commit (no force-push, no amend).\n"
 }
 ```
 
@@ -28822,14 +28822,14 @@ The exporter works, and it names files by session creation time. Next, the redac
 
 **Output:**
 ```
-store: ~/.local/share/chezmoi-private
+store: ~/.local/share/[redacted:private]
 project file: [redacted:worktrees_root]/rog-export/.session-redact.toml
 profile: public (project file)
 fleet-names: redact (default)
 identity: auto (default), applied: yes
 path-aliases: auto (default), applied: yes
 check: memory/sessions/*.md
-layer global: ~/.local/share/chezmoi-private/session-redact
+layer global: ~/.local/share/[redacted:private]/session-redact
 --- raw: 20340 bytes
 redact exit 0
 20340
@@ -29066,7 +29066,7 @@ The leftover matches are harmless prefixes, but the bare username `silopolis` is
 **Input:**
 ```json
 {
-  "command": "cd [redacted:worktrees_root]/rog-export && echo \"silopolis in tracked public files: $(git grep -l silopolis -- . ':!memory' | tr '\\n' ' ')\"; git grep -c silopolis -- package.json README.md | cat; git log -1 --format='%an <%ae>' | sed -E 's/<.*>/<email>/'; echo \"--- identity.txt categories (names only):\"; cut -d: -f1 ~/.local/share/chezmoi-private/session-redact/identity.txt | sort -u | tr '\\n' ' '; echo; echo \"--- github-owners entries: $(wc -l < ~/.local/share/chezmoi-private/session-redact/github-owners.txt)\""
+  "command": "cd [redacted:worktrees_root]/rog-export && echo \"silopolis in tracked public files: $(git grep -l silopolis -- . ':!memory' | tr '\\n' ' ')\"; git grep -c silopolis -- package.json README.md | cat; git log -1 --format='%an <%ae>' | sed -E 's/<.*>/<email>/'; echo \"--- identity.txt categories (names only):\"; cut -d: -f1 ~/.local/share/[redacted:private]/session-redact/identity.txt | sort -u | tr '\\n' ' '; echo; echo \"--- github-owners entries: $(wc -l < ~/.local/share/[redacted:private]/session-redact/github-owners.txt)\""
 }
 ```
 
@@ -29396,7 +29396,7 @@ ap|[redacted:user_username]|kali|GDrive|Nextcloud' rul
 
 ---
 
-## Assistant (Build · Claude Sonnet 5.5)
+## Assistant (Build · Claude Sonnet 5.5 · 170.1s)
 
 _Thinking:_
 Most of the listed tools are already public in this repo, but `[redacted:private]`, `[redacted:private]` and the `[redacted:private]…spike_[redacted:private]…` names reveal private projects that the redactor missed. I'm scrubbing those now and will ask you to confirm the export in review.
@@ -29409,6 +29409,3443 @@ Most of the listed tools are already public in this repo, but `[redacted:private
 {
   "command": "cd [redacted:repo]:.state/rog-orch && cat >> private/extra-terms.txt <<'EOF'\n[redacted:private]\n[redacted:private]\n[redacted:private]\nEOF\ngrep -rn \"insync\\|nextcloud\\|chezmoi\\|obsidian\" [redacted:repo]:rules/cases.json [redacted:repo]:rules/allow.json 2>/dev/null | wc -l | sed 's/^/public-repo mentions of insync|nextcloud|chezmoi|obsidian: /'; rm -f [redacted:worktrees_root]/rog-export/memory/sessions/2026*.md; time bin/export-sessions.sh [redacted:worktrees_root]/rog-export rog-setup-contributor-config=ses_e628b9edaffe6dwCDYcqRDaZQY rog-testenv-test-git-env=ses_e5e9e43ebffeJtgDSTuZb3lwN2 rog-rules-allowlist=ses_e628ba01affeR7WDxT7lQyqZ4H rog-loading-plugin-loading=ses_e6211500dffe3uDLOjxq2C7tCX rog-doctor-fail-closed-doctor=ses_e4e0c7172ffekIV6Oe8UQvE937 rog-utilities-rules=ses_e4df84f8effeT5Vvi7wrKUMZC4 rog-deploy-batch-1=ses_e5e6b7d29ffevszocEkydBl0v7 rog-deploy-batch-2=ses_e494aa317ffeXHa2ul3G2rhzxx rog-orch-orchestration=ses_e6320a0e1ffexOEYp4Zi3QELSa 2>&1 | tail -16",
   "timeout": 2400000
+}
+```
+
+**Output:**
+```
+public-repo mentions of insync|nextcloud|chezmoi|obsidian: 2
+202611021910-rog-setup-contributor-config.md                   raw   453894 B -> redacted   454040 B
+202611031328-rog-testenv-test-git-env.md                       raw   174199 B -> redacted   174433 B
+202611021910-rog-rules-allowlist.md                            raw  1471590 B -> redacted  1472470 B
+202611022123-rog-loading-plugin-loading.md                     raw   896505 B -> redacted   893580 B
+202611061841-rog-doctor-fail-closed-doctor.md                  raw  1031297 B -> redacted  1032521 B
+202611061903-rog-utilities-rules.md                            raw   985597 B -> redacted   986440 B
+202611031423-rog-deploy-batch-1.md                             raw     5895 B -> redacted     5907 B
+202611071651-rog-deploy-batch-2.md                             raw     6570 B -> redacted     6575 B
+202611021627-rog-orch-orchestration.md                         raw  1540579 B -> redacted  1540579 B
+202611021714-rog-orch-orchestrati-research_herdr_worktree.md   raw   141068 B -> redacted   140962 B
+redactor --check exit 0
+all categories 0
+bin/export-sessions.sh [redacted:worktrees_root]/rog-export          2>&1  192,29s user 12,88s system 128% cpu 2:39,65 total
+tail -16  0,00s user 0,00s system 0% cpu 2:39,65 total
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 101.0s)
+
+I'm verifying the scrub took effect and the files are clean text now, using the same independent scan, extended.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export/memory/sessions && echo \"binary files (NUL): $(grep -lP '\\x00' 2*.md | wc -l)\"; echo \"[redacted:private]: $(grep -ci [redacted:private] 2*.md | awk -F: '{s+=$2} END{print s+0}'), [redacted:private]: $(grep -ci '[redacted:private]' 2*.md | awk -F: '{s+=$2} END{print s+0}'), [redacted:private]: $(grep -ci [redacted:private] 2*.md | awk -F: '{s+=$2} END{print s+0}'), [redacted:private]: $(grep -c '[redacted:private]' 2*.md | awk -F: '{s+=$2} END{print s+0}')\"; echo \"[redacted:private] markers: $(grep -o '\\[redacted:private\\]' 2*.md | wc -l)\"; echo \"exact token: $(grep -lF \"${[redacted:envvar]:-__none__}\" 2*.md | wc -l); token shapes: $(grep -ElE 'gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}' 2*.md | wc -l); key shapes: $(grep -ElE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE' 2*.md | wc -l)\"; echo \"real /home/<user>: $(grep -ohE '/home/[A-Za-z0-9_.-]+' 2*.md | grep -vE '^/home/(linuxbrew|user)$' | wc -l)\"; echo \"emails (distinct): $(grep -ohE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}' 2*.md | sort -u | tr '\\n' ' ')\"; cd ../.. && git status --short | head -14; git diff --stat --cached | tail -1; python3 ~/.config/nvim/scripts/session_redact.py --check >/dev/null; echo \"redactor --check exit $?\""
+}
+```
+
+**Output:**
+```
+binary files (NUL): 0
+[redacted:private]: 0, [redacted:private]: 0, [redacted:private]: 0, [redacted:private]: 0
+[redacted:private] markers: 196
+exact token: 0; token shapes: 0; key shapes: 0
+real /home/<user>: 0
+emails (distinct): git@gitlab.com 
+?? memory/sessions/202611021627-rog-orch-orchestration.md
+?? memory/sessions/202611021714-rog-orch-orchestrati-research_herdr_worktree.md
+?? memory/sessions/202611021910-rog-rules-allowlist.md
+?? memory/sessions/202611021910-rog-setup-contributor-config.md
+?? memory/sessions/202611022123-rog-loading-plugin-loading.md
+?? memory/sessions/202611031328-rog-testenv-test-git-env.md
+?? memory/sessions/202611031423-rog-deploy-batch-1.md
+?? memory/sessions/202611061841-rog-doctor-fail-closed-doctor.md
+?? memory/sessions/202611061903-rog-utilities-rules.md
+?? memory/sessions/202611071651-rog-deploy-batch-2.md
+redactor --check exit 0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 42.8s)
+
+_Thinking:_
+The scans came back clean, and I'm committing one file as a trial to confirm the repo's hooks and CI accept these files, since transcripts quote conflict markers.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export && mise trust 2>&1 | tail -1; ln -s [redacted:repo]:node_modules node_modules 2>/dev/null; git status --short | head -2 | wc -l; rtk git add memory/sessions/202611031423-rog-deploy-batch-1.md && rtk git commit -q -m \"docs(sessions): export the first deploy batch session\" 2>&1 | tail -15; rtk git log --oneline -2 | cat; git config --get core.worktree | sed 's/^/MAIN core.worktree: /'; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"",
+  "timeout": 300000
+}
+```
+
+**Output:**
+```
+mise WARN  No untrusted config or environment files found.
+2
+ok 1 file changed, 121 insertions(+)
+❯ check_merge_conflict – aborted
+⚠ check_merge_conflict – aborted
+❯ detect_private_key – aborted
+⚠ detect_private_key – aborted
+  stash – Restoring unstaged changes (manual)
+✔ stash – Restoring unstaged changes (manual)
+
+prettier stderr:
+mise ERROR No version is set for shim: prettier
+Set a global default version with one of the following:
+mise use -g prettier@3.8.1
+mise ERROR Version: 2026.10.23 linux-x64 (2026-10-29)
+mise ERROR Run with --verbose or MISE_VERBOSE=1 for more information
+
+See [redacted:repo]:.git/worktrees/rog-export/hk/output.log for full command output
+853a384 Merge pull request #15 from [redacted:repo]/memory-sessions
+fc67033 docs(todo): track a CI-side secrets scanner for session transcripts
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 7.7s)
+
+_Thinking:_
+The commit hook failed because `prettier` isn't installed in this fresh worktree, so I'm running `bun install` here and will retry the commit rather than bypass the hook.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export && rm -f node_modules && bun install --frozen-lockfile 2>&1 | tail -1; rtk git status --short | head -3; rtk git commit -q -m \"docs(sessions): export the first deploy batch session\" 2>&1 | tail -8; rtk git log --oneline -2 | cat; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"",
+  "timeout": 300000
+}
+```
+
+**Output:**
+```
+43 packages installed [796.00ms]
+A  memory/sessions/202611031423-rog-deploy-batch-1.md
+?? memory/sessions/202611021627-rog-orch-orchestration.md
+?? memory/sessions/202611021714-rog-orch-orchestrati-research_herdr_worktree.md
+ok
+4975926 docs(sessions): export the first deploy batch session
+853a384 Merge pull request #15 from [redacted:repo]/memory-sessions
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 23.9s)
+
+The first commit went through with the hooks active (`check_merge_conflict`, `detect_private_key`, prettier). Committing the rest one per session, which also exercises the hooks on the large files.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export && c() { f=$1; shift; rtk git add \"memory/sessions/$f\" && rtk git commit -q -m \"$*\" 2>&1 | grep -E \"✗|error|Error|aborted|failed\" | head -4; }; c 202611021910-rog-setup-contributor-config.md \"docs(sessions): export the contributor setup worker session\"; c 202611031328-rog-testenv-test-git-env.md \"docs(sessions): export the sandbox git environment worker session\"; c 202611021910-rog-rules-allowlist.md \"docs(sessions): export the allowlist rules worker session\"; c 202611022123-rog-loading-plugin-loading.md \"docs(sessions): export the plugin loading worker session\"; c 202611061841-rog-doctor-fail-closed-doctor.md \"docs(sessions): export the fail-closed and doctor worker session\"; c 202611061903-rog-utilities-rules.md \"docs(sessions): export the utilities rules worker session\"; c 202611071651-rog-deploy-batch-2.md \"docs(sessions): export the second deploy batch session\"; c 202611021714-rog-orch-orchestrati-research_herdr_worktree.md \"docs(sessions): export the herdr worktree research subagent session\"; c 202611021627-rog-orch-orchestration.md \"docs(sessions): export the orchestration session\"; rtk git log --oneline origin/main..HEAD | cat; git status --short | wc -l; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"",
+  "timeout": 900000
+}
+```
+
+**Output:**
+```
+ok 1 file changed, 10236 insertions(+)
+ok 1 file changed, 4104 insertions(+)
+ok 1 file changed, 23854 insertions(+)
+ok 1 file changed, 16516 insertions(+)
+ok 1 file changed, 17932 insertions(+)
+ok 1 file changed, 21719 insertions(+)
+ok 1 file changed, 131 insertions(+)
+ok 1 file changed, 2572 insertions(+)
+ok 1 file changed, 29417 insertions(+)
+64152f4 docs(sessions): export the orchestration session
+78135e1 docs(sessions): export the herdr worktree research subagent session
+e679b3a docs(sessions): export the second deploy batch session
+5cac32a docs(sessions): export the utilities rules worker session
+70383c2 docs(sessions): export the fail-closed and doctor worker session
+dd56a31 docs(sessions): export the plugin loading worker session
+770dbdb docs(sessions): export the allowlist rules worker session
+0e985ec docs(sessions): export the sandbox git environment worker session
+831ea0d docs(sessions): export the contributor setup worker session
+4975926 docs(sessions): export the first deploy batch session
+0
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 711.2s)
+
+All 10 commits passed the hooks, and `core.worktree` in main is still unset. Pushing the branch and opening the PR with a description that doesn't quote the content.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export && cat > [redacted:repo]:.state/rog-orch/tmp/pr-export.md <<'EOF'\nAdds the redacted transcripts of the orchestration run that produced PRs #3 to #14, under `memory/sessions/` (set up by #15).\n\n## What is in it\n\n| File | Session |\n| --- | --- |\n| `202611021627-rog-orch-orchestration.md` | the orchestrator (this run), snapshot of 2026-11-08 |\n| `202611021714-rog-orch-orchestrati-research_herdr_worktree.md` | its research subagent (herdr worktree semantics) |\n| `202611021910-rog-setup-contributor-config.md` | worker: contributor setup (#3) |\n| `202611021910-rog-rules-allowlist.md` | worker: allowlist rules (#4, #5, #7, #11) |\n| `202611022123-rog-loading-plugin-loading.md` | worker: plugin loading (#6, #8, #9) |\n| `202611031328-rog-testenv-test-git-env.md` | worker: sandbox git environment (#10) |\n| `202611061841-rog-doctor-fail-closed-doctor.md` | worker: fail closed, `doctor`, dogfooding (#12, #14) |\n| `202611061903-rog-utilities-rules.md` | worker: utilities, builtins, redirection twins (#13) |\n| `202611031423-rog-deploy-batch-1.md`, `202611071651-rog-deploy-batch-2.md` | the two throwaway deploy sessions |\n\nOne commit per session, 6.5 MB in total. They are history, not documentation (see `memory/sessions/README.md`).\n\n## How they were produced\n\n1. The fleet's session exporter, **without** `--sanitize`: `opencode export --sanitize` replaces every message, reasoning block and tool input with a placeholder (`[redacted:text:prt_…]`), which leaves nothing to read. Raw exports lived only in a `0700` directory under the maintainer's ignored `.state/` and were deleted.\n2. The fleet's redactor in the `public` profile (secrets, local paths and user identity, private repository and host names, credential variable names, addresses), then `--check`: exit 0, every category 0.\n3. A post-redaction scrub, kept outside the repository, for terms the redactor's store does not know yet (one host name, two private project names) and for NUL bytes that came from searching binaries with `rg -a` (they made git treat one file as binary).\n4. An independent scan of all files: the exact value of the environment's GitHub token, token and key shapes, `/home/<user>` paths, e-mail addresses, IPv4 addresses. All clean.\n\nThe hooks (`detect_private_key`, `check_merge_conflict`) ran on each commit.\n\n## What a reviewer should know\n\n- The scans cannot prove there is nothing private left: they find what they know. The maintainer reads the files before merging, and anything found later means rewriting history, so please read before approving.\n- These sessions printed samples of the maintainer's own shell history while building the allowlist (command names such as `insync` or `nextcloud` appear in rule discussions and are already in this repository's test cases).\n- One session briefly held a GitHub token in its context (it had printed the environment). Its stored copy was replaced by a marker before this export, and no file here contains the token or anything shaped like one.\n- The orchestrator's session was still running when it was exported. It will be re-exported incrementally (`--since`) after the retrospective.\nEOF\npython3 ~/.config/nvim/scripts/session_redact.py --profile public < [redacted:repo]:.state/rog-orch/tmp/pr-export.md | diff -q - [redacted:repo]:.state/rog-orch/tmp/pr-export.md && echo \"PR body clean under the redactor\"; git push -u origin docs/sessions-export 2>&1 | tail -2; gh pr create --base main --head docs/sessions-export --title \"docs(sessions): export the redacted transcripts of the orchestration run\" --body-file [redacted:repo]:.state/rog-orch/tmp/pr-export.md 2>&1 | tail -1; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"",
+  "timeout": 300000
+}
+```
+
+**Output:**
+```
+PR body clean under the redactor
+ * [new branch]      docs/sessions-export -> docs/sessions-export
+branch 'docs/sessions-export' set up to track 'origin/docs/sessions-export'.
+https://github.com/silopolis/opencode-readonly-guard/pull/16
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 212.0s)
+
+The push ran the pre-push hook, which runs the unit tests with `GIT_DIR` set, and `core.worktree` is still unset: #10 holds. Waiting for CI, then setting up a review tab.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && for i in $(seq 1 16); do p=$(gh pr checks 16 2>&1 | rtk grep -c pending); [ \"$p\" = \"0\" ] && break; sleep 20; done; gh pr checks 16 2>&1 | cat; gh pr view 16 --json additions,changedFiles --jq '\"+\\(.additions) lines, \\(.changedFiles) files\"'; cd [redacted:worktrees_root]/rog-export && W=$(herdr workspace create --cwd [redacted:worktrees_root]/rog-export --label rog-export --no-focus | jq -r '.result.workspace.workspace_id'); echo \"workspace $W\"; P=$(herdr pane list --workspace $W | jq -r '.result.panes[0].pane_id'); sleep 2; herdr pane run \"$P\" \"hunk gh pr 16\" >/dev/null; echo \"hunk in $P\"; herdr notification show \"PR #16 ready: session exports\" --body \"CI result in; READ the files in workspace rog-export before merging (merge 2 of 2)\" --sound done | jq -c '.result.shown'",
+  "timeout": 400000
+}
+```
+
+**Output:**
+```
+GitGuardian Security Checks	pass	2s	https://dashboard.gitguardian.com	
+lint, types, unit tests	pass	16s	https://github.com/silopolis/opencode-readonly-guard/actions/runs/42451815782/job/128642456531	
+package and opencode integration	pass	3m18s	https://github.com/silopolis/opencode-readonly-guard/actions/runs/42451815782/job/128642456634	
++126602 lines, 10 files
+workspace w12
+hunk in w12:p1
+true
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 15.0s)
+
+_Thinking:_
+CI is green, including the GitGuardian secrets scan. I'm now updating state.md and the journal, and checking the other repos' conventions before the handoff.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && { echo \"- $(date '+%F %T') rog-orch PR #15 merged by maintainer (853a384); main pulled (no src change, no deploy)\"; echo \"- $(date '+%F %T') rog-orch export pilot: opencode export --sanitize replaces ALL content with placeholders (useless); exported WITHOUT it, redactor public profile does the work\"; echo \"- $(date '+%F %T') rog-orch export: redactor missed a host name, two private project names and NUL bytes (rg -a on binaries); added post-redaction scrub with private/extra-terms.txt (local only) in bin/export-sessions.sh\"; echo \"- $(date '+%F %T') rog-orch 10 session transcripts exported (6.5 MB), 10 commits, hooks passed (prettier needed bun install in the new worktree), PR #16 opened, CI green, hunk in workspace w12 (rog-export)\"; } >> journal.md\npython3 - <<'EOF'\np='state.md'\nt=open(p).read()\na=t.index('## Now'); b=t.index('## Identity')\nt=t[:a]+'''## Now (updated 2026-11-08)\n- PR #16 `docs(sessions): export the redacted transcripts of the orchestration run` (branch docs/sessions-export, worktree\n  [redacted:worktrees_root]/rog-export, herdr workspace w12 `rog-export`): CI green, hunk open. WAITING FOR THE MAINTAINER TO READ THE 10 FILES\n  AND MERGE (merge 2 of 2). Do not merge it myself.\n- Then: `git pull` main (docs only, no deploy), remove the rog-export worktree + local branch (remote kept), close workspace w12.\n- Then compaction by the maintainer, then step 4.\n- Main checkout `[redacted:repo]`: 853a384, clean, `core.worktree` unset. dist = build of bcb2ebc (no src change since).\n- The orchestrator session is exported as a snapshot of 2026-11-08 04:xx; re-export incrementally at step 6 (`--since auto`).\n\n'''+t[b:]\nt=t.replace('''## Pitfalls''','''## Session export procedure (as run on 2026-11-08; `bin/export-sessions.sh <worktree> slug=session_id ...`)\n- [redacted:repo] exporter (`[redacted:repo]:scripts/session/export.py`, venv `[redacted:repo]:.venv/bin/python`) WITHOUT `--sanitize`\n  (`opencode export --sanitize` replaces every message, reasoning and tool input with placeholders: useless as a record).\n- Raw export only in `.state/rog-orch/tmp/export-raw/` (0700, deleted at the end). Then the fleet redactor\n  (`~/.config/nvim/scripts/session_redact.py --profile public`, run from the worktree root so it reads `.session-redact.toml`),\n  then the local scrub (NUL bytes; `private/extra-terms.txt`: terms the private store does not know yet: a host name and two\n  private project names; PROMOTE THEM into the store's `session-redact/redact-terms.txt`), then `--check` and an independent scan\n  (exact token, token/key shapes, /home/<user>, emails, IPv4, the private fleet words).\n- New worktrees need `bun install --frozen-lockfile` before the first commit (hk's prettier step needs it).\n- The redactor cannot prove absence: the maintainer reads every file before merge.\n\n## Pitfalls''')\nt=t.replace('''## Next actions''','''## Worker harvest at retirement\nCopy `.state/<worker>/` (minus `tmp/`) from the worker's worktree to the main checkout's `.state/<worker>/`, then `herdr worktree remove`,\nthen delete the local branch. Already done for the evidence of rog-loading, rog-utilities, rog-doctor, rog-testenv, rog-rules.\n\n## Next actions''')\nt=t.replace('1. (done) Deploy batch 3; old /tmp scratch deleted.\\n3. Plumbing PR by a fresh worker `rog-memory`: `.gitignore` (.state/, .tmp/), `memory/sessions/README.md`, `.session-redact.toml`\\n   (profile public), prettier/hk scopes, AGENTS.md storage note. Maintainer merges.\\n4. Export 9 sessions ([redacted:repo] exporter --sanitize -> nvim `session_redact.py --profile public` -> --check -> token scan) on branch\\n   `docs/sessions-export`, one commit per session; maintainer reads every file, then merges.\\n','1. (done) deploy batch 3, /tmp cleaned, plumbing PR #15 merged, export PR #16 opened.\\n2. After #16: cleanup of rog-export + rog-memory worktrees and workspaces (w12, w0); harvest rog-memory\\'s .state.\\n')\nopen(p,'w').write(t)\nEOF\nsed -n '1,14p' state.md"
+}
+```
+
+**Output:**
+```
+# rog-orch state
+
+Living file: rewritten at every state change and before every wait or turn end. History goes to `journal.md`.
+Layout: `state.md` (this), `journal.md` (append-only), `notes/` (curated), `bin/` (tools), `briefs/` (worker briefs),
+`evidence/`, `dist-backups/` (newest only), `tmp/` (disposable, own git roots for sandboxes). Worker state: `.state/<worker>/`.
+
+## Now (updated 2026-11-08)
+- PR #16 `docs(sessions): export the redacted transcripts of the orchestration run` (branch docs/sessions-export, worktree
+  [redacted:worktrees_root]/rog-export, herdr workspace w12 `rog-export`): CI green, hunk open. WAITING FOR THE MAINTAINER TO READ THE 10 FILES
+  AND MERGE (merge 2 of 2). Do not merge it myself.
+- Then: `git pull` main (docs only, no deploy), remove the rog-export worktree + local branch (remote kept), close workspace w12.
+- Then compaction by the maintainer, then step 4.
+- Main checkout `[redacted:repo]`: 853a384, clean, `core.worktree` unset. dist = build of bcb2ebc (no src change since).
+- The orchestrator session is exported as a snapshot of 2026-11-08 04:xx; re-export incrementally at step 6 (`--since auto`).
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 11.7s)
+
+PR #16 is the second merge, and it's yours. It adds 10 session transcripts, 126,602 lines (6.5 MB), one commit per session, and CI is green including GitGuardian. Please read them in workspace `rog-export` (hunk) before approving, because history can't be unpublished.
+
+**What I found while exporting**
+- **`--sanitize` empties the transcript.** `opencode export --sanitize` replaces every message, reasoning block and tool input with placeholders, so the export reads like `[redacted:text:prt_…]` throughout. I exported without it and let the public redactor do the work.
+- **The redactor missed a few things** that I caught with my own scan. All were present in the first pass.
+  - A hostname from your SSH setup, 93 times. It came from the `rog-rules` log analysis and the samples in my own session.
+  - Two private project names, `[redacted:private]` and `[redacted:private]`, plus `[redacted:private]`.
+  - 41 NUL bytes from my `rg -a` search of the opencode and hk binaries, which made git treat my transcript as binary.
+- **How I fixed them:** a scrub step after the redactor, in `bin/export-sessions.sh`. Its extra terms live in `.state/rog-orch/private/extra-terms.txt`, which is ignored by git. This session's file is now plain text with no private terms.
+- **Residuals I left alone:**
+  - tool names such as `insync`, `nextcloud`, `chezmoi` and `obsidian`, which appear in this repo's own test cases and rule discussions
+  - your GitHub login, already in `package.json`, `CHANGELOG.md` and the schemas
+  - `git@gitlab.com`, a public documentation host
+- **Independent scan, all clean:**
+  - the exact `[redacted:envvar]` value
+  - token and key shapes
+  - real `/home/<user>` paths
+  - IPv4 addresses
+  - emails other than that public git host
+
+  The redactor's own `--check` also gives 0 everywhere. Neither can prove nothing private remains.
+- **The hooks ran on every commit.** The first attempt failed because the fresh worktree had no `node_modules` (`bun install` fixed it). I did not bypass the hook. `core.worktree` in `main` stayed unset through all the commits and the push.
+
+**After you merge #16**
+- I pull `main`, a docs-only change that needs no deploy.
+- I remove the `rog-export` and `rog-memory` worktrees and workspaces. Their local branches go, and the remote branches stay.
+
+**Before you compact**
+- `.state/rog-orch/state.md` is current, with its next actions and the export procedure. The journal has each step.
+- **For the redactor's owner:** add the three private terms from `.state/rog-orch/private/extra-terms.txt` to the store's `session-redact/redact-terms.txt`, so every repo benefits.
+
+After compaction, the next work is step 4, which starts from `notes/step4-inputs.md`.
+
+---
+
+## User
+
+merge #16
+remove all ended rog-* worktrees and workspaces
+tell me who's the redactor's owner
+prepare launching step 4 after compaction
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 45.0s)
+
+_Thinking:_
+I'm treating "merge #16" as the user's explicit go-ahead, so I'll check CI, merge it, and pull main. Then I'll clean up the ended rog-* worktrees and workspaces (rog-rules, rog-loading, rog-testenv, rog-doctor, rog-utilities, rog-memory, rog-export), saving their .state files before removal. The rog-setup workspace is already gone.
+
+I'm checking whether the worktree removal will be blocked by ignored files, and I'm recalling that the earlier removal of wT closed its workspace as well, so the agents still running in those panes would be ended too. I'm also considering whether to save the .state of each worker and the rog-deploy workspace before removing anything.
+
+I'm working out how the rog-memory session and the third deploy session, which both came after the export, need to be captured in the re-export at the final step. The sessions stay in the database after the panes close, so nothing is lost. I'll also copy each worktree's .state into the main checkout before removing anything.
+
+I'm now trying to find out who owns the redaction script, which lives in the nvim config directory, and I'm checking its docstring and the roadmap references it cites. I'll look at the git history and the related nvim sessions to see who maintains it, reading only and changing nothing.
+
+I'm checking who maintains the redaction script by reading its docstring, the roadmap entries it cites, and the git history, without changing anything. The next step is to see which project the [redacted:repo] T-063 task belongs to, and I'll also draft the launch brief for the research workers after compaction.
+
+I'm planning the step-4 briefs for the research workers, which will go in the orchestration state directory, and I'll hold off on launching until after compaction. I'm also leaving the private store alone, since the redaction script's ownership is what the user asked me to report on.
+
+Checking CI on #16 before merging, since the user has already said to merge it.
+
+Before merging, I'm making sure the merge matches the commit I've reviewed, then I'll check the core.worktree setting in the main checkout. After that I'll pull main, and then look at each worktree's state so I can harvest it before removal.
+
+
+**Tool: todowrite**
+
+**Input:**
+```json
+{
+  "todos": [
+    {
+      "content": "Merge #16 (maintainer said merge), pull main",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "content": "Harvest .state of ended workers into main checkout, then remove all ended rog-* worktrees + workspaces + local branches (remote kept)",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "content": "Find the redactor's owner (evidence from repos/roadmaps) and report",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "content": "Prepare step 4 launch: briefs for 2 research workers, decision doc skeleton, state.md next actions",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "content": "Update state.md + journal.md; final report",
+      "status": "pending",
+      "priority": "medium"
+    }
+  ]
+}
+```
+
+**Output:**
+```
+[
+  {
+    "content": "Merge #16 (maintainer said merge), pull main",
+    "status": "in_progress",
+    "priority": "high"
+  },
+  {
+    "content": "Harvest .state of ended workers into main checkout, then remove all ended rog-* worktrees + workspaces + local branches (remote kept)",
+    "status": "pending",
+    "priority": "high"
+  },
+  {
+    "content": "Find the redactor's owner (evidence from repos/roadmaps) and report",
+    "status": "pending",
+    "priority": "high"
+  },
+  {
+    "content": "Prepare step 4 launch: briefs for 2 research workers, decision doc skeleton, state.md next actions",
+    "status": "pending",
+    "priority": "high"
+  },
+  {
+    "content": "Update state.md + journal.md; final report",
+    "status": "pending",
+    "priority": "medium"
+  }
+]
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && git config --get core.worktree || echo \"core.worktree (main) before: unset\"; gh pr checks 16 2>&1 | cat; H=$(gh pr view 16 --json headRefOid --jq .headRefOid); gh pr view 16 --json state,mergeable,mergeStateStatus --jq '.'; gh pr merge 16 --merge --match-head-commit \"$H\" 2>&1 | tail -2; gh pr view 16 --json state,mergedAt,mergeCommit --jq '{state,merge:.mergeCommit.oid[0:7]}'; git config --get core.worktree || echo \"core.worktree (main) after merge: unset\"; git pull -q --ff-only 2>&1 | tail -2; echo \"HEAD: $(git log --oneline -1 | cat)\"; git status -sb | head -2; ls memory/sessions | wc -l",
+  "timeout": 120000
+}
+```
+
+**Output:**
+```
+core.worktree (main) before: unset
+GitGuardian Security Checks	pass	2s	https://dashboard.gitguardian.com	
+lint, types, unit tests	pass	16s	https://github.com/silopolis/opencode-readonly-guard/actions/runs/42451815782/job/128642456531	
+package and opencode integration	pass	3m18s	https://github.com/silopolis/opencode-readonly-guard/actions/runs/42451815782/job/128642456634	
+{"mergeStateStatus":"CLEAN","mergeable":"MERGEABLE","state":"OPEN"}
+{"merge":"cb8fd46","state":"MERGED"}
+core.worktree (main) after merge: unset
+HEAD: cb8fd46 Merge pull request #16 from [redacted:repo]/sessions-export
+## main...origin/main
+11
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 12.9s)
+
+_Thinking:_
+The merge is done, so I'm moving on to the worktrees now. I need to list the worktrees and workspaces next.
+
+
+#16 is merged and main is at cb8fd46. Now the cleanup. First, an inventory of everything `rog-*`, and what each worktree holds that is not in git.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && git worktree list | cat; echo \"--- workspaces:\"; herdr workspace list | jq -r '.result.workspaces[]|select(.label|test(\"^rog-\"))|\"\\(.workspace_id)\\t\\(.label)\\t\\(.tab_count) tabs\\t\\(.agent_status)\"'; echo \"--- per worktree: branch | dirty | unpushed | PR | ignored-but-valuable (.state files outside tmp)\"; for d in [redacted:worktrees_root]/rog-*; do b=$(git -C $d branch --show-current); dirty=$(git -C $d status --porcelain | wc -l); up=$(git -C $d rev-list --count @{u}..HEAD 2>/dev/null || echo \"-\"); pr=$(gh pr list --state all --head \"$b\" --json number,state --jq '.[0]|\"#\\(.number) \\(.state)\"' 2>/dev/null); st=$(find $d/.state -type f -not -path '*/tmp/*' 2>/dev/null | wc -l); echo \"$(basename $d) | $b | dirty $dirty | unpushed $up | ${pr:-no PR} | .state files $st\"; done",
+  "timeout": 90000
+}
+```
+
+**Output:**
+```
+[redacted:repo] cb8fd46 [main]
+[redacted:worktrees_root]/rog-doctor        ca56652 [feat/dogfood]
+[redacted:worktrees_root]/rog-export        64152f4 [docs/sessions-export]
+[redacted:worktrees_root]/rog-loading       a164150 [build/hk-2.11]
+[redacted:worktrees_root]/rog-memory        fc67033 [chore/memory-sessions]
+[redacted:worktrees_root]/rog-rules         df589a8 [docs/env-prefix-design]
+[redacted:worktrees_root]/rog-testenv       c135a0f [fix/test-git-env]
+[redacted:worktrees_root]/rog-utilities     d9e166f [feat/rules-utilities]
+--- workspaces:
+wS	rog-rules	1 tabs	idle
+wV	rog-loading	1 tabs	idle
+wW	rog-testenv	1 tabs	idle
+wX	rog-doctor	3 tabs	idle
+wY	rog-utilities	2 tabs	idle
+w0	rog-memory	2 tabs	idle
+w12	rog-export	1 tabs	unknown
+--- per worktree: branch | dirty | unpushed | PR | ignored-but-valuable (.state files outside tmp)
+rog-doctor | feat/dogfood | dirty 0 | unpushed 0 | #14 MERGED | .state files 0
+rog-export | docs/sessions-export | dirty 0 | unpushed 0 | #16 MERGED | .state files 0
+rog-loading | build/hk-2.11 | dirty 0 | unpushed 0 | #9 MERGED | .state files 0
+rog-memory | chore/memory-sessions | dirty 0 | unpushed 0 | #15 MERGED | .state files 0
+rog-rules | docs/env-prefix-design | dirty 0 | unpushed 0 | #11 MERGED | .state files 0
+rog-testenv | fix/test-git-env | dirty 0 | unpushed 0 | #10 MERGED | .state files 0
+rog-utilities | feat/rules-utilities | dirty 0 | unpushed 0 | #13 MERGED | .state files 0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 9.5s)
+
+_Thinking:_
+All the PRs are merged and nothing is left unpushed. The `.state` files outside tmp come to zero, but rog-memory's `.state/rog-memory/tmp/` still holds some leftovers like the PR body and hook outputs. Since it's disposable scratch space, I'll check it for anything worth keeping, along with other ignored files.
+
+I'm also going to check the other ignored files, looking for any untracked ones beyond node_modules, dist, and .state, using `git status --ignored --short`.
+
+
+Every worktree is clean, fully pushed and merged. Checking for ignored files that I haven't harvested before they're deleted.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "for d in [redacted:worktrees_root]/rog-*; do echo \"== $(basename $d): $(git -C $d status --ignored --short | grep '^!!' | sed 's/^!! //' | tr '\\n' ' ')\"; done; echo; echo \"--- rog-memory .state/tmp content:\"; find [redacted:worktrees_root]/rog-memory/.state -type f | sed \"s#$HOME#~#\" | head -20; echo \"--- sizes:\"; du -sh [redacted:worktrees_root]/rog-* | sed \"s#$HOME#~#\""
+}
+```
+
+**Output:**
+```
+== rog-doctor: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json dist/ node_modules/ 
+== rog-export: node_modules/ 
+== rog-loading: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json dist/ node_modules/ 
+== rog-memory: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json .state/ node_modules/ 
+== rog-rules: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json dist/ node_modules/ 
+== rog-testenv: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json dist/ node_modules/ 
+== rog-utilities: .opencode/.gitignore .opencode/node_modules/ .opencode/package-lock.json .opencode/package.json dist/ node_modules/ 
+
+--- rog-memory .state/tmp content:
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/steps.py
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/hk.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/hk2.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/hk3.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/hk4.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/prettier.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/pack.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/check.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/hk5.out
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/pr.md
+[redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/push.out
+--- sizes:
+206M	[redacted:worktrees_root]/rog-doctor
+7,4M	[redacted:worktrees_root]/rog-export
+64M	[redacted:worktrees_root]/rog-loading
+63M	[redacted:worktrees_root]/rog-memory
+64M	[redacted:worktrees_root]/rog-rules
+64M	[redacted:worktrees_root]/rog-testenv
+64M	[redacted:worktrees_root]/rog-utilities
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 20.5s)
+
+_Thinking:_
+The `.opencode/` ignored files are just opencode's plugin cache, so there's nothing in them worth keeping. rog-memory's tmp directory is disposable too, since its evidence already lives in the PR #15 body. I'm still weighing whether to keep pr.md and steps.py as evidence, but pr.md is small, so I'll copy it into .state/rog-memory/evidence on main for completeness.
+
+Next I'm looking at the herdr-created workspaces, which herdr worktree remove should handle, though the one I made with a plain git worktree may need git worktree remove followed by closing the workspace. Closing a workspace kills its idle agent panes, which is fine. After that I'll delete the listed local branches, including the ones already merged.
+
+I'm deleting the local branches that are already merged into main, since git branch -d will accept them. Before running any of that, I want to confirm core.worktree isn't set in a way that would affect the operations. Then I'll copy the rog-memory evidence first.
+
+
+_Thinking:_
+Only two small rog-memory files need saving; the rest is opencode's plugin cache and build output. I'm harvesting those two, then removing the worktrees one by one and checking the main config after each.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && mkdir -p .state/rog-memory/evidence && cp [redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/pr.md [redacted:worktrees_root]/rog-memory/.state/rog-memory/tmp/steps.py .state/rog-memory/evidence/ && ls .state/rog-memory/evidence; for ws in wS wV wW wX wY w0; do l=$(herdr workspace list | jq -r --arg w $ws '.result.workspaces[]|select(.workspace_id==$w)|.label'); printf '%s %s: ' \"$ws\" \"$l\"; herdr worktree remove --workspace $ws 2>&1 | jq -c 'if .error then {error:.error.message} else {removed:.result.path} end'; echo \"   core.worktree(main): $(git config --get core.worktree || echo unset)\"; done",
+  "timeout": 180000
+}
+```
+
+**Output:**
+```
+pr.md
+steps.py
+wS rog-rules: {"removed":"[redacted:worktrees_root]/rog-rules"}
+   core.worktree(main): unset
+wV rog-loading: {"removed":"[redacted:worktrees_root]/rog-loading"}
+   core.worktree(main): unset
+wW rog-testenv: {"removed":"[redacted:worktrees_root]/rog-testenv"}
+   core.worktree(main): unset
+wX rog-doctor: {"removed":"[redacted:worktrees_root]/rog-doctor"}
+   core.worktree(main): unset
+wY rog-utilities: {"removed":"[redacted:worktrees_root]/rog-utilities"}
+   core.worktree(main): unset
+w0 rog-memory: {"removed":"[redacted:worktrees_root]/rog-memory"}
+   core.worktree(main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 5.6s)
+
+_Thinking:_
+I'm looking at rog-export, the w12 worktree, which was set up with both git worktree add and a herdr workspace. My plan is to try herdr worktree remove first, and fall back to git worktree remove plus closing the workspace if that fails.
+
+
+Six removed. `rog-export` (w12) was made with plain `git worktree add`, so herdr may not manage it. I'll try herdr first and fall back to git.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && herdr worktree remove --workspace w12 2>&1 | jq -c 'if .error then {error:.error.message} else {removed:.result.path} end'; rtk git worktree list | cat; herdr workspace list | jq -r '.result.workspaces[]|select(.label|test(\"^rog-\"))|\"\\(.workspace_id)\\t\\(.label)\"'",
+  "timeout": 90000
+}
+```
+
+**Output:**
+```
+{"error":"workspace is not a Herdr-managed worktree checkout"}
+[redacted:repo] cb8fd46 [main]
+[redacted:worktrees_root]/rog-export 64152f4 [docs/sessions-export]
+w12	rog-export
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 7.7s)
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && rtk git worktree remove [redacted:worktrees_root]/rog-export 2>&1 | tail -2; herdr workspace close w12 2>&1 | jq -c '.error // \"w12 closed\"'; git config --get core.worktree || echo \"core.worktree (main): unset\"; echo \"--- worktrees:\"; rtk git worktree list | cat; echo \"--- rog-* workspaces left:\"; herdr workspace list | jq -r '.result.workspaces[]|select(.label|test(\"^rog-\"))|.label'; echo \"--- rog dirs left in [redacted:worktrees_root]:\"; ls [redacted:worktrees_root] | rtk grep '^rog-' || echo none; echo \"--- local branches:\"; rtk git branch --format='%(refname:short)' | cat",
+  "timeout": 90000
+}
+```
+
+**Output:**
+```
+ok
+"w12 closed"
+core.worktree (main): unset
+--- worktrees:
+[redacted:repo] cb8fd46 [main]
+--- rog-* workspaces left:
+--- rog dirs left in [redacted:worktrees_root]:
+none
+--- local branches:
+main
+docs/sessions-export
+chore/memory-sessions
+feat/dogfood
+feat/rules-utilities
+docs/env-prefix-design
+fix/test-git-env
+build/hk-2.11
+fix/single-load
+fix/loading-robustness
+
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 8.5s)
+
+_Thinking:_
+Next I'll remove the local branches that have already been merged, leaving the remote ones alone. I'll use `git branch -d` for that, since it only deletes branches that are fully merged. Afterwards I'll check that each remote branch is still there.
+
+
+All worktrees and workspaces are gone. Now the local branches, using `-d`, which only deletes branches that are fully merged, so it fails safely. The remote branches stay.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && for b in docs/sessions-export chore/memory-sessions feat/dogfood feat/rules-utilities docs/env-prefix-design fix/test-git-env build/hk-2.11 fix/single-load fix/loading-robustness; do git branch -d \"$b\" 2>&1 | tail -1; done; echo \"--- local branches left: $(git branch --format='%(refname:short)' | tr '\\n' ' ')\"; git fetch -q origin 2>&1 | tail -1; echo \"--- remote branches kept: $(git branch -r --format='%(refname:short)' | grep -v HEAD | wc -l)\"; git branch -r --format='%(refname:short)' | grep -v HEAD | tr '\\n' ' '; echo; git config --get core.worktree || echo \"core.worktree (main): unset\"; git status -sb | head -2; git worktree prune -n | cat",
+  "timeout": 90000
+}
+```
+
+**Output:**
+```
+Deleted branch docs/sessions-export (was 64152f4).
+Deleted branch chore/memory-sessions (was fc67033).
+Deleted branch feat/dogfood (was ca56652).
+Deleted branch feat/rules-utilities (was d9e166f).
+Deleted branch docs/env-prefix-design (was df589a8).
+Deleted branch fix/test-git-env (was c135a0f).
+Deleted branch build/hk-2.11 (was a164150).
+Deleted branch fix/single-load (was 92f4d4a).
+Deleted branch fix/loading-robustness (was b0922fd).
+--- local branches left: main 
+--- remote branches kept: 18
+origin origin/main origin/docs/sessions-export origin/chore/memory-sessions origin/feat/dogfood origin/feat/rules-utilities origin/feat/doctor origin/docs/env-prefix-design origin/fix/test-git-env origin/build/hk-2.11 origin/fix/single-load origin/fix/analyze-exported-env origin/fix/loading-robustness origin/feat/rules-sysadmin origin/feat/rules-from-sessions origin/chore/contributor-setup origin/feat/herdr-ui-preset origin/feat/herdr-rules 
+core.worktree (main): unset
+## main...origin/main
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 10.2s)
+
+_Thinking:_
+The cleanup is finished, and I'm keeping 17 remote branches; the count showed 18 with origin included, so I'll note that discrepancy in the journal. Next I'm turning to the redactor owner and starting to look through the evidence for who that is.
+
+
+Cleanup is done: only `main` locally, all remote branches kept, `core.worktree` unset. Next, the redactor's owner. I'll look at the evidence rather than guess.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.config/nvim && echo \"== script history (author/subject only):\"; rtk git log --format='%h %ad %an | %s' --date=short -- scripts/session_redact.py | head -12; echo; echo \"== who wrote it: distinct authors:\"; git log --format='%an' -- scripts/session_redact.py | sort | uniq -c; echo; echo \"== ROADMAP mentions (D23, S17, S18, S14):\"; rtk grep -n -E \"D23|S17\\b|S18\\b|S14\\b|session_redact|redact\" ROADMAP.md | head -24 | cut -c1-200"
+}
+```
+
+**Output:**
+```
+== script history (author/subject only):
+0ad18b4 2026-11-07 [redacted:user_fullname] (@silopolis) | fix(sessions): do not echo a ...
+46de707 2026-11-07 [redacted:user_fullname] (@silopolis) | feat(sessions): read the reda...
+cc082b6 2026-11-02 [redacted:user_fullname] (@silopolis) | feat(specs): add identity, pa...
+7139445 2026-10-31 [redacted:user_fullname] (@silopolis) | feat(specs): add public redac...
+cbb7c5b 2026-10-31 [redacted:user_fullname] (@silopolis) | fix(specs): keep ~
+c0e1c6e 2026-10-31 [redacted:user_fullname] (@silopolis) | feat(specs): add transitional...
+
+== who wrote it: distinct authors:
+      6 [redacted:user_fullname] (@silopolis)
+
+== ROADMAP mentions (D23, S17, S18, S14):
+95 matches in 1 files:
+
+11:- S1, S2 and S17 are bootstrap sessions: they run in the main checkout `~/.co...
+43:- gitleaks is not installed (S14). Baselines (2026-11-02): stylua `--check` i...
+56:- `opencode export --sanitize` replaces all text, reasoning, tool inputs and ...
+58:- [redacted:repo] (`[redacted:repo]`): copier template of the Silopolis project factory. `...
+125:| D1 | Back up to GitHub as `[redacted:repo]`, private. It goes public in S14 ...
+143:| D19 | The experiment is measured: lifecycle events go to `~/.local/state/or...
+147:| D23 | [redacted:repo] (the Silopolis project factory) is evaluated as this repo's sca...
+235:- [ ] Export and redact the session transcript: `mise run session:export` (th...
+278:| S2 | `setup-session-workflow` | `chore/setup-session-workflow` | boot | S1 ...
+290:| S14 | `prepare-public-release` | `chore/prepare-public-release` | - | S13, ...
+291:| S15 | `record-orchestration-experiment` | `docs/record-orchestration-experi...
+293:| S17 | `adopt-[redacted:repo]-scaffold` | `chore/adopt-[redacted:repo]-scaffold` | - | S2, S19 |...
+294:| S18 | `layer-redaction-config` | `feat/layer-redaction-config` | X | S2, S1...
+298:S17 also waits for an external trigger the table cannot express: [redacted:repo] `v0.2....
+299:S18 and S17 overlap on redaction: S18 starts by reading [redacted:repo] `T-063` (and S1...
+300:S19 (user decision 2026-11-03) runs before the next batch: S7, S12, S17 and S...
+301:S15 is the last session: it depends on S14, S18 and S19, which together cover...
+361:- The opencode API key was printed in this transcript by a faulty redaction f...
+363:- Deviation: change `export-bootstrap-sessions` (PR #2) was inserted between ...
+364:- That change's PR is `#2` (branch `docs/export-bootstrap-sessions`); the use...
+365:- Follow-ups added: S17; send the [redacted:repo] and [redacted:repo] briefs from S2.
+366:- Request from the chezmoi session (2026-10-31, relayed by the user): `script...
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.local/share/[redacted:private] && echo \"== private store repo:\"; git remote get-url origin 2>/dev/null | sed -E 's#(https://)[^@]*@#\\1#'; git log --format='%h %ad %an | %s' --date=short -6 | cat; echo; rtk ls . | head; echo; echo \"== who consumes it (repos referencing session_redact or the store):\"; for r in [redacted:repo] [redacted:repo] [redacted:repo] ~/.config/nvim ~/.local/share/chezmoi; do [ -d $r ] && printf '%-32s %s\\n' \"$(basename $r)\" \"$(grep -rIl --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=sessions -e 'session_redact' -e '[redacted:private]' $r 2>/dev/null | wc -l) files\"; done"
+}
+```
+
+**Output:**
+```
+== private store repo:
+[redacted:repo]
+f45e92e 2026-11-07 [redacted:user_fullname] (@silopolis) | chore: remove what moved to session-redact/ from nvim/ and dotfiles/
+7c6fa16 2026-11-07 [redacted:user_fullname] (@silopolis) | chore: add the global session-redact layer
+c26ffb4 2026-11-03 [redacted:user_fullname] (@silopolis) | chore: add the LTeX hidden false positives moved from the live nvim checkout
+2a78741 2026-11-03 [redacted:user_fullname] (@silopolis) | chore: import the private store (spell words and redaction terms)
+
+dotfiles/
+nvim/
+session-redact/
+
+== who consumes it (repos referencing session_redact or the store):
+[redacted:repo]                            1 files
+[redacted:repo]                             0 files
+[redacted:repo]                         0 files
+nvim                             37 files
+chezmoi                          7 files
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 11.1s)
+
+_Thinking:_
+The script lives in the `nvim` repo at `~/.config/nvim`, which is private. The commits are authored under the user's identity, and the recent 2026-11-07 commits came from session S18, the layered config work that is listed in the repo's ROADMAP.
+
+I'm checking the ROADMAP entries and the [redacted:repo] T-063 relation to confirm which session wrote the layered config and who currently owns the script. The nvim coordinator in workspace wP is the current owner, while [redacted:repo] is meant to take over, and the private store sits with the chezmoi dotfiles workspace.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.config/nvim && sed -n '56p;147p;294p;298,299p' ROADMAP.md | cut -c1-520; echo; echo \"== [redacted:repo] T-063:\"; cd [redacted:repo] && rtk ls project/tasks | rtk grep -i \"T-063\\|T-065\"; f=$(ls project/tasks/T-063* 2>/dev/null | head -1); [ -n \"$f\" ] && sed -n '1,22p' \"$f\" | cut -c1-200; rtk grep -n \"T-063\" project/roadmap.md project/TODO.md | head -4 | cut -c1-220"
+}
+```
+
+**Output:**
+```
+  - `opencode export --sanitize` replaces all text, reasoning, tool inputs and outputs and paths by `[redacted:<kind>:<id>]`, keeping structure, IDs and timings. It suits metrics, not readable transcripts.
+| D23 | [redacted:repo] (the Silopolis project factory) is evaluated as this repo's scaffold. `v0.1.0` is not adopted: it brings six local adaptations (`mise.toml` name, hk version pin, `trailing_whitespace` rewriting fixtures, large-file check on the dictionaries, `.editorconfig` indent, colliding README/AGENTS/LICENSE) and [redacted:repo] `v0.2.0` changes much of it (markdownlint `T-061`, secret scanning and redaction `T-063`, hk 2.x `B-027`). Adoption is session S17, after [redacted:repo] `v0.2.0` or later, ideally with a license choice and 
+| S18 | `layer-redaction-config` | `feat/layer-redaction-config` | X | S2, S19 | `scripts/session_redact.py`, `tests/session_redact/**`, `memory/sessions/README.md`, `openspec/specs/session-transcripts/**`; private store `~/.local/share/[redacted:private]`; optional chezmoi `dot_config/session-redact/**` | decision, cross-repo, interactive, merge | M |
+S17 also waits for an external trigger the table cannot express: [redacted:repo] `v0.2.0` or later is released (D23). If [redacted:repo] is not ready when S13 merges, S17 records "deferred" in its Log and S14 proceeds without it.
+S18 and S17 overlap on redaction: S18 starts by reading [redacted:repo] `T-063` (and S17's Log). If [redacted:repo] already covers layered redaction configuration, S18 records "superseded" and S17 adopts [redacted:repo]'s tool; otherwise S18 runs before S17 and S17 then compares it with `T-063`.
+
+== [redacted:repo] T-063:
+---
+id: T-063
+title: "Secret scanning, secret-shaped path filtering and redaction: template quality module and [redacted:repo]'s own hooks"
+status: done
+created: 2026-10-31
+updated: 2026-10-31
+depends_on: [T-060]
+related_decisions:
+  - id: DR-003
+    role: depends_on
+  - id: DR-004
+    role: depends_on
+  - id: DR-006
+    role: depends_on
+  - id: DR-008
+    role: see_also
+  - id: DR-009
+    role: depends_on
+related_specs:
+  - CT-004
+  - CT-005
+---
+project/roadmap.md:166:Standalone tasks, out of any milestone: `T-001` (spec import, self-initiated, closed ahead of `M-001` opening); `T-013` (re-import review, `[redacted:repo]:DR-000` 1.4.1 -> 1.6.0 and `[redacted:repo]:DR-013` 1.2
+project/roadmap.md:242:| 2026-10-31 | Tasks `T-060` and `T-061` re-planned and `T-062` to `T-064` registered at a planning session (`ses_e721ee8d3ffeH57lXl6YVcN3VZ`, target-rooted session started by the orchestrator `ses
+project/roadmap.md:244:| 2026-10-31 | Task `T-060` closed (branch `task/T-060-tolerant_requirement_ids`, merged `--no-ff` into `dev`): `DR-010` `1.5.0` and `DR-014` `2.0.0` re-derived (pins `[redacted:repo]:DR-000@1.10.0`, `ami
+project/roadmap.md:247:| 2026-10-31 | Task `T-063` opened (`ready -> in-progress`, branch `task/T-063-secret_scanning_path_filtering_and_redaction` forked from `dev` at `7b66e3c`, target-rooted session `[redacted:repo]-t063` start
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "herdr agent list | jq -r '.result.agents[]|select(.workspace_id==\"wP\" or .workspace_id==\"w9\" or .workspace_id==\"wN\")|\"\\(.workspace_id)\\t\\(.name // \"-\")\\t\\(.agent_status)\\t\\(.cwd)\\t\\(.terminal_title_stripped)\"' | sed \"s#$HOME#~#\""
+}
+```
+
+**Output:**
+```
+w9	[redacted:repo]-orch	idle	[redacted:repo]	OC | [redacted:repo] repo and herdr workspace coordi…
+wN	-	idle	~/.config/herdr	OC | Implement OpenSpec change tasks
+wN	-	idle	~/.local/share/chezmoi	OC | OpenSpec Change Implementation Workflow
+wP	nvim-orch	idle	~/.config/nvim	OC | Orchestrating herdr work sessions fro…
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 12.7s)
+
+_Thinking:_
+The wP agent has been renamed to `nvim-orch`, and [redacted:repo]'s agent is now `[redacted:repo]-orch`, so the fleet has adopted the "-orch" suffix, which makes rog-orch a good fit for the name. The redactor belongs to the nvim repo, run by `nvim-orch` out of `~/.config/nvim`, under ROADMAP session S18.
+
+Intended successor is [redacted:repo], with its T-063 marked done under [redacted:repo]-orch in w9, via nvim's S17 "adopt-[redacted:repo]-scaffold". The private terms store, `[redacted:repo]`, is cloned to ~/.local/share/[redacted:private] and managed from the chezmoi repo; the user owns all of it.
+
+I'm going to read step4-inputs.md and the roadmap so I can write accurate briefs for step 4, the TODO triage and scope work. I'll also check the current TODO.md on main so the triage starts from what's actually there.
+
+
+Quick finding for the owner question: the fleet agents have renamed themselves while I worked. `wP` is now `nvim-orch` (it was `nvim-coord`) and `w9` is `[redacted:repo]-orch`. Now the inputs for step 4.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && rtk read notes/step4-inputs.md; echo; echo \"=== TODO.md on main: section headings and open-item counts\"; awk '/^## /{h=$0} /^- \\[ \\]|^  - \\[ \\]/{c[h]++} /^- \\[x\\]|^  - \\[x\\]/{d[h]++} END{for(k in c) printf \"%-40s open %d done %d\\n\", k, c[k], d[k]}' [redacted:repo]:TODO.md | sort"
+}
+```
+
+**Output:**
+```
+# Step 4 inputs: vision, scope, worker role, rename (collected during Phase A)
+
+## 1. Secret redaction layer (maintainer idea, 2026-11-03)
+Goal: sensitive output never reaches the provider or the session history, whatever the agent runs.
+Plugin API (v1, opencode 1.19.x, `@opencode-ai/plugin` types) already offers:
+- `tool.execute.after(input, output)` with a mutable `output.output` string: redact the tool result before the model
+  sees it. To verify: is the mutated string what gets persisted in `part.data` and sent next turn?
+- `experimental.chat.messages.transform(input, output)`: rewrite the messages sent to the model (last line of defence,
+  also covers history that already contains a secret).
+- `shell.env(input, output)`: `output.env` is the environment given to shell commands; a role can drop or replace
+  secret variables ([redacted:envvar], [redacted:envvar], MISE_*TOKEN, *_KEY, *_SECRET...) so `env`/`printenv` cannot print them.
+  Caveat: `gh`, `git push` and `mise` need credentials; a worker role may need a scoped token.
+- `tool.execute.before`: can rewrite or block a command (e.g. `env`, `printenv`, `cat ~/.config/gh/hosts.yml`).
+Incident that motivated it: rog-loading printed [redacted:envvar] (see signal-notes.md). Redaction also needs value-based
+matching (the exact values of secret-looking env vars) not only regexes.
+Open design questions: scope (all agents or roles), false positives, performance on large outputs, redact in logs
+(`events.jsonl` also stores commands), how to test (unit tests with fake secrets), relation to rtk (rtk rewrites commands
+and filters output: could redaction be an rtk-like wrapper outside the plugin?).
+Decision pending (maintainer undecided): `env` and `printenv *` are on the shared allowlist since PR #4 (they print every
+secret into a read-only agent's transcript). Interim options: move them back to ask (small PR) or keep until redaction exists.
+
+## 2. Worker role (unattended build workers)
+Sources to derive the spec and tests from: /tmp/opencode/rog/answers.log (about 100 decisions with reasons),
+/tmp/opencode/rog/bin/watch + lib-once.sh + stages.mjs (the approval logic that exists today).
+Rules observed: reads via allowlist + ask flags + write guard; writes only in own worktree and /tmp scratch; push of own
+branch only, never force; `gh pr create|edit|comment` for own PR; never merge, never delete branches, never install
+(exception: pinned tool versions), never `env`/`printenv`, never a dialog with unreadable command text.
+Needs: a stable way to answer "once" (lib-once.sh verifies the highlighted option from the ANSI snapshot).
+
+## 3. Orchestrator class / multiclass / rename
+Roles seen so far: read-only (plan/explore), build worker (bounded writes), orchestrator (herdr control, gh, no code
+edits), deployer (builds the checkout the fleet loads). If the plugin becomes a role-based policy engine, "readonly" in
+the name is misleading. Rename is cheap now, expensive after the npm publish (package, CLI, repo, store files,
+READONLY_GUARD_* env vars, /guard-review, `file://` path in the maintainer's global config, the rog- alias).
+
+## 4. Process findings
+- opencode.db is 10 GB: full-table queries take minutes; always filter by session_id/time (indexed).
+- A prompt sent right after `herdr agent start` is lost about half the time: verify with `agent read`.
+- Permission dialogs can show an empty command (long multi-line): reject, ask for a script file + one-line command.
+- Parallel instructions from the maintainer inside worker panes (merge, ACK) are normal: expect duplicates and check
+  `gh pr list`, branches and the DB's last user message before acting.
+
+## 5. Found by rog-utilities (2026-11-07)
+- opencode never prompts for declarations (`export`, `declare`, `typeset`, `readonly`, bare assignments are not command
+  nodes), so `export -p` / `declare -p` printed every secret of the environment in a read-only agent with NO prompt.
+  PR 1.4 adds a guard block. Same class as `env`/`printenv *` (allowed by #4, decision pending) and `ps e` / `ps -o environ`.
+
+=== TODO.md on main: section headings and open-item counts
+## Interplay with other plugins          open 2 done 0
+## Learning and review                   open 3 done 1
+## Loading                               open 3 done 5
+## opencode 2.x                          open 6 done 0
+## Policy and parser                     open 15 done 0
+## Release                               open 4 done 0
+## Repository                            open 2 done 3
+## Sharing rules                         open 1 done 0
+## Statements, redirections and environment prefixes open 4 done 3
+## Testing                               open 3 done 0
+## Upstream (opencode)                   open 4 done 0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 159.2s)
+
+_Thinking:_
+I'm laying out the Step 4 launch package, starting with research task R1 on redaction feasibility. The plan is to run sandboxed experiments to check whether mutating the tool output in an after-hook changes what gets stored and what the model sees on the next turn.
+
+I'm working out how to verify the redaction behavior without a real model, and the obvious route is a small local mock provider that speaks the OpenAI chat format and returns scripted tool calls. Its logged request bodies would show exactly what reaches the model, and the stored part data would show what gets persisted. From there I'd check whether the message-transform hook changes outgoing messages without touching history, and whether the shell env hook can drop variables while leaving the plugin's own environment working.
+
+I'm now going through how to verify whether secrets can be scrubbed, covering what the hooks can touch and where secrets might also leak, such as tool-output files, logs, and session exports. I'm also weighing how value-based redaction would work and whether the fleet's existing redactor could be reused.
+
+I'm now working through the role spec for R2: the capability matrix for each role, how to express "writes only in the worktree," and how the opencode 1.x permission rules compare with plugin hooks. I also want to sort the journal's ~300 decisions into classes with counts, then draft test cases that map commands to expected verdicts per role. The report and its JSON case draft will stay in the private `.state` directory, since the journal contains raw commands.
+
+I'm moving on to the third part of the package, a triage step after the two research tasks, where I'll draft a decision document covering the vision and role model along with the rename options and their cost. I'm also thinking about whether a separate read-only worker could take on the inventory of the rename surface.
+
+I'm weighing whether a third parallel worker should inventory the rename surface: every occurrence of the name in the repo, env vars, file names, URLs, and store paths, plus fleet-side references in the user's global configs and dotfiles, all via read-only grep. I'm also considering checking candidate names for availability on npm and GitHub as a separate step.
+
+I'm weighing whether to fold in a third, optional research pass on the rename surface, since the user's plan only covered two workers and my context is the real constraint. I'm leaning toward proposing it as a cheap read-only add-on that the maintainer can choose to launch or skip.
+
+I'm drafting the launch briefs for the Step 4 package, one each for the redaction and role research, with a rename one as an optional third. The TODO triage worker waits until the decisions are in, and the env/printenv question can be an interim PR, which I'll put in the decision doc as an option rather than launch now.
+
+I'm writing a small launch script that handles worktree setup, trust, dependencies, state folders, tab naming, and agent start with retries, so I don't have to repeat those steps by hand. I'll pair it with a retire script that harvests the state folder and cleans up the worktree and branch, and I'll test both with a dry-run flag, holding off on any real launch until the decisions are in.
+
+I'm planning to smoke-test the launch and retire scripts with a throwaway worker that just replies READY, then remove it with the retire script, so the real Step 4 launches go smoothly later. After that I'll update the state file with exact launch commands and set up a decision doc skeleton with the open questions.
+
+I'm wrapping up the launch prep by updating the state file and journal, and noting the redactor owner's details under open items. For the research briefs, I'm making sure they carry the standing rules: no printing secrets, state folders under `.state/<name>/`, and no touching the main checkout. The redaction worker will test only with fake token values, never the real [redacted:envvar].
+
+I'm checking the allowed-command rule for the new worker names, since `rog-redact` and `rog-roles` both fall under the `rog-` prefix in the trees directory. For the redaction sandbox, the mock provider will be wired through the opencode config using an OpenAI-compatible package with a custom base URL, so real secrets never reach it.
+
+Next I'm drafting the brief for the roles worker, keeping its journal copy and command notes under `.state` since they contain raw commands, and deciding what its report and case file should cover.
+
+I'm defining the roles worker's scope around a candidate role-based policy engine, with roles modeled as agent classes in the plugin options. I'll check the design against both opencode 1.x and 2.x hooks, and aim for two or three options with their tradeoffs, plus a minimal slice that could ship on v1, such as an orchestrator/worker preset that sets agent permission rules and guard flags. I also want a rough count of how often secret-looking strings appear in past tool outputs, but I'll sample rather than scan the whole database.
+
+I'm drafting the launch scripts now: `launch-worker.sh` will take a name, branch, and brief, and handle the worktree setup, trust, dependencies, state folders, and agent start with retries. A matching `retire-worker.sh` will harvest the state folder and clean up. I'll test both with a dry-run flag first.
+
+I'm writing the launch script's remaining steps: after creating the worktree, it will trust the mise config, install dependencies, set up the state folders, and copy the inputs. Then it will rename the tab and start the agent, retrying if the pane is busy. Last, it will send the brief and retry up to four times, checking that the agent has left the idle state.
+
+I'm sketching out the retire script: it will look up the worktree and workspace by name, then refuse to proceed if there are uncommitted changes or unpushed commits unless forced. Its first real job is to copy the worker's state folder out before cleanup, skipping temporary files and dependencies.
+
+I'm finishing the retire script: after the state folder is harvested, it will remove the worktree and its workspace, then delete the local branch. I'll also add journal entries and check that `core.worktree` is unchanged before and after. Both scripts will get a `--dry-run` flag so I can test them before any real launch.
+
+
+_Thinking:_
+The owner question is answered and goes into the report, and I'm now scripting the step 4 worker launch package, since doing it by hand from a compacted context is error-prone.
+
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/bin/launch-worker.sh",
+  "content": "#!/usr/bin/env bash\n# launch-worker.sh [--dry-run] [--input FILE]... <name> <branch> <brief-file>\n# Start a worker agent in its own herdr worktree workspace, as done by hand for rog-rules .. rog-memory:\n#   1. worktree from origin/main under [redacted:worktrees_root]/<name>, grouped under workspace wR, no focus\n#   2. mise trust + bun install --frozen-lockfile (hk's prettier step needs node_modules before the first commit)\n#   3. .state/<name>/{inputs,tmp} (tmp is mode 0700); each --input FILE is copied to .state/<name>/inputs/\n#      (workers never read the main checkout: give them copies)\n#   4. tab renamed \"agent\", opencode started in the pane (retries while the pane is not a ready shell)\n#   5. brief sent with verification: a prompt sent right after `agent start` is lost about half the time, so resend until\n#      the agent leaves idle, and check that exactly one user message arrived\n# Prints one summary line: workspace, pane, session. Never prints the environment.\nset -uo pipefail\nSTATE=$(cd \"$(dirname \"$0\")/..\" && pwd)\nMAIN=$(cd \"$STATE/../..\" && pwd)\ndry=0; inputs=()\nwhile [ $# -gt 0 ]; do\n  case $1 in\n    --dry-run) dry=1; shift ;;\n    --input) inputs+=(\"$2\"); shift 2 ;;\n    --) shift; break ;;\n    -*) echo \"unknown option $1\" >&2; exit 64 ;;\n    *) break ;;\n  esac\ndone\nname=${1:?usage: launch-worker.sh [--dry-run] [--input FILE]... <name> <branch> <brief-file>}\nbranch=${2:?branch}; brief=${3:?brief-file}\n[[ $name =~ ^rog-[a-z0-9-]+$ ]] || { echo \"name must match ^rog-[a-z0-9-]+\\$ (the prompt watcher's cd rule relies on the prefix)\" >&2; exit 64; }\n[[ $branch =~ ^[a-z]+/[a-z0-9._-]+$ ]] || { echo \"branch must look like type/slug\" >&2; exit 64; }\n[ -s \"$brief\" ] || { echo \"brief not found: $brief\" >&2; exit 66; }\nfor f in \"${inputs[@]}\"; do [ -e \"$f\" ] || { echo \"input not found: $f\" >&2; exit 66; }; done\nwt=$HOME/Work/trees/$name\nfor v in $(env | cut -d= -f1 | grep -E '^GIT_'); do unset \"$v\"; done\njournal() { printf -- '- %s %s\\n' \"$(date '+%F %T')\" \"$*\" >>\"$STATE/journal.md\"; }\nrun() { if [ \"$dry\" = 1 ]; then printf 'DRY: %s\\n' \"$*\"; else \"$@\"; fi; }\n\necho \"== preflight\"\n[ \"$(git -C \"$MAIN\" config --get core.worktree || true)\" = \"\" ] || { echo \"core.worktree is set in main: stop and report\" >&2; exit 1; }\n[ ! -e \"$wt\" ] || { echo \"$wt exists already\" >&2; exit 1; }\ngit -C \"$MAIN\" fetch -q origin || { echo \"git fetch failed\" >&2; exit 1; }\ngit -C \"$MAIN\" show-ref --verify --quiet \"refs/heads/$branch\" && { echo \"local branch $branch exists\" >&2; exit 1; }\necho \"origin/main = $(git -C \"$MAIN\" rev-parse --short origin/main); worktree $wt; branch $branch\"\n\necho \"== worktree\"\nif [ \"$dry\" = 1 ]; then\n  echo \"DRY: herdr worktree create --workspace wR --branch $branch --base origin/main --path $wt --label $name --no-focus\"\n  ws=wDRY pane=wDRY:p1 tab=wDRY:t1\nelse\n  out=$(herdr worktree create --workspace wR --branch \"$branch\" --base origin/main --path \"$wt\" --label \"$name\" --no-focus) || { echo \"$out\" | jq -r '.error.message // .' >&2; exit 1; }\n  ws=$(jq -r '.result.workspace.workspace_id' <<<\"$out\"); pane=$(jq -r '.result.root_pane.pane_id' <<<\"$out\"); tab=$(jq -r '.result.tab.tab_id' <<<\"$out\")\nfi\necho \"workspace $ws pane $pane\"\nrun bash -c \"cd '$wt' && mise trust >/dev/null 2>&1; bun install --frozen-lockfile 2>&1 | tail -1\"\nrun mkdir -p \"$wt/.state/$name/inputs\" \"$wt/.state/$name/tmp\"\nrun chmod 700 \"$wt/.state/$name/tmp\"\nfor f in \"${inputs[@]}\"; do run cp -a \"$f\" \"$wt/.state/$name/inputs/\"; done\nrun herdr tab rename \"$tab\" agent >/dev/null\n\necho \"== agent\"\nstarted=0\nfor i in 1 2 3 4; do\n  sleep 3\n  if [ \"$dry\" = 1 ]; then echo \"DRY: herdr agent start $name --kind opencode --pane $pane\"; started=1; break; fi\n  if herdr agent start \"$name\" --kind opencode --pane \"$pane\" >/dev/null 2>&1; then started=1; break; fi\ndone\n[ \"$started\" = 1 ] || { echo \"agent start failed after 4 tries (pane $pane)\" >&2; exit 1; }\n\necho \"== brief\"\nsid=\"\"\nif [ \"$dry\" = 1 ]; then echo \"DRY: herdr agent prompt $name <$(wc -c <\"$brief\") bytes>; verify; resend up to 4 times\"; exit 0; fi\nsid=$(herdr agent get \"$name\" | jq -r '.result.agent.agent_session.value')\nok=0\nfor i in 1 2 3 4; do\n  sleep 8\n  herdr agent prompt \"$name\" \"$(cat \"$brief\")\" >/dev/null 2>&1\n  sleep 15\n  s=$(herdr agent get \"$name\" | jq -r '.result.agent.agent_status')\n  if [ \"$s\" != idle ]; then ok=1; break; fi\ndone\n[ \"$ok\" = 1 ] || { echo \"brief not accepted after 4 tries\" >&2; exit 1; }\nn=$(sqlite3 -readonly \"$HOME/.local/share/opencode/opencode.db\" \"select count(*) from message where session_id='$sid' and json_extract(data,'\\$.role')='user'\")\necho \"user messages in the session: $n (expected 1)\"\njournal \"launch-worker $name ($ws, $branch, session $sid, brief $(basename \"$brief\"), $n user message(s))\"\necho \"LAUNCHED $name workspace=$ws pane=$pane session=$sid\"\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/bin/retire-worker.sh",
+  "content": "#!/usr/bin/env bash\n# retire-worker.sh [--dry-run] [--force] <name>\n# End a worker whose work is merged (or abandoned with --force):\n#   1. refuse unless the worktree is clean and nothing is unpushed (--force overrides, and says what is lost)\n#   2. harvest .state/<name>/ (without tmp/) into the main checkout's .state/<name>/\n#   3. remove the worktree and its herdr workspace (herdr-managed ones with `herdr worktree remove`, others with git +\n#      `herdr workspace close`)\n#   4. delete the LOCAL branch with -d (it must be merged; the remote branch is always kept)\n# The worker's session stays in opencode.db: export it with bin/export-sessions.sh when the maintainer wants it published.\nset -uo pipefail\nSTATE=$(cd \"$(dirname \"$0\")/..\" && pwd)\nMAIN=$(cd \"$STATE/../..\" && pwd)\ndry=0 force=0\nwhile [ $# -gt 0 ]; do\n  case $1 in --dry-run) dry=1; shift ;; --force) force=1; shift ;; -*) echo \"unknown option $1\" >&2; exit 64 ;; *) break ;; esac\ndone\nname=${1:?usage: retire-worker.sh [--dry-run] [--force] <name>}\n[[ $name =~ ^rog-[a-z0-9-]+$ ]] || { echo \"bad name\" >&2; exit 64; }\nwt=$HOME/Work/trees/$name\n[ -d \"$wt\" ] || { echo \"no worktree $wt\" >&2; exit 66; }\nfor v in $(env | cut -d= -f1 | grep -E '^GIT_'); do unset \"$v\"; done\njournal() { printf -- '- %s %s\\n' \"$(date '+%F %T')\" \"$*\" >>\"$STATE/journal.md\"; }\nrun() { if [ \"$dry\" = 1 ]; then printf 'DRY: %s\\n' \"$*\"; else \"$@\"; fi; }\ncw() { git -C \"$MAIN\" config --get core.worktree >/dev/null 2>&1 && { echo \"core.worktree is set in main: stop and report\" >&2; exit 1; }; }\n\nbranch=$(git -C \"$wt\" branch --show-current)\ndirty=$(git -C \"$wt\" status --porcelain | wc -l)\nunpushed=$(git -C \"$wt\" rev-list --count '@{u}..HEAD' 2>/dev/null || echo \"no-upstream\")\nmerged=$(gh pr list --state all --head \"$branch\" --json number,state --jq '.[0]|\"#\\(.number) \\(.state)\"' 2>/dev/null)\necho \"worker $name | branch $branch | dirty files $dirty | unpushed $unpushed | PR ${merged:-none}\"\nif [ \"$force\" = 0 ]; then\n  [ \"$dirty\" = 0 ] || { echo \"REFUSED: uncommitted changes (use --force to discard)\" >&2; exit 1; }\n  [ \"$unpushed\" = 0 ] || { echo \"REFUSED: unpushed commits ($unpushed) (use --force)\" >&2; exit 1; }\nfi\ncw\nif [ -d \"$wt/.state/$name\" ]; then\n  echo \"harvest: $(find \"$wt/.state/$name\" -type f -not -path '*/tmp/*' | wc -l) file(s) to .state/$name/\"\n  run mkdir -p \"$MAIN/.state/$name\"\n  run rsync -a --exclude tmp/ \"$wt/.state/$name/\" \"$MAIN/.state/$name/\"\nelse\n  echo \"harvest: no .state/$name in the worktree\"\nfi\nws=$(herdr workspace list | jq -r --arg n \"$name\" '.result.workspaces[]|select(.label==$n)|.workspace_id' | head -1)\necho \"workspace: ${ws:-none}\"\nif [ -n \"$ws\" ]; then\n  if [ \"$dry\" = 1 ]; then echo \"DRY: herdr worktree remove --workspace $ws  (fallback: git worktree remove + herdr workspace close)\"\n  else\n    herdr worktree remove --workspace \"$ws\" >/dev/null 2>&1 || { git -C \"$MAIN\" worktree remove ${force:+--force} \"$wt\" 2>&1 | tail -1; herdr workspace close \"$ws\" >/dev/null 2>&1; }\n  fi\nelse\n  run git -C \"$MAIN\" worktree remove ${force:+--force} \"$wt\"\nfi\ncw\nif [ \"$dry\" = 0 ] && [ -d \"$wt\" ]; then echo \"worktree directory still exists: $wt\" >&2; exit 1; fi\nrun git -C \"$MAIN\" branch -d \"$branch\"\ncw\n[ \"$dry\" = 1 ] || journal \"retire-worker $name (branch $branch deleted locally, remote kept, .state harvested)\"\necho \"RETIRED $name\"\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch/bin && chmod +x launch-worker.sh retire-worker.sh && bash -n launch-worker.sh && bash -n retire-worker.sh && shellcheck -S warning launch-worker.sh retire-worker.sh && echo lint-ok; echo \"Reply with exactly the word READY and nothing else. This is a smoke test of the launch scripts.\" > ../tmp/smoke-brief.md; echo \"smoke inputs\" > ../tmp/smoke-input.txt; ./launch-worker.sh --dry-run --input ../tmp/smoke-input.txt rog-smoke chore/smoke ../tmp/smoke-brief.md"
+}
+```
+
+**Output:**
+```
+
+In launch-worker.sh line 72:
+for i in 1 2 3 4; do
+^-^ SC2034 (warning): i appears unused. Verify use (or export if used externally).
+
+For more information:
+  https://www.shellcheck.net/wiki/SC2034 -- i appears unused. Verify use (or ...
+== preflight
+origin/main = cb8fd46; worktree [redacted:worktrees_root]/rog-smoke; branch chore/smoke
+== worktree
+DRY: herdr worktree create --workspace wR --branch chore/smoke --base origin/main --path [redacted:worktrees_root]/rog-smoke --label rog-smoke --no-focus
+workspace wDRY pane wDRY:p1
+DRY: bash -c cd '[redacted:worktrees_root]/rog-smoke' && mise trust >/dev/null 2>&1; bun install --frozen-lockfile 2>&1 | tail -1
+DRY: mkdir -p [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/inputs [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/tmp
+DRY: chmod 700 [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/tmp
+DRY: cp -a ../tmp/smoke-input.txt [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/inputs/
+== agent
+DRY: herdr agent start rog-smoke --kind opencode --pane wDRY:p1
+== brief
+DRY: herdr agent prompt rog-smoke <96 bytes>; verify; resend up to 4 times
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 64.1s)
+
+_Thinking:_
+I'm fixing the shellcheck warning by switching to `for _ in`, and the dry run came back fine. Next I'll run the real smoke test with rog-smoke, then retire it using the script. The `chore/smoke` branch has no commits beyond origin/main, so deleting it with `branch -d` should work since it matches HEAD. Without an upstream the unpushed check returns "no-upstream" rather than 0, which would get the retire refused, so I need a way to handle that for the smoke case.
+
+I'm checking whether the retire step can work for the smoke branch when there's no upstream: if none exists and the branch has no commits ahead of origin/main, it should be fine. I'll change retire to count unpushed commits against origin/main when no upstream is set.
+
+
+_Thinking:_
+Dry run passes; next I'm fixing the unused-variable lint and making retire-worker.sh fall back to origin/main when a branch has no upstream, then running a real smoke test with a throwaway worker.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch/bin && sed -i 's/^for i in 1 2 3 4; do$/for _ in 1 2 3 4; do/' launch-worker.sh && python3 - <<'EOF'\np='retire-worker.sh'\nt=open(p).read()\nold='''unpushed=$(git -C \"$wt\" rev-list --count '@{u}..HEAD' 2>/dev/null || echo \"no-upstream\")'''\nnew='''# commits not on the upstream branch; without an upstream: not on origin/main\nunpushed=$(git -C \"$wt\" rev-list --count '@{u}..HEAD' 2>/dev/null || git -C \"$wt\" rev-list --count origin/main..HEAD)'''\nassert old in t\nopen(p,'w').write(t.replace(old,new,1))\nEOF\nbash -n retire-worker.sh && shellcheck -S warning launch-worker.sh retire-worker.sh && echo lint-ok; time ./launch-worker.sh --input ../tmp/smoke-input.txt rog-smoke chore/smoke ../tmp/smoke-brief.md 2>&1 | tail -14",
+  "timeout": 300000
+}
+```
+
+**Output:**
+```
+lint-ok
+== preflight
+origin/main = cb8fd46; worktree [redacted:worktrees_root]/rog-smoke; branch chore/smoke
+== worktree
+workspace w13 pane w13:p1
+43 packages installed [324.00ms]
+== agent
+== brief
+user messages in the session: 0 (expected 1)
+LAUNCHED rog-smoke workspace=w13 pane=w13:p1 session=null
+./launch-worker.sh --input ../tmp/smoke-input.txt rog-smoke chore/smoke  2>&1  0,26s user 0,26s system 0% cpu 54,632 total
+tail -14  0,00s user 0,00s system 0% cpu 54,631 total
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 7.1s)
+
+_Thinking:_
+The session id comes back null right after start, since the session only gets created with the first prompt, so my verification query was running against a null session. I need to re-fetch the id once the prompt is accepted, and also confirm that the agent actually received the prompt.
+
+
+_Thinking:_
+The scripts run, but the session-id check looked up `null` because the agent only gets an id after its first message. I'm checking what happened to the smoke worker, then I'll fix the script to read the id after the prompt is accepted.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "herdr agent get rog-smoke | jq -c '.result.agent|{agent_status,sid:.agent_session.value,title:.terminal_title_stripped}'; SID=$(herdr agent get rog-smoke | jq -r '.result.agent.agent_session.value'); sqlite3 -readonly ~/.local/share/opencode/opencode.db \"select json_extract(m.data,'\\$.role'), substr(coalesce((select group_concat(json_extract(p.data,'\\$.text'),' ') from part p where p.message_id=m.id and json_extract(p.data,'\\$.type')='text'),''),1,60) from message m where m.session_id='$SID' order by m.time_created\"",
+  "timeout": 60000
+}
+```
+
+**Output:**
+```
+{"agent_status":"idle","sid":"ses_e463710e6ffeFmwV4qrQ1faPzX","title":"OC | Launch script smoke test"}
+user|Reply with exactly the word READY and nothing else. This is 
+assistant|READY
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 33.6s)
+
+_Thinking:_
+I can only exactly one user message here, so I'll answer READY. The script needs a fix: sid should be fetched after acceptance. After that I'll test retire. I'm not sure whether the first prompt succeeded on the first try this time, so I'll update the script and check.
+
+
+_Thinking:_
+The smoke worker accepted the brief and answered READY, so delivery is fine and only the session lookup changed. I'm fixing the lookup next, then testing retire-worker.sh on this worker, including the harvest of its .state.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch/bin && python3 - <<'EOF'\np='launch-worker.sh'\nt=open(p).read()\nold='''sid=$(herdr agent get \"$name\" | jq -r '.result.agent.agent_session.value')\nok=0'''\nnew='''ok=0'''\nassert old in t\nt=t.replace(old,new,1)\nold2='''n=$(sqlite3 -readonly'''\nnew2='''# the session id only exists once the first message was accepted\nsid=$(herdr agent get \"$name\" | jq -r '.result.agent.agent_session.value // empty')\n[ -n \"$sid\" ] || { echo \"no session id after the brief was accepted\" >&2; exit 1; }\nn=$(sqlite3 -readonly'''\nassert old2 in t\nt=t.replace(old2,new2,1)\nopen(p,'w').write(t)\nEOF\nbash -n launch-worker.sh && shellcheck -S warning launch-worker.sh && echo lint-ok; echo \"-- smoke worker state before retire:\"; ls [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/inputs; echo \"harvest me\" > [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/result.md; echo scratch > [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/tmp/scratch.txt; ./retire-worker.sh --dry-run rog-smoke; echo; ./retire-worker.sh rog-smoke; echo \"-- after:\"; ls [redacted:repo]:.state/rog-smoke [redacted:repo]:.state/rog-smoke/inputs 2>&1; ls [redacted:worktrees_root] | rtk grep rog-smoke || echo \"worktree dir gone\"; herdr workspace list | jq -r '.result.workspaces[]|select(.label==\"rog-smoke\")|.workspace_id' | grep . || echo \"workspace gone\"; git -C [redacted:repo] branch --list 'chore/smoke' | grep . || echo \"local branch gone\"; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"",
+  "timeout": 120000
+}
+```
+
+**Output:**
+```
+lint-ok
+-- smoke worker state before retire:
+smoke-input.txt
+worker rog-smoke | branch chore/smoke | dirty files 0 | unpushed 0 | PR #null null
+harvest: 2 file(s) to .state/rog-smoke/
+DRY: mkdir -p [redacted:repo]:.state/rog-smoke
+DRY: rsync -a --exclude tmp/ [redacted:worktrees_root]/rog-smoke/.state/rog-smoke/ [redacted:repo]:.state/rog-smoke/
+workspace: w13
+DRY: herdr worktree remove --workspace w13  (fallback: git worktree remove + herdr workspace close)
+DRY: git -C [redacted:repo] branch -d chore/smoke
+RETIRED rog-smoke
+
+worker rog-smoke | branch chore/smoke | dirty files 0 | unpushed 0 | PR #null null
+harvest: 2 file(s) to .state/rog-smoke/
+workspace: w13
+Deleted branch chore/smoke (was cb8fd46).
+RETIRED rog-smoke
+-- after:
+[redacted:repo]:.state/rog-smoke:
+inputs
+result.md
+
+[redacted:repo]:.state/rog-smoke/inputs:
+smoke-input.txt
+worktree dir gone
+workspace gone
+local branch gone
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 9.9s)
+
+_Thinking:_
+The harvest looks right: it picked up `inputs` and result.md and skipped tmp. Next I want to clear out the smoke harvest. The dry run also says "RETIRED" when it's only a dry run, so I'll change that to "WOULD RETIRE", and the "PR #null null" message needs fixing for the case with no PR. Those are small, so a quick patch should do. After that I'll remove .state/rog-smoke from main and move on to writing the briefs.
+
+
+_Thinking:_
+Both scripts now run end to end, so I'm removing the smoke leftovers and writing the step 4 briefs next, after two cosmetic fixes.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch/bin && python3 - <<'EOF'\np='retire-worker.sh'\nt=open(p).read()\nt=t.replace('''--jq '.[0]|\"#\\\\(.number) \\\\(.state)\"' 2>/dev/null)''','''--jq 'if length>0 then .[0]|\"#\\\\(.number) \\\\(.state)\" else \"none\" end' 2>/dev/null)''')\nt=t.replace('echo \"RETIRED $name\"','if [ \"$dry\" = 1 ]; then echo \"DRY RUN: would retire $name\"; else echo \"RETIRED $name\"; fi')\nopen(p,'w').write(t)\nEOF\nbash -n retire-worker.sh && shellcheck -S warning retire-worker.sh && echo lint-ok; rm -rf [redacted:repo]:.state/rog-smoke ../tmp/smoke-*; echo \"- $(date '+%F %T') rog-orch built bin/launch-worker.sh + bin/retire-worker.sh and smoke-tested them with a throwaway worker (rog-smoke): launch with verified single brief, harvest minus tmp, worktree+workspace+local branch removal, core.worktree unset throughout\" >> ../journal.md"
+}
+```
+
+**Output:**
+```
+lint-ok
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 8.0s)
+
+_Thinking:_
+I'm going to put together the briefs for step 4, and first I need the facts they depend on. The opencode plugin's hook names are defined in `node_modules/@opencode-ai/plugin/dist/index.d.ts`, and I want to confirm that `shell.env` is one of them, since an earlier snippet showed it typed as `env: Record<string,string>`.
+
+I'm checking the opencode plugin's hook definitions near line 247, since the `env` type there looks like it belongs to `shell.env`. I'll pull the full list of hook names from that file so the briefs use the exact names.
+
+
+Before writing the redaction brief, I want its facts right. Which hooks does the installed plugin API really expose?
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && grep -nE '^\\s+\"?[a-zA-Z.]+\"?\\?: \\(' node_modules/@opencode-ai/plugin/dist/index.d.ts | sed -E 's/\\(.*//' | cut -c1-80; echo; sed -n '240,262p' node_modules/@opencode-ai/plugin/dist/index.d.ts; echo; sed -n '304,320p' node_modules/@opencode-ai/plugin/dist/index.d.ts"
+}
+```
+
+**Output:**
+```
+64:    loader?: 
+73:            validate?: 
+75:            condition?: 
+87:            condition?: 
+99:            validate?: 
+101:            condition?: 
+113:            condition?: 
+169:    models?: 
+174:    dispose?: 
+175:    event?: 
+178:    config?: 
+187:    "chat.message"?: 
+203:    "chat.params"?: 
+216:    "chat.headers"?: 
+225:    "permission.ask"?: 
+228:    "command.execute.before"?: 
+235:    "tool.execute.before"?: 
+242:    "shell.env"?: 
+249:    "tool.execute.after"?: 
+259:    "experimental.chat.messages.transform"?: 
+265:    "experimental.chat.system.transform"?: 
+283:    "experimental.session.compacting"?: 
+296:    "experimental.compaction.autocontinue"?: 
+306:    "experimental.text.complete"?: 
+316:    "tool.definition"?: 
+
+        args: any;
+    }) => Promise<void>;
+    "shell.env"?: (input: {
+        cwd: string;
+        sessionID?: string;
+        callID?: string;
+    }, output: {
+        env: Record<string, string>;
+    }) => Promise<void>;
+    "tool.execute.after"?: (input: {
+        tool: string;
+        sessionID: string;
+        callID: string;
+        args: any;
+    }, output: {
+        title: string;
+        output: string;
+        metadata: any;
+    }) => Promise<void>;
+    "experimental.chat.messages.transform"?: (input: {}, output: {
+        messages: {
+            info: Message;
+            parts: Part[];
+
+        enabled: boolean;
+    }) => Promise<void>;
+    "experimental.text.complete"?: (input: {
+        sessionID: string;
+        messageID: string;
+        partID: string;
+    }, output: {
+        text: string;
+    }) => Promise<void>;
+    /**
+     * Modify tool definitions (description and parameters) sent to LLM
+     */
+    "tool.definition"?: (input: {
+        toolID: string;
+    }, output: {
+        description: string;
+        parameters: any;
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 65.7s)
+
+_Thinking:_
+Hooks are confirmed: `shell.env`, `tool.execute.after`, `experimental.chat.messages.transform`, `experimental.text.complete`, `chat.message`, `tool.definition`, and `permission.ask`, which is never called.
+
+Next I'll write the briefs, starting with a shared header in `briefs/step4-header.md`. The launch script only sends one brief file, so I'll compose each brief from that header and
+
+I'm assembling the briefs next: a shared header for the research workers, with the two task bodies added after it and each brief kept to about 100 lines.
+
+I'm settling the report format: a `report.md` of at most 250 lines with a verdict, verified facts with their evidence, unverified items, a recommendation, effort and risks, and open questions. The workers will reply with the path to it when they're done. For the redaction study I still need a sandbox to run experiments in, and the helper script lives in main's `.state`, so I'll have to pass it in as an input rather than expect the worker to find it.
+
+Next I'm writing the test-harness setup for the redaction experiments. The plan is a tiny mock provider server that returns scripted tool calls and logs each request body, so I can see exactly what gets sent to the model. I'll point the sandbox config at that mock as a custom provider and let opencode install the openai-compatible SDK when it first runs.
+
+I'm working out how the redaction experiments will run: a sandbox with a mock provider so I can check what the model actually receives, then looking at whether the messages transform changes the request bodies.
+
+I'm checking how the redaction plugin's `shell.env` hook behaves: whether it can delete variables or only override them, and whether a `gh`-style tool can keep its token. I'm also planning to measure what the `messages.transform` hook costs on a long history.
+
+I'm checking the redaction research workers' remaining questions: whether the hooks can cover every leak path, like tool-output files, logs, session exports, compaction summaries, and MCP outputs. I'm also planning how to detect secrets, either by matching values collected from env vars and credential files at startup, or by shape-based regexes.
+
+I'm mapping out the rest of the redaction research questions: how to test with fake secrets and the mock provider, the rough effort, and where a redaction option would live in the codebase. I still need to settle how it would interact with the existing guard and rtk, and whether an `env`/`printenv` allowlist makes sense if redaction is in place.
+
+I'm compiling the roles brief now, listing the inputs to copy in: the decisions journal of around 300 approvals and rejections, the watch and once scripts, the deploy script, the standing header, and the signal notes.
+
+I'm mapping out the roles next: for each of read-only, worker, orchestrator, and deployer (maybe a reviewer too), I'll note its purpose and a capability matrix covering file reads and writes, git and gh access, herdr control, network, tool installs, project scripts, process listing, and env access. After that I'll go through the journal's approvals and rejections and classify each one.
+
+I'm working out how to classify the journal's decisions into categories for the report, describing the commands generically so nothing sensitive ends up in it. Then I'll map each class onto the possible policy mechanisms: opencode 1.x agent permission patterns, plugin hooks that scope writes by path, and the 2.x permission hook.
+
+I'm sketching the config surface next: a `roles` option with per-role write paths and push rules, kept compatible with the existing agents, allow, presets and store settings. After that I'll pin down a small shippable slice for opencode 1.x and a test corpus of about 80 neutrally named cases drawn from the journal classes.
+
+Now I'm settling the rename question and the decision skeleton: I'll list the naming options, note which strings a rename would touch, keep the rename brief marked optional, and set up a decisions table with the role model and the rename as the first two decisions.
+
+Now I'm finishing the decision list: the redaction approach, an interim plan for `env`/`printenv`, triage of the TODO list, the release version and timing, and where the orchestration tooling should live. Afterwards I'll write a TODO-triage brief once those decisions are in. Last, I'm noting the launch command for the redaction worker in the state file, so it can be picked up after a compaction.
+
+Next I'm checking the launch commands for the research workers, using the branch names `research/redaction`, `research/roles`, and `research/rename`. The journal is private, so it goes into each worker's `.state` as an input, and I'm weighing whether reading roughly 300 long lines of it will fit in the worker's context.
+
+I'm writing the brief files now, planning to keep a shared header separate and combine it with each task body so the launch script gets a single file per worker.
+
+Both briefs are going to be the same file, assembled by concatenating a shared header with each task body, so I'll keep the header as its own file and save the assembled versions to send.
+
+
+Now the briefs. First the shared header, which carries every rule learned this week, then the three task bodies.
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/briefs/step4-header.md",
+  "content": "You are {{NAME}}, a RESEARCH worker. Your coordinator is rog-orch (herdr pane wR:p1). You cannot talk to it directly: end each stage with \"READY: ...\" or \"BLOCKED: <question>\" and wait.\n\n## Where you work\n- Repo: opencode-readonly-guard, a PUBLIC opencode plugin (v1 plugin API, opencode 1.19.3 pinned in mise.toml) that makes read-only agents actually read-only. Read AGENTS.md first (commands, style, map, hazards), then README.md (\"How the policy is built\", \"What it does not do\", \"Findings\"), TODO.md.\n- Your worktree: [redacted:worktrees_root]/{{NAME}}, branch {{BRANCH}} (from origin/main). Dependencies are installed. This is a research task: you produce a REPORT, not a pull request. Do not push, do not open PRs, do not merge. If you commit anything, the hk hooks are active and safe; but you should not need to commit.\n- Your private area (ignored by git, never published): `.state/{{NAME}}/`\n  - `inputs/`  copies of the files the coordinator gave you (read them there, never in the main checkout)\n  - `tmp/`     disposable scratch (mode 0700): sandboxes, downloads, raw outputs\n  - `report.md`, `evidence/`, `prototype/`  your deliverables (kept: the coordinator harvests them when you are retired)\n  Nothing durable in /tmp (cleaned after 10 days, lost at reboots).\n- NEVER touch [redacted:repo] (the main checkout: the whole fleet loads its dist/), the user's real opencode config, store or event log (~/.config/opencode, ~/.local/share/opencode), or the private redaction store.\n- Anything that starts opencode or git outside the repo's tests needs an isolated sandbox: use `sandbox()` / `withServer()` / `copyPlugin()` from test/helpers.ts (isolated XDG dirs, plugin store and log, its own git root, no inherited GIT_*/HERDR_*), from a script under `.state/{{NAME}}/tmp/` run with bun.\n- Never put an UNPUBLISHED npm package name in an opencode config (opencode installs npm plugin entries from the public registry). `file://` paths only. Fetching well-known packages that opencode itself installs for a provider adapter into the sandbox cache is expected.\n\n## Secrets: a hard rule (a token already leaked once into a session this way)\n- Your shell environment holds a real GitHub token. NEVER print the environment: no `env`, `printenv`, `set`, `export -p`, `declare -p`, `ps e`, `/proc/*/environ`, no `env | grep ...`, no `process.env` dumps. Check ONE variable with `[ -n \"${NAME:-}\" ]`; list names only with `env | cut -d= -f1 | sort`.\n- Experiments use FAKE secrets only, generated by your scripts (for example `ghp_` plus 36 random alphanumerics). Never give the real token, or any real credential file, to a sandbox, a mock server or a log.\n- Do not paste private data (host names, user names, project names other than this repo, contents of the maintainer's files) into your report. Describe categories and counts.\n\n## Process\n- Permission prompts are answered by rog-orch (\"Allow once\" only). Prefer ONE-LINE commands; put any multi-line script in a file under `.state/{{NAME}}/tmp/` (or `prototype/`) with the write tool, then run it with a short command. A dialog whose command text is unreadable is rejected.\n- STAGE 0 (now): read the files named in the task, then reply with a PLAN (max 20 lines: the experiments in order, what each proves, the harness, what you cannot test and why, open questions). WAIT for my \"go\".\n- After the go, work through the questions. Record every verified fact WITH its evidence (the command and what you observed). Say plainly what you could not verify. If an experiment contradicts the hypothesis in the task, say so first.\n- Stop and report when the questions are answered or when your context passes about 150K tokens, whichever comes first.\n\n## Report format (`.state/{{NAME}}/report.md`, at most ~250 lines)\n1. Verdict (5 lines): what is feasible, what is not, the recommended direction.\n2. Findings, one numbered block per question: claim; evidence (command and observed result, paths relative to your worktree); confidence.\n3. Not verified, and why.\n4. Recommendation: design, smallest useful first slice, what waits for opencode 2.x.\n5. Effort and risks (rough sizes: S/M/L per PR) and what a test plan needs.\n6. Questions for the maintainer (decisions only the maintainer can take).\nThen reply `READY: .state/{{NAME}}/report.md` with the 5-line verdict.\n\n---\n\n## Your task\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/briefs/step4-task-redact.md",
+  "content": "### Question: can the plugin keep secrets out of what the model sees and what the session stores?\n\nWhy: on 2026-11-03 a worker ran `env | grep -E '^(GIT|HK)'`; the pattern matched `[redacted:envvar]`, the token entered the session (stored in opencode.db, re-sent to the provider on every turn). Two more ways to print secrets without any prompt were found later (`export -p` / `declare -p`, `ps e`); both are now blocked by the write guard, and exact `env` / `printenv *` are still on the shared allowlist (a maintainer decision is pending). The maintainer wants to know whether an in-plugin REDACTION LAYER could do on the fly what blocking cannot: whatever a command prints, secrets never reach the provider or the history.\n\nHooks of the installed plugin API (`node_modules/@opencode-ai/plugin/dist/index.d.ts`, 1.19.x): `tool.execute.before`, `tool.execute.after` (mutable `output.output`), `shell.env` (mutable `output.env`, input: cwd, sessionID, callID), `experimental.chat.messages.transform`, `experimental.chat.system.transform`, `experimental.text.complete` (mutable `output.text`), `chat.message`, `tool.definition`, `event`, `config`. (`permission.ask` is declared but never called by 1.19.3.) The plugin today: see src/plugin.ts, src/log.ts (its own `events.jsonl` stores commands), src/tools.ts.\n\nHypotheses to TEST, not assume:\nH1. Mutating `output.output` in `tool.execute.after` changes both what is stored and what is sent to the model next turn.\nH2. `experimental.chat.messages.transform` changes what is sent but not what is stored (so it also covers history that already contains a secret), and is cheap enough to run on every turn.\nH3. `shell.env` can REMOVE or blank variables for the bash tool (not only add), so `env`/`printenv` cannot print them; a deleted key may be re-merged from the process environment (check!). `gh`, `git push`, `mise` need credentials: find out how a role could keep them for those commands only.\nH4. Hooks fire for built-in tools (`read`, `grep`, `glob`, `bash`) and for MCP tools alike; the `read` tool reading a credentials file is covered only by `tool.execute.after`.\n\nQuestions (answer each with an experiment):\nR1. For `tool.execute.after`: what the next provider request contains, what `part.data` in the sandbox database contains, what the API (`GET /session/:id/message`) returns. Does it fire for every tool, for subagent (task) results, for MCP tools?\nR2. For `experimental.chat.messages.transform`: effect on the provider request vs storage; call frequency; cost on a history of ~200 messages with 1 MB of tool output.\nR3. For `shell.env`: delete vs blank; effect on bash tool, on `!`-prefixed user commands, on `opencode run`; effect on child processes that need credentials; can it differ per command (cwd, callID)? Is there a way to give `gh` its token and nothing else?\nR4. For `experimental.text.complete`: can it redact an assistant message that echoes a secret; stored vs sent.\nR5. Other leak paths: tool-output spill files (opencode keeps big outputs in files), logs, compaction summaries (`experimental.session.compacting`), session export, the plugin's own `events.jsonl` (commands). For each: covered by which hook, or not covered.\nR6. Detection: (a) value-based (collect the values of environment variables whose NAMES look secret, at startup, never printed; replace exact occurrences, longest first; minimum length policy), (b) shape-based (token regexes: study the secret patterns of the fleet's transcript redactor, copied to your inputs; do not depend on it), (c) both. Measure time on 1 MB of output; false-positive risk (short values, common words); replacement format.\nR7. Scope: all agents, or only agents of a role? Interplay with rtk (which rewrites commands and filters output) and with the write guard. What does it change for the pending decision \"keep `env` and `printenv *` on the shared allowlist\"? Give a recommendation with the evidence.\n\nHarness (suggested): a mock OpenAI-compatible provider, because no real model may be used: a small Bun HTTP server under `prototype/mock-provider.ts` that answers `/v1/chat/completions` (streaming SSE) with SCRIPTED tool calls (for example one `bash` call printing a fake secret from the sandbox environment, then a final text), and writes every request body it receives to a file: that file is the proof of what \"reaches the provider\". Configure it in the sandbox `opencode.json` as a custom provider (`@ai-sdk/openai-compatible`, `options.baseURL` to 127.0.0.1, any apiKey; opencode fetches the adapter into the sandbox cache; this is expected). Drive it with `opencode run -m <provider>/<model> ...` or `opencode serve` plus the HTTP API, from a script using `sandbox()`/`withServer()`. A prototype plugin under `prototype/` (a `file://` copy of a tiny plugin module, not the repo's `src/`) implements the hooks you test. This harness also answers the TODO item \"Deterministic e2e: a mock OpenAI-compatible provider\": say how reusable it is.\n\nInputs given: `inputs/step4-inputs.md` (collected notes), `inputs/session_redact.py` (the fleet's transcript redactor, for its secret regexes only). Also read: src/plugin.ts, src/log.ts, src/tools.ts, test/helpers.ts, test/integration/opencode.test.ts, TODO.md \"Policy and parser\" and \"Upstream (opencode)\".\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 26.5s)
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/briefs/step4-task-roles.md",
+  "content": "### Question: what is the role model behind \"unattended agents under a policy\", and what is the smallest useful way to ship it?\n\nWhy: the plugin was born to make PLANNING agents safely unattended (read-only). In one week the maintainer ran four kinds of agent under its protection or next to it: read-only agents (`plan`, `explore`), build WORKERS (they write code inside their own git worktree, push their own branch, never merge), an ORCHESTRATOR (it controls other agents through herdr and `gh`, edits no code) and a DEPLOYER (a throwaway agent that runs one reviewed script that rebuilds the checkout the whole fleet loads). Today only the first kind is enforced by the plugin; the other three are held together by briefs, by the project `opencode.json` (narrow allowlist, everything else asks) and by a coordinator that answers every permission prompt by hand with a helper script (`inputs/watch` and friends). The maintainer wants to know what a role-based policy would look like (and whether it changes what the project IS, since \"readonly\" is in its name), in a form that can be built incrementally on opencode 1.x.\n\nYour inputs (`inputs/`): `journal.md` (the coordinator's log: about 300 permission decisions with their reasons, plus events; contains private commands: never quote it verbatim in your report, describe classes and counts), `watch`, `lib-once.sh`, `stages.mjs`, `once`, `deploy-main.sh` (the approval logic and the reviewed deploy script as they exist today), `signal-notes.md`, `step4-inputs.md` (sections 2 and 3), `worker-header.md` (the rules every worker is given today). Also read: README.md (\"How the policy is built\", \"Options\", \"What it does not do\"), AGENTS.md, src/inject.ts, src/plugin.ts, src/sources.ts (presets), src/rules.ts, src/decide.ts, rules/commands.json (shape only), TODO.md (\"Policy and parser\", \"opencode 2.x\", \"Sharing rules\").\n\nDeliver (all in `.state/{{NAME}}/`):\n1. `report.md` (format above) with these parts:\n   a. ROLE MODEL: purpose, trust assumptions and capability matrix for read-only, worker, orchestrator, deployer (and any role the data suggests, such as reviewer). Rows: read files, write inside the worktree, write elsewhere, scratch space, local git, push own branch, merge, `gh` read, `gh` write, herdr read / herdr control, network read, install tools, run project scripts (`mise run ...`, `bun test`), list processes, read the environment, read credential files.\n   b. DECISION CLASSES: classify the permission decisions in the journal (answered once by rule, scratch writes, own-worktree dev loop, own-branch push and PR, exceptions the maintainer approved, rejections with the reason, escalations to the maintainer). Counts per class; which classes a machine could decide without a human, and which must stay human.\n   c. EXPRESSIBILITY: for each class, how it would be expressed (i) as opencode 1.x agent `permission` rules (globs), (ii) with plugin hooks (`tool.execute.before` can inspect and block; path scoping such as \"writes only under the worktree\" needs a notion of working directory and of redirection targets: check what src/analyze.ts knows), (iii) only with the opencode 2.x permission hook. List what globs can NOT express (cwd-relative path scope, \"push only my own branch\", \"this script and no other\").\n   d. CONFIG SURFACE: two or three options for how a user declares roles in plugin options or `readonly-guard.json` (example JSON for each), compatible with today's `agents.include/exclude`, `allow`, `presets`, store and herdr's file. Say which you recommend and why. Keep the invariant that a role can only narrow what the safety check (`classify.ts`) accepts, never widen it.\n   e. MVP: the smallest slice shippable on opencode 1.x as 2 to 4 pull requests (S/M/L each), and what waits for 2.x.\n   f. IDENTITY: does the role model change what the project is? Three short candidate framings, with the strings a rename would touch named only by category (the rename inventory is a separate task).\n2. `cases-roles.json`: a draft corpus of about 80 cases `{ \"role\": ..., \"command\": ..., \"cwd\": \"worktree|main|scratch|home|other\", \"expect\": \"allow|ask|block\", \"why\": ... }` derived from the decision classes, with NEUTRAL names (no host, user or project names of the maintainer), so it could become part of the test suite. Include the negative cases that matter (`git push` of another branch, `rm` outside the worktree, `gh pr merge`, printing the environment, `mise run` of an unreviewed script).\n3. Optional, if time allows: `evidence/` with any measurement you relied on.\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/briefs/step4-task-rename.md",
+  "content": "### Question: what would renaming the project cost, and which names are available?\n\nWhy: the maintainer is deciding whether the project keeps the name `opencode-readonly-guard` (it may grow into a role-based policy tool for unattended agents). Renaming is cheap before the first npm publish and expensive after. This task is an INVENTORY and an availability check; it takes no decision and changes nothing.\n\nDeliver `.state/{{NAME}}/report.md` (format above, shorter is fine) with:\n1. BLAST RADIUS of the current name, by category with counts and the exact strings: package name and `bin`, npm scope, plugin `id` (`src/constants.ts`), CLI name, command `/guard-review`, tool ids (`readonly_guard_review`, `readonly_guard_update`, the global `readonly_guard_allow: ask` rule), store file `readonly-guard.json` and its default path, log dir and `events.jsonl`, environment variables `READONLY_GUARD_*`, the init event, docs (README, CONTRIBUTING, AGENTS, CHANGELOG, TODO, `memory/sessions/` which is history and stays), GitHub repository URL, `package.json` fields, `renovate.json`, CI workflows, test names and fixtures, the `rules/` JSON schema `$id`s. For each: breaking for existing users? (nobody has installed it from npm yet, but the maintainer's own global opencode config loads the checkout by path, and the store and log live on his machine), and what migration it needs (alias or fallback for the old env vars and store path for a release or two, or none).\n2. CROSS-REPO REFERENCES (read-only search, count files only, never print content): which sibling repositories under ~/Work and the maintainer's dotfiles mention the plugin or its paths (the global opencode config entry, herdr or chezmoi sources, agent skills). A rename must update them.\n3. CANDIDATE NAMES: for each of at most 8 candidates you propose (and for the current name, as a baseline): npm availability (`npm view <name> name` returns 404 when free; also check scoped forms), GitHub availability under the maintainer's owner and whether a well-known project of that name exists (`gh search repos <name> --limit 5`), opencode-plugin naming conventions seen on npm (`npm search opencode-plugin` style: look at 10 real names), length and typing cost of the CLI, and whether the name still makes sense if the project covers read-only AND worker/orchestrator roles. Candidates must not claim to be official opencode packages.\n4. A recommended migration plan for the best two options (steps, order, what can be scripted), including how to keep `opencode-readonly-guard` resolvable for a while (a deprecated npm package pointing to the new one is NOT possible before the first publish; say what is possible).\nRead-only network access (npm view, gh search) is fine; do not publish, reserve or create anything.\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 422.5s)
+
+_Thinking:_
+I'm filling in the final briefs by swapping each {{NAME}} and {{BRANCH}} placeholder for the matching pair: rog-redact on research/redaction, rog-roles on research/roles, and rog-rename on research/rename. The roles brief points to a worker header file, so I'm working out what should go into that spot.
+
+I'm swapping the worker-header reference for `rog-memory.md`, a copy of a worker brief I can use as a stand-in input, and updating the paths in `step4-inputs.md` to match the current location. I'll also gather the bin scripts, notes, and journal as inputs, then assemble each brief with `bin/make-brief.sh` and save the output.
+
+
+Assembling the three final briefs from the header and the task bodies, and fixing the stale `/tmp` paths in the step 4 inputs note.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && sed -i 's#`worker-header.md` (the rules every worker is given today)#`rog-memory.md` (a complete worker brief as sent today: header, process, conventions)#' briefs/step4-task-roles.md && python3 - <<'EOF'\np='notes/step4-inputs.md'\nt=open(p).read()\nt=t.replace(\"/tmp/opencode/rog/answers.log (about 100 decisions with reasons)\",\"`journal.md` (the imported answers log: about 300 decisions with reasons)\")\nt=t.replace(\"/tmp/opencode/rog/bin/watch + lib-once.sh + stages.mjs (the approval logic that exists today)\",\"`bin/watch`, `bin/lib-once.sh`, `bin/stages.mjs` (the approval logic that exists today)\")\nopen(p,'w').write(t)\nEOF\ngrep -c \"/tmp/opencode\" notes/step4-inputs.md notes/signal-notes.md | cat\ncat > bin/make-brief.sh <<'EOF'\n#!/usr/bin/env bash\n# make-brief.sh <name> <branch> <task-file>  ->  briefs/step4-<name>.md  (header + task, placeholders filled)\nset -euo pipefail\nS=$(cd \"$(dirname \"$0\")/..\" && pwd)\nname=${1:?name}; branch=${2:?branch}; task=${3:?task file}\ncat \"$S/briefs/step4-header.md\" \"$task\" | sed \"s#{{NAME}}#$name#g; s#{{BRANCH}}#$branch#g\" >\"$S/briefs/step4-$name.md\"\necho \"$S/briefs/step4-$name.md: $(wc -l <\"$S/briefs/step4-$name.md\") lines, $(wc -c <\"$S/briefs/step4-$name.md\") bytes\"\nEOF\nchmod +x bin/make-brief.sh; bin/make-brief.sh rog-redact research/redaction briefs/step4-task-redact.md; bin/make-brief.sh rog-roles research/roles briefs/step4-task-roles.md; bin/make-brief.sh rog-rename research/rename briefs/step4-task-rename.md; grep -c '{{' briefs/step4-rog-*.md | cat; echo \"--- secrets/private scan of the briefs:\"; grep -ElE 'gh[pousr]_[A-Za-z0-9]{30,}|github_pat_' briefs/step4-*.md || echo \"no token shapes\"; grep -c '[redacted:private]\\|[redacted:private]\\|[redacted:private]' briefs/step4-*.md | cat"
+}
+```
+
+**Output:**
+```
+notes/step4-inputs.md:0
+notes/signal-notes.md:1
+[redacted:repo]:.state/rog-orch/briefs/step4-rog-redact.md: 61 lines, 9646 bytes
+[redacted:repo]:.state/rog-orch/briefs/step4-rog-roles.md: 53 lines, 8944 bytes
+[redacted:repo]:.state/rog-orch/briefs/step4-rog-rename.md: 47 lines, 7143 bytes
+briefs/step4-rog-redact.md:0
+briefs/step4-rog-rename.md:0
+briefs/step4-rog-roles.md:0
+--- secrets/private scan of the briefs:
+no token shapes
+briefs/step4-header.md:0
+briefs/step4-rog-redact.md:0
+briefs/step4-rog-rename.md:0
+briefs/step4-rog-roles.md:0
+briefs/step4-task-redact.md:0
+briefs/step4-task-rename.md:0
+briefs/step4-task-roles.md:0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 426.2s)
+
+_Thinking:_
+I'm checking one `/tmp/opencode` mention in signal-notes.md, the old handoff note, and fixing it. I also need to add the fleet naming convergence, export learnings, redactor misses, and redactor owner info to the notes, since the step 6 signal depends on them. After that I'll dry-run each launch to confirm the assembly path works with the right inputs for all three.
+
+
+The briefs are assembled with no leftover placeholders and nothing private in them. Dry-running the exact launch commands for the three workers, which also validates the input paths.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && grep -n \"/tmp/opencode\" notes/signal-notes.md | cut -c1-160; R=$PWD; rtk ls $HOME/.config/nvim/scripts/session_redact.py >/dev/null && echo \"redactor script present\"; echo; echo \"== rog-redact\"; bin/launch-worker.sh --dry-run --input notes/step4-inputs.md --input $HOME/.config/nvim/scripts/session_redact.py rog-redact research/redaction briefs/step4-rog-redact.md 2>&1 | rtk grep -E \"origin/main|DRY: cp|DRY: herdr agent prompt\"; echo \"== rog-roles\"; bin/launch-worker.sh --dry-run --input journal.md --input bin/watch --input bin/lib-once.sh --input bin/stages.mjs --input bin/once --input bin/deploy-main.sh --input notes/signal-notes.md --input notes/step4-inputs.md --input briefs/rog-memory.md rog-roles research/roles briefs/step4-rog-roles.md 2>&1 | grep -E \"DRY: cp|DRY: herdr agent prompt\" | sed -E 's#[redacted:worktrees_root]/rog-roles/.state/rog-roles/inputs/##'; echo \"== rog-rename\"; bin/launch-worker.sh --dry-run rog-rename research/rename briefs/step4-rog-rename.md 2>&1 | rtk grep -E \"DRY: herdr agent prompt\""
+}
+```
+
+**Output:**
+```
+18:  (`/tmp/opencode/rog/bin/watch`) reads the exact pending command from opencode's DB (no terminal wrapping) and logs
+redactor script present
+
+== rog-redact
+origin/main = cb8fd46; worktree [redacted:worktrees_root]/rog-redact; branch research/redaction
+DRY: herdr worktree create --workspace wR --branch research/redaction --base origin/main --path [redacted:worktrees_root]/rog-redact --label rog-redact --no-focus
+DRY: cp -a notes/step4-inputs.md [redacted:worktrees_root]/rog-redact/.state/rog-redact/inputs/
+DRY: cp -a ~/.config/nvim/scripts/session_redact.py [redacted:worktrees_root]/rog-redact/.state/rog-redact/inputs/
+DRY: herdr agent prompt rog-redact <9646 bytes>; verify; resend up to 4 times
+== rog-roles
+DRY: cp -a journal.md 
+DRY: cp -a bin/watch 
+DRY: cp -a bin/lib-once.sh 
+DRY: cp -a bin/stages.mjs 
+DRY: cp -a bin/once 
+DRY: cp -a bin/deploy-main.sh 
+DRY: cp -a notes/signal-notes.md 
+DRY: cp -a notes/step4-inputs.md 
+DRY: cp -a briefs/rog-memory.md 
+DRY: herdr agent prompt rog-roles <8944 bytes>; verify; resend up to 4 times
+== rog-rename
+DRY: herdr agent prompt rog-rename <7143 bytes>; verify; resend up to 4 times
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 21.1s)
+
+_Thinking:_
+I'm noting that relative paths for --input work from the rog-orch directory, and that after a compaction the launch needs a cd into that directory first, which I'll record in state. Next up: fixing line 18 of the signal notes, adding the fleet naming and redactor owner findings, then the decision skeleton, and finally updating state.md and the journal.
+
+
+_Thinking:_
+The dry runs are clean, so I'm checking the stale path in the signal notes next, then writing a skeleton for the decision document.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && sed -i 's#(`/tmp/opencode/rog/bin/watch`)#(`.state/rog-orch/bin/watch`)#' notes/signal-notes.md && cat >> notes/signal-notes.md <<'EOF'\n\n## Added 2026-11-08 (storage, export, fleet)\n- STATE AND SCRATCH CONVENTION (for [redacted:repo] phase 8, T-314; send with the step 6 signal): per-agent state in `.state/<agent>/`\n  (durable, gitignored, never published), disposable scratch in `.state/<agent>/tmp/` (0700), both ignored by git; nothing\n  durable in /tmp (cleaned after 10 days; reboots lost work). `git clean -X/-fdx` deletes them. A worker's state is harvested\n  into the main checkout's `.state/<worker>/` when it is retired. Sandboxes need their own git root. Documented in this\n  repo's AGENTS.md (\"State, scratch and transcripts\"). Tools: bin/launch-worker.sh, bin/retire-worker.sh, bin/export-sessions.sh.\n- `opencode export --sanitize` replaces every message, reasoning block and tool input with a placeholder: useless for a\n  readable transcript; export without it and redact (fleet redactor, `public` profile for a public repo).\n- The fleet redactor missed, in a first pass: a host name (93 occurrences), two private project names, NUL bytes (binary\n  strings from `rg -a` over executables turn a transcript into a \"binary file\" for git). A local post-redaction scrub fixed\n  it (bin/export-sessions.sh, private/extra-terms.txt). The three terms should be promoted to the private store's\n  `session-redact/redact-terms.txt` (owner: see below).\n- REDACTOR OWNERSHIP: `scripts/session_redact.py` lives in the nvim repo (`~/.config/nvim`, orchestrated by `nvim-orch`,\n  herdr workspace wP; roadmap session S18 `layer-redaction-config`; header says TRANSITIONAL). Intended successor: [redacted:repo]'s\n  secret-scanning and redaction (T-063, done; `[redacted:repo]-orch`, workspace w9), adopted by nvim session S17. Its private terms\n  store is the `[redacted:repo]` clone at `~/.local/share/[redacted:private]` (global layer `session-redact/`; chezmoi/dotfiles\n  side: workspace wN). All commits are authored by the maintainer: the owners are sessions, not people.\n- FLEET NAMING CONVERGED on `<project>-orch` while this ran: `nvim-coord` became `nvim-orch`, a [redacted:repo] coordinator is\n  `[redacted:repo]-orch`; `rog-orch` fits (the earlier \"coord for cross-repo roles\" split was not kept by the others).\n- A herdr agent name is cleared when the opencode session restarts: set it again with `herdr agent rename <pane> <name>`.\n- A worker retired while its session is still unexported keeps its transcript in opencode.db; export it later by session id.\nEOF\ncat > notes/step4-decision-skeleton.md <<'EOF'\n# Step 4 decision document (skeleton; fill from the reports of rog-redact, rog-roles, rog-rename)\n\nStatus: NOT STARTED. Reports land in `.state/rog-redact/report.md`, `.state/rog-roles/report.md`, `.state/rog-rename/report.md`\n(read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`).\nFormat of the final document: one page per decision, options with cost, my recommendation, the evidence line, the maintainer's choice.\n\n| # | Decision | Options (initial) | Evidence needed | My provisional lean |\n|---|---|---|---|---|\n| D1 | Vision and scope: what is the project? | (a) read-only guard only; (b) read-only guard + worker/orchestrator/deployer roles as presets; (c) a role-based policy tool | rog-roles report (role model, MVP slice, expressibility on 1.x) | (b) as the first step, named for (c) if the rename is cheap |\n| D2 | Name | keep; rename now (before the first npm publish); rename later | rog-rename report (blast radius, availability, migration) | decide BEFORE step 5; rename cost is lowest now |\n| D3 | Redaction layer | build in the plugin (which hooks, which scope); wait for 2.x; do not build | rog-redact report (H1..H4 verified?) | build only the hooks proven to change the stored AND sent data; value-based first |\n| D4 | `env` and `printenv *` on the shared allowlist | keep; move back to ask now (small PR); decide after D3 | rog-redact R7 | move back to ask now: cheap, and D3 may take weeks |\n| D5 | Where the orchestration tools live (watch, once, lib-once, stages, deploy-main, launch/retire-worker, export-sessions, box, tally) | stay in `.state/` (private, unversioned); a separate private repo; a `tools/` directory here | maintainer taste; the tools hold machine paths | a small private repo or this repo's `tools/` after de-personalising paths |\n| D6 | Curated notes (signal-notes, step4-inputs, decisions) | stay in `.state/`; promote the generic ones to committed memory (`memory/notes/`) redacted | D1/D2 | promote after the signal to the fleet |\n| D7 | TODO triage | one pass applying D1..D6: prune done/obsolete, regroup by priority and by release | decisions D1..D6 | a worker `rog-triage` applies it as one PR after the decisions |\n| D8 | Release (step 5) | v0.1.0 as is; v0.2.0 with the new rules, doctor and fail-closed; wait for roles | D1, D2 | v0.2.0 after D2 |\n\nProcess after the reports: I write the document; the maintainer decides D1..D8 in one sitting; then launch `rog-triage` (brief to\nwrite from the decisions), the small `env`/`printenv` PR if D4 says so, and the release workstream.\nEOF\necho \"- $(date '+%F %T') rog-orch step 4 launch package ready: briefs step4-rog-{redact,roles,rename}.md (assembled by bin/make-brief.sh), launch dry-runs OK, decision skeleton notes/step4-decision-skeleton.md, signal-notes extended (storage convention, export lessons, redactor ownership, fleet naming)\" >> journal.md; ls briefs | tr '\\n' ' '"
+}
+```
+
+**Output:**
+```
+rog-deploy.md rog-doctor.md rog-loading-hk.md rog-loading.md rog-memory.md rog-rules.md rog-rules-phaseB.md rog-setup.md rog-testenv.md rog-utilities-handoff.md rog-utilities.md step4-header.md step4-rog-redact.md step4-rog-rename.md step4-rog-roles.md step4-task-redact.md step4-task-rename.md step4-task-roles.md 
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 32.8s)
+
+_Thinking:_
+I'm going to rewrite the whole of state.md so it reads coherently: the current status, identity, roadmap, open decisions, the retired workers, standing rules, the tooling table, and the step 4 launch instructions with exact commands. I'll also cover the pitfalls, the next actions, and the redactor's owner details.
+
+
+Now the key file for the post-compaction restart. `state.md` was written before most of today's events, so I'm rewriting it completely rather than patching it.
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/state.md",
+  "content": "# rog-orch state\n\nLiving file: rewritten at every state change and before every wait or turn end. History is in `journal.md` (append-only).\nLayout of `.state/rog-orch/`: `state.md` (this), `journal.md`, `notes/` (curated), `bin/` (tools), `briefs/` (worker briefs),\n`evidence/`, `dist-backups/` (newest two), `private/` (local-only terms), `tmp/` (disposable; own git roots for sandboxes).\nWorker state: `.state/<worker>/` (harvested when a worker is retired).\n\n## Now (updated 2026-11-08, after #16)\n- Everything planned before step 4 is DONE and merged. `main` = cb8fd46 (docs-only since the last deploy), clean, `core.worktree` unset.\n  `dist/` = build of bcb2ebc (deploy batch 3); nothing under `src/` changed since. No open PR, no worker running, no extra worktree.\n- The maintainer is about to COMPACT this session. After compaction: read this file, then launch step 4 (see \"Step 4 launch\").\n- Nothing is waiting on the maintainer except the decisions listed below.\n\n## Identity\n- Agent `rog-orch`, herdr pane `wR:p1` (workspace `wR`, tab `orch`), opencode session `ses_e6320a0e1ffexOEYp4Zi3QELSa`.\n  The herdr name is cleared when the opencode session restarts: `herdr agent rename wR:p1 rog-orch`.\n- Panel layout: agent name on line 1 (reversible block in `~/.config/herdr/config.toml`, backup `config.toml.rog-orch.bak`).\n- Fleet naming has converged on `<project>-orch`: `nvim-orch` (wP), `[redacted:repo]-orch` (w9). Other coordinators: `[redacted:private]` (study agent in the\n  [redacted:repo] workspace).\n\n## Roadmap (maintainer's order)\n1. Allowlist from session learnings: DONE (#4 core, #5 sysadmin, #7 export guard, #11 design note, #13 utilities/builtins/twins).\n2. Contributor setup: DONE (#3).\n3. Loading robustness: DONE (#6 bundle, #8 single load, #12 fail closed + doctor, #14 dogfooding). Gate: #9 hk 2.11.0, #10 sandbox() GIT_* scrub.\n   Also done: #15 storage/transcripts plumbing, #16 ten redacted session transcripts in `memory/sessions/`.\n4. TODO triage + vision/scope: NEXT (launch package ready, see below).\n5. Release: after the rename decision (D2).\n6. Retrospective with workers, incremental re-export of sessions (`--since auto`), signal to [redacted:repo]/[redacted:repo] (`notes/signal-notes.md`):\n   after 4 and 5. Note: the workers are already retired, so the \"retrospective\" = the reports of the workers + their exported\n   transcripts; ask the maintainer whether to still hold a retrospective prompt with fresh sessions of the same roles or skip it.\n\n## Open decisions (maintainer) -> `notes/step4-decision-skeleton.md` D1..D8\n- Rotate [redacted:envvar] (printed once into rog-loading's session; that database row now holds a redaction marker). Status unknown: ask.\n- `env` / `printenv *` on the shared allowlist since #4 print secrets: keep, ask, or wait for a redaction layer (D4).\n- Redaction layer feasibility (D3), role model / scope (D1), rename (D2), tools' home (D5), notes promotion (D6), TODO triage (D7), release (D8).\n- Promote the private extra terms (`private/extra-terms.txt`: one host name, two private project names) into the fleet redactor's\n  store `session-redact/redact-terms.txt`: owner below.\n\n## Who owns the transcript redactor\n- Script: `~/.config/nvim/scripts/session_redact.py` in the **nvim repo** (`[redacted:repo]`, private), orchestrated by **`nvim-orch`** (workspace wP);\n  nvim roadmap session S18 `layer-redaction-config` wrote the layered config; the script header says TRANSITIONAL.\n- Intended successor: **[redacted:repo]**'s secret scanning/redaction (T-063, done), adopted by nvim session S17 (orchestrator `[redacted:repo]-orch`, w9, for [redacted:repo]).\n- Terms store: `[redacted:repo]` cloned at `~/.local/share/[redacted:private]` (global layer `session-redact/`); chezmoi/dotfiles side is workspace wN.\n- Every commit is authored by the maintainer: the owners are SESSIONS. A request to add terms goes to `nvim-orch` (draft it, send only after the maintainer's OK).\n\n## Workers: ALL RETIRED (no worktree, no workspace; local branches deleted, remote branches kept)\nrog-setup (#3), rog-rules (#4 #5 #7 #11), rog-loading (#6 #8 #9; token context), rog-testenv (#10), rog-doctor (#12 #14),\nrog-utilities (#13), rog-memory (#15), rog-deploy x3 (batches 1-3), export worktree (#16). Their evidence is in `.state/<worker>/evidence/`.\nSessions NOT yet exported: rog-memory, rog-deploy batch 3, and everything after the export (this one continues): re-export at step 6.\n\n## Tools (`.state/rog-orch/bin/`, all shellcheck-clean; paths relative to the state dir, no /tmp)\n| tool | use |\n|---|---|\n| `launch-worker.sh [--dry-run] [--input F]... <name> <branch> <brief>` | worktree from origin/main under [redacted:worktrees_root]/<name> in workspace wR, mise trust, bun install, `.state/<name>/{inputs,tmp}`, start opencode, send the brief with verify/resend (a prompt right after `agent start` is lost half the time). Smoke-tested. Run it FROM `.state/rog-orch/` so relative `--input` paths work. |\n| `retire-worker.sh [--dry-run] [--force] <name>` | refuses if dirty/unpushed; harvests `.state/<name>` minus tmp into main; removes worktree + workspace; `branch -d` locally; keeps the remote branch. Smoke-tested. |\n| `watch NAME...` | polls workers; auto-answers \"Allow once\" ONLY for commands vetted by `check --no-store` plus a few exact dev-loop forms in a worker's own worktree; stops and prints anything else |\n| `once NAME \"note\"` | one verified \"Allow once\" (checks the highlighted option in the ANSI snapshot first; presses nothing if no dialog) |\n| `peek NAME` | status, plus the prompt when blocked |\n| `deploy-main.sh [--dry-run] [--skip-integration]` | scratch build + tests of origin/main, spot-checks, ff-pull, 2-rename dist swap, rollback, `doctor`; run by a throwaway `rog-deploy` session in a new tab of wR after ONE `Allow once` from me (read the script's sha first); batches, not per merge; close the tab after |\n| `export-sessions.sh <worktree> slug=session_id...` | fleet exporter (no --sanitize) -> redactor public profile -> local scrub (NUL bytes, private/extra-terms.txt) -> --check; raw export deleted |\n| `make-brief.sh <name> <branch> <task-file>` | header + task -> `briefs/step4-<name>.md` |\n| `box.sh`, `tally.mjs` | sandbox with its own git root; log tally (before/after tables) |\n\n## Standing rules (maintainer-approved)\n- Prompts: \"Allow once\" only, highlight verified. OK: read-only commands; scratch writes in the worker's own worktree and `.state/<w>/tmp`;\n  own-branch push; `gh pr create|edit|comment` for the worker's PR. NEVER: merge without the maintainer's word; delete branches (remote);\n  install (except pinned tools); force-push; print the environment; accept a dialog whose command is unreadable; put an unpublished npm\n  name in a config. Scripts a worker wrote are answered AFTER I read them (isolation: sandbox()/box.sh, scratch paths, no env dump).\n- The maintainer also answers prompts and says \"merge\" inside worker panes; `once` presses nothing when no dialog is left. Check\n  `gh pr list`/branches before acting on a worker's claim.\n- Merges only on the maintainer's explicit word; then `git pull --ff-only` in main, deploy batch if `src/` changed. Check `git config --get core.worktree`\n  in main before git operations there (it was corrupted 4 times before #10; none since).\n- Hooks (hk 2.11.0) are safe in linked worktrees since #10: workers commit and push normally.\n- Never print the environment. Never build in the main checkout outside the deploy script. Public text (PRs, commits, docs) never names\n  private fleet repos, hosts or paths (run it through the redactor `--profile public` when unsure).\n\n## Step 4 launch (after compaction)\nGoal: three read-only RESEARCH workers in parallel (no PRs; each writes `.state/<name>/report.md`), then I write the decision document\n(`notes/step4-decision-skeleton.md` -> D1..D8), the maintainer decides in one sitting, then a `rog-triage` worker applies the TODO/README triage.\nReports are read in the workers' worktrees (`[redacted:worktrees_root]/rog-*/.state/<name>/report.md`) until retired. Cost so far: workers cost $10-75 each.\n```\ncd [redacted:repo]:.state/rog-orch\nbin/launch-worker.sh --input notes/step4-inputs.md --input ~/.config/nvim/scripts/session_redact.py \\\n    rog-redact research/redaction briefs/step4-rog-redact.md\nbin/launch-worker.sh --input journal.md --input bin/watch --input bin/lib-once.sh --input bin/stages.mjs --input bin/once \\\n    --input bin/deploy-main.sh --input notes/signal-notes.md --input notes/step4-inputs.md --input briefs/rog-memory.md \\\n    rog-roles research/roles briefs/step4-rog-roles.md\nbin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md        # optional (rename inventory): ask the maintainer\n```\nEach worker first replies with a PLAN and waits for my \"go\" (send it with `herdr agent prompt <name> \"...\"`). Run `bin/watch rog-redact rog-roles\n[rog-rename]` to answer prompts (it stops on anything not vetted: read it, then `bin/once`). The redaction worker builds a mock OpenAI-compatible\nprovider in its sandbox (opencode fetches the adapter into the sandbox cache: expected). Retire each with `bin/retire-worker.sh <name>` after\nits report is read and the maintainer has what he needs from it.\n\n## Pitfalls\n- `herdr agent prompt` right after `agent start` is lost about half the time: `launch-worker.sh` verifies and resends. The session id exists only after the first message.\n- opencode.db is 10 GB: always filter by session_id / time. A Bun child exiting right after a large write loses the tail through a pipe.\n- A permission dialog with empty command text: reject, ask for a script file + one-line command.\n- `/tmp` is cleaned after 10 days and reboots lose it: nothing durable there. Sandboxes under `.state/*/tmp/` need their own git root.\n- A fresh worktree needs `bun install --frozen-lockfile` before its first commit (hk's prettier step).\n- Public repo: never publish raw exports; the redactor cannot prove absence, the maintainer reads every transcript before merge.\n\n## Next actions\n1. (maintainer) compacts this session.\n2. Read this file; `herdr agent rename wR:p1 rog-orch`; `git -C [redacted:repo] config --get core.worktree` (must be empty).\n3. Launch step 4 (above); answer the PLAN of each worker; read the reports; write the decision document; maintainer decides.\n4. Then: `rog-triage` worker, optional `env`/`printenv` PR (D4), release workstream (D8), step 6 (re-export, signal incl. the storage convention for [redacted:repo] phase 8).\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 13.1s)
+
+_Thinking:_
+I'm checking the state.md claims against what's actually there: the unexported sessions rog-memory and rog-deploy batch 3, plus rog-smoke, and the two newest dist-backups. Those all look right. Next I want a final consistency pass on git status, the workspaces, and the layout of the .state files.
+
+I'm also confirming that the herdr agent rog-orch still has its name set and that core.worktree is right. Then I'll check the 10 session files in the merged #16 export directory and add journal lines for the merge and the cleanup.
+
+
+Last checks, and the journal entries for what I did today that isn't logged yet.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && { echo \"- $(date '+%F %T') rog-orch maintainer said 'merge #16': merged (cb8fd46), main pulled (docs only, no deploy)\"; echo \"- $(date '+%F %T') rog-orch removed all ended workers: worktrees+workspaces rog-rules rog-loading rog-testenv rog-doctor rog-utilities rog-memory (herdr worktree remove) and rog-export (git worktree remove + workspace close); 9 local branches deleted with -d, 17 remote branches kept; harvested rog-memory evidence; core.worktree unset throughout\"; echo \"- $(date '+%F %T') rog-orch answered 'who owns the redactor': nvim repo / nvim-orch (S18), successor [redacted:repo] (T-063, [redacted:repo]-orch), terms store [redacted:repo]; recorded in state.md and notes/signal-notes.md\"; echo \"- $(date '+%F %T') rog-orch state.md rewritten for the post-compaction restart (tools table, step 4 launch commands, owner, pitfalls)\"; } >> .state/rog-orch/journal.md\necho \"== main:\"; echo \"HEAD $(git log --oneline -1 | cat) | $(git status -sb | head -1)\"; echo \"core.worktree: $(git config --get core.worktree || echo unset)\"; echo \"worktrees: $(git worktree list | wc -l) (main only)\"; echo \"rog-* workspaces: $(herdr workspace list | jq -r '.result.workspaces[]|select(.label|test(\"^rog-\"))|.label' | wc -l)\"; echo \"my name: $(herdr agent get wR:p1 | jq -r '.result.agent.name')\"; echo \"transcripts in memory/sessions: $(ls memory/sessions/2*.md | wc -l)\"; echo \"== .state:\"; ls .state; echo \"rog-orch: $(ls .state/rog-orch | tr '\\n' ' ')\"; echo \"briefs for step 4: $(ls .state/rog-orch/briefs | grep -c '^step4-rog-')\"; du -sh .state | cut -f1; echo \"== any token in .state (exact/shape):\"; grep -rlF \"${[redacted:envvar]:-__none__}\" .state 2>/dev/null | wc -l; grep -rElE 'gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}' .state 2>/dev/null | wc -l; echo \"== open PRs: $(gh pr list --state open --json number --jq length)\"",
+  "timeout": 60000
+}
+```
+
+**Output:**
+```
+== main:
+HEAD cb8fd46 Merge pull request #16 from [redacted:repo]/sessions-export | ## main...origin/main
+core.worktree: unset
+worktrees: 1 (main only)
+rog-* workspaces: 0
+my name: rog-orch
+transcripts in memory/sessions: 10
+== .state:
+rog-doctor
+rog-loading
+rog-memory
+rog-orch
+rog-rules
+rog-testenv
+rog-utilities
+rog-orch: bin briefs dist-backups evidence journal.md notes private state.md tmp 
+briefs for step 4: 3
+147M
+== any token in .state (exact/shape):
+0
+0
+== open PRs: 0
+
+```
+
+**Tool: todowrite**
+
+**Input:**
+```json
+{
+  "todos": [
+    {
+      "content": "Merge #16, pull main",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "content": "Remove all ended rog-* worktrees + workspaces + local branches (remote kept)",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "content": "Find the redactor's owner and report",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "content": "Prepare step 4 launch: briefs, launch/retire scripts (smoke-tested), decision skeleton, state.md",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "content": "Maintainer compacts; then launch step 4 per state.md",
+      "status": "pending",
+      "priority": "high"
+    }
+  ]
+}
+```
+
+**Output:**
+```
+[
+  {
+    "content": "Merge #16, pull main",
+    "status": "completed",
+    "priority": "high"
+  },
+  {
+    "content": "Remove all ended rog-* worktrees + workspaces + local branches (remote kept)",
+    "status": "completed",
+    "priority": "high"
+  },
+  {
+    "content": "Find the redactor's owner and report",
+    "status": "completed",
+    "priority": "high"
+  },
+  {
+    "content": "Prepare step 4 launch: briefs, launch/retire scripts (smoke-tested), decision skeleton, state.md",
+    "status": "completed",
+    "priority": "high"
+  },
+  {
+    "content": "Maintainer compacts; then launch step 4 per state.md",
+    "status": "pending",
+    "priority": "high"
+  }
+]
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 12.7s)
+
+All four are done, and the session is ready for you to compact.
+
+**1. #16 is merged.** `main` is at cb8fd46. It's docs-only, so no deploy was needed. The 10 transcripts are now in `memory/sessions/`.
+
+**2. Ended workers are removed.** Seven worktrees and seven herdr workspaces are gone: `rog-rules`, `rog-loading`, `rog-testenv`, `rog-doctor`, `rog-utilities`, `rog-memory` and `rog-export`.
+- Each was clean, fully pushed and merged before removal.
+- I deleted nine local branches with `-d`, which refuses anything unmerged. Seventeen remote branches are kept.
+- `core.worktree` stayed unset throughout.
+- Their useful files are in `.state/<worker>/evidence/` in the main checkout.
+- `rog-memory` and the third deploy session aren't exported yet. Step 6's re-export will include them.
+
+**3. The redactor's owner is the nvim repo, and `nvim-orch` is its agent.**
+- **Where it lives:** `scripts/session_redact.py` is in `~/.config/nvim` (the private repo `[redacted:repo]`).
+- **Who runs it:** the `nvim-orch` agent in workspace `wP`. Its roadmap session S18 (`layer-redaction-config`) wrote the layered config.
+- **Successor:** the script's header says it is TRANSITIONAL. [redacted:repo]'s secret scanning and redaction (T-063, done, `[redacted:repo]-orch` in `w9`) is meant to replace it, adopted by nvim session S17.
+- **Terms store:** the private store is the `[redacted:repo]` clone at `~/.local/share/[redacted:private]`. Its global `session-redact/` layer is where the three extra terms belong (one host name, two private project names). The chezmoi side is workspace `wN`.
+- **Authorship:** every commit is authored by you, so the owners are sessions, not people.
+- **Fleet naming:** while I worked, `nvim-coord` became `nvim-orch`, so the fleet has converged on `<project>-orch`.
+- **Next step:** I can draft the terms request to `nvim-orch`. I won't send it without your OK.
+
+**4. Step 4 is ready to launch.**
+- **Launch tools:** `bin/launch-worker.sh` and `bin/retire-worker.sh` replace what I did by hand about eight times. I tested both end to end with a throwaway worker, which received exactly one brief and answered `READY`. The harvest, worktree removal and branch deletion all worked.
+- **Three research briefs** are assembled and dry-run:
+  - **`rog-redact`:**
+    - It tests four hypotheses about whether the plugin can keep secrets out of what the model sees and what is stored.
+    - The hooks are `tool.execute.after`, `messages.transform`, `shell.env` and `text.complete`.
+    - It uses a mock OpenAI-compatible provider and fake secrets, so no model and no real token is involved.
+    - It also gives evidence for keeping `env` and `printenv` on the allowlist or moving them back to ask.
+  - **`rog-roles`:** it turns the roughly 300 permission decisions in the journal into a role model for read-only, worker, orchestrator and deployer. It covers what globs can and can't express, three options for the config surface, a shippable first slice, and about 80 draft test cases.
+  - **`rog-rename`** (optional): the cost of a rename by category, references from other repos, and npm and GitHub availability for up to eight candidates.
+- **Decision skeleton:** `notes/step4-decision-skeleton.md` lists D1 to D8 (scope, name, redaction, `env`/`printenv`, where the tools live, notes, TODO triage, release), each with a provisional lean.
+- **State file:** `state.md` is rewritten with the tools table, the exact launch commands, the owner chain and the pitfalls. `journal.md` is updated and holds 230 entries.
+- **Storage convention:** it goes in the step 6 signal to [redacted:repo] for phase 8.
+
+**Decisions for you after compaction**
+- **Rename worker:** do you want `rog-rename` launched alongside the other two?
+- **Token:** is `[redacted:envvar]` rotated?
+- **Redactor terms:** should I send the terms request to `nvim-orch`?
+
+---
+
+## User
+
+send nvim-orch its request
+do not launch rename worker
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 33.5s)
+
+_Thinking:_
+I'm going to send nvim-orch the request to add the terms to the redactor's store, and I'm holding off on launching the rename worker. Before sending, I want to confirm whether nvim-orch is idle and which pane it's in, and check how redact-terms.txt is structured so the request matches it.
+
+I'm checking whether nvim-orch is idle and which pane it's in, and how the redact-terms.txt store is laid out so the request matches its format. I'm also reviewing whether the private terms are safe to send there, since its transcripts land in a private repo.
+
+I'm checking whether the three private terms are already in the redactor's store, using a presence-only grep so the contents stay unprinted. I also want to draft the request for nvim-orch so it stays self-contained and asks for nothing beyond adding the terms.
+
+Next I'm adding the request to write the brief to a file for the record, and then I'll check the store's format and whether the terms are already present before sending it.
+
+Next I'm checking whether nvim-orch is idle and which pane it's in, before sending anything.
+
+
+Two jobs: send the terms request to `nvim-orch`, and drop the rename worker from the plan. First I'm checking `nvim-orch` can take a prompt, and how the store file is laid out, using counts only so no private term gets printed.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "herdr agent get nvim-orch | jq -c '.result.agent|{name,agent_status,pane_id,workspace_id,cwd,session:.agent_session.value,title:.terminal_title_stripped}'; S=~/.local/share/[redacted:private]/session-redact; echo \"--- store layer files (names, line counts):\"; wc -l $S/*.txt $S/config.toml 2>/dev/null | sed \"s#$HOME#~#\"; echo \"--- format of redact-terms.txt (comment/blank/re:/include lines, counts only):\"; grep -c '^#' $S/redact-terms.txt; grep -c '^re:' $S/redact-terms.txt; grep -c '^include ' $S/redact-terms.txt; echo \"--- are my 4 terms already in the store? (-i -F -x, counts)\"; for t in [redacted:private] [redacted:private] [redacted:private] [redacted:private]; do printf '%s: %s\\n' \"$t\" \"$(grep -ciFx -- \"$t\" $S/redact-terms.txt)\"; done | sed -E 's/^[^:]+/<term>/' | sort | uniq -c; cat [redacted:repo]:.state/rog-orch/private/extra-terms.txt | grep -vc '^#'; cd ~/.local/share/[redacted:private] && git status --short | wc -l | sed 's/^/store: uncommitted files: /'; git log -1 --format='store HEAD %h %ad' --date=short"
+}
+```
+
+**Output:**
+```
+{"name":"nvim-orch","agent_status":"idle","pane_id":"wP:p1","workspace_id":"wP","cwd":"~/.config/nvim","session":"ses_e642425adffeMIf5abGTn7YC65","title":"OC | Orchestrating herdr work sessions fro…"}
+--- store layer files (names, line counts):
+  13 ~/.local/share/[redacted:private]/session-redact/fleet-repos.txt
+   2 ~/.local/share/[redacted:private]/session-redact/github-owners.txt
+   6 ~/.local/share/[redacted:private]/session-redact/identity.txt
+   2 ~/.local/share/[redacted:private]/session-redact/path-aliases.txt
+  19 ~/.local/share/[redacted:private]/session-redact/private-repos.txt
+  97 ~/.local/share/[redacted:private]/session-redact/public-repos.txt
+  15 ~/.local/share/[redacted:private]/session-redact/redact-terms.txt
+   1 ~/.local/share/[redacted:private]/session-redact/config.toml
+ 155 total
+--- format of redact-terms.txt (comment/blank/re:/include lines, counts only):
+3
+8
+0
+--- are my 4 terms already in the store? (-i -F -x, counts)
+      4 <term>: 0
+4
+store: uncommitted files: 0
+store HEAD 2a995bd 2026-11-08
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 19.8s)
+
+_Thinking:_
+The store HEAD has moved to 2a995bd from today, 2026-11-08, replacing f45e92e from yesterday, so someone committed in the meantime, which is fine. There are no terms in the store itself, and the extra-terms file lists four: [redacted:private], [redacted:private], [redacted:private], and [redacted:private], though my line count may have picked up blank lines.
+
+I'm checking whether "[redacted:private]", "[redacted:private]", and "[redacted:private]" really need redacting: [redacted:repo] already gets caught as a repo name, and "[redacted:private]" is a tool [redacted:repo] is studying. [redacted:private] is an SSH host alias, so the global term file is the right place for it rather than the repo list.
+
+I'm going to check whether the redactor is case-insensitive, since that decides how I describe these terms. The four candidates include a host alias and two private names, and the public export let all of them through. Most of the leaks are a single host name, with a few private project and agent names and a task ID alongside it.
+
+I'm deciding how to hand the four terms to nvim-orch so it can add them to the store's global term file, and I'm weighing whether to include the terms directly in the message or point it to the local-only file.
+
+I'm weighing how to ask nvim-orch to add these terms to the store's global term file, and whether to include the raw terms in the message or point it to the local-only file. Including them inline keeps it self-contained, and a later export will redact them anyway. I also need to tell it how to reply, since a dispatch should state a return signal.
+
+Next I'm checking how the redactor handles case, since that determines whether the four terms need exact casing. The maintainer approved this request, so I'll make clear to nvim-orch that it's a request it can adapt to its own conventions, and it may prefer a different layer, though I'm leaning toward the global one because every project benefits. I'll tell it to reply with the commit hash in its pane when done, so I can read the result there rather than prompting me.
+
+
+_Thinking:_
+`nvim-orch` is idle with none of the four terms in its store yet, and it has one new commit, so someone is working there. I'm checking how the redactor matches terms, case and word boundaries, so the request is accurate.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.config/nvim && grep -n -i -E \"IGNORECASE|re\\.I\\b|casefold|\\.lower\\(\\)|word boundar|\\\\\\\\b\" scripts/session_redact.py | head -14 | cut -c1-170; echo ---; grep -n \"def load_terms\\|redact-terms\\|def compile_terms\\|TERM\" scripts/session_redact.py | head -10 | cut -c1-150"
+}
+```
+
+**Output:**
+```
+122:    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),
+123:    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"),
+124:    re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}"),
+125:    re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}"),
+126:    re.compile(r"\bnpm_[A-Za-z0-9]{30,}"),
+127:    re.compile(r"\bhf_[A-Za-z0-9]{30,}"),
+128:    re.compile(r"\bAIza[0-9A-Za-z_-]{35}"),
+129:    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+131:    re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}"),
+132:    re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{20,}"),
+139:USER_HOME = r"/home/(?!(?:linuxbrew|user)\b)[A-Za-z0-9._-]+"
+151:SCOPES_RE = re.compile(r"(Token scopes?:)[ \t]*(?!\[redacted:scopes\])\S.*", re.I)
+157:    r"\bgit@(?!(?:github\.com|gitlab\.com|bitbucket\.org|codeberg\.org)(?![\w.-]))[A-Za-z0-9.-]+"
+500:        for ch in word.lower():
+---
+26:  4. SESSION_REDACT_TERMS_DIR, a directory of list files read as one more
+30:With no global directory, no project file and no SESSION_REDACT_TERMS_DIR,
+43:  redact-terms.txt   one term per line; 're:' prefix = regex;
+109:TERMS_DIR_ENV = "SESSION_REDACT_TERMS_DIR"
+375:    terms_env = os.environ.get(TERMS_DIR_ENV)
+378:        raise ConfigError(f"{TERMS_DIR_ENV}: directory not found: {short(terms_dir)}")
+395:            f"terms directory and no {TERMS_DIR_ENV}"
+514:def compile_terms(literals: list[str], regexes: list[str]) -> re.Pattern[str] | None:
+537:def load_terms(layers: list[Layer]) -> tuple[re.Pattern[str] | None, dict[str, re.Pattern[str]]]:
+546:        terms_file = layer.path / "redact-terms.txt"
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 6.6s)
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.config/nvim && sed -n '490,536p' scripts/session_redact.py | cut -c1-150"
+}
+```
+
+**Output:**
+```
+
+def trie_regex(words: list[str]) -> str:
+    """Regex matching any of the words (case-folded), factored by common prefix.
+
+    A flat alternation of hundreds of words is tried at every position and
+    is about ten times slower on a multi-megabyte transcript.
+    """
+    root: dict = {}
+    for word in words:
+        node = root
+        for ch in word.lower():
+            node = node.setdefault(ch, {})
+        node[""] = {}
+
+    def build(node: dict) -> str:
+        alts = [re.escape(ch) + build(node[ch]) for ch in sorted(k for k in node if k)]
+        joined = "|".join(alts)
+        if "" in node:
+            return "(?:" + joined + ")?" if alts else ""
+        return alts[0] if len(alts) == 1 else "(?:" + joined + ")"
+
+    return build(root)
+
+
+def compile_terms(literals: list[str], regexes: list[str]) -> re.Pattern[str] | None:
+    parts = list(regexes)
+    if literals:
+        parts.insert(0, r"(?<!\w)(?:" + trie_regex(sorted(set(literals))) + r")(?!\w)")
+    return re.compile("|".join(parts), re.I) if parts else None
+
+
+def spell_words(layer: Layer) -> list[str]:
+    words = []
+    for spell in layer.spell_dirs:
+        for add in sorted(spell.glob("*.add")):
+            count = 0
+            for line in read_lines(add):
+                word, _, flags = line.partition("/")
+                word = word.strip()
+                # 'word/!' marks a misspelled word (Vim zw), not a private term.
+                if word and not word.startswith("#") and "!" not in flags:
+                    words.append(word)
+                    count += 1
+            layer.note(layer.label(add), count)
+    return words
+
+
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 165.3s)
+
+_Thinking:_
+I'm checking how the redactor matches literal terms, since it uses word boundaries around them. The hyphen in "[redacted:private]" isn't a word character, so that term should still match as a whole. I'm now looking at whether "[redacted:private]" would be caught inside the ssh command in my transcripts.
+
+I'm checking whether the literal term `[redacted:private]` would catch the branch name "[redacted:private]-spike_[redacted:private]_revue". The underscore before it is a word character, so the word-boundary rule would miss it, which means the scrub I ran earlier with plain substitution was actually the safer approach. That points to a real gap, so I'm thinking the request should suggest a regex entry like `re:[redacted:private]` without boundaries. I want to verify this against the redactor using a test term directory.
+
+I'm going to run a quick test: point the redactor at a temp terms directory containing `[redacted:private]`, feed it a string with the branch name, and see whether the term gets caught inside the underscore-joined identifier.
+
+
+_Thinking:_
+Literal terms are matched with `(?<!\w)…(?!\w)`, which lets a term inside a snake_case identifier slip through since `_` counts as a word character. I'm verifying that with a throwaway terms directory outside the store.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && T=.state/rog-orch/tmp/terms-test && rm -rf $T && install -d -m 0700 $T/lit $T/rx && printf '[redacted:private]\\n[redacted:private]\\n[redacted:private]\\n[redacted:private]\\n' > $T/lit/redact-terms.txt && printf 're:[redacted:private]\\nre:[redacted:private]\\nre:[redacted:private]\\nre:[redacted:private]\\n' > $T/rx/redact-terms.txt && SAMPLE='branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]; ssh [redacted:private]x; [redacted:private]; [redacted:private]-annotate'; for k in lit rx; do echo \"== $k\"; printf '%s\\n' \"$SAMPLE\" | SESSION_REDACT_TERMS_DIR=$PWD/$T/$k python3 ~/.config/nvim/scripts/session_redact.py --profile public; done; rm -rf $T"
+}
+```
+
+**Output:**
+```
+== lit
+branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]; ssh [redacted:private]x; [redacted:private]; [redacted:private]-annotate
+== rx
+branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]; ssh [redacted:private]x; [redacted:private]; [redacted:private]-annotate
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 39.6s)
+
+_Thinking:_
+I've confirmed that literal entries miss `spike_[redacted:private]_revue`, since the underscore counts as a word character, while `re:` entries catch it but also match inside longer words like [redacted:private]x. I'm leaning toward `re:[redacted:private]` for that one, with literals for the rest, and I'm still weighing how [redacted:private] fits in.
+
+Now I'm drafting the request for nvim-orch, with the terms included inline since the repo is private. I'm also flagging the NUL-byte finding as an optional redactor hardening step, and the underscore boundary problem.
+
+Next I'm drafting the message to nvim-orch, listing the four terms with what each one is, the note about how literal entries treat the underscore in the branch name, and a test command to confirm the redaction catches all four.
+
+Next I'm adding two notes for the S18 and [redacted:repo] T-063 work, with no action requested: NUL bytes from `rg -a` over binaries make git and GitHub treat transcripts as binary, so a NUL pass in the redactor would help other consumers. The public profile also left some tool names and the GitHub login, which is fine for my repo but worth checking for theirs. Then I'm asking nvim-orch to add the four entries to the store, commit them as it sees fit, and reply in my pane with the commit hash or the reason it declined.
+
+Next I'm checking that nvim-orch isn't blocked, then sending the message with `herdr agent prompt`. To confirm delivery, I'll count its user messages before and after, since its session is long.
+
+Next I'm checking the approval setup: the project config will prompt before `herdr agent prompt` runs, so the user will need to confirm. Then I'll write the brief file and send it with the file's contents as the message.
+
+
+_Thinking:_
+Literal entries leak `spike_[redacted:private]_revue` because `_` counts as a word character and the `re:` entries catch it. I'm drafting a self-contained request for `nvim-orch` that it can decline or adapt.
+
+
+**Tool: write**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/briefs/request-nvim-orch.md",
+  "content": "From rog-orch (herdr pane wR:p1, repo opencode-readonly-guard, the orchestrator of a week-long run of worker agents) to nvim-orch. This is a REQUEST, not an order: adapt it to your conventions or decline it, and say why. The maintainer asked me to send it.\n\n## Context\nI exported 10 session transcripts of that run into a PUBLIC repository (memory/sessions/, PRs #15 and #16 there) with your redactor: `scripts/session_redact.py --profile public`, driven by a project file `.session-redact.toml` (settings only). `--check` was green (every category 0), yet my own scan found strings that the private store does not know. They were present in the first pass; I removed them with a local scrub step.\n\n## Terms to add (global layer: <store>/session-redact/redact-terms.txt; none of the four is in it today)\n- [redacted:private]       an SSH host name of the maintainer's setup (93 occurrences in one transcript)\n- [redacted:private]      a herdr agent / workspace name of the study agent\n- [redacted:private]  a project name; it also appears inside branch names, for example task/[redacted:private]-spike_[redacted:private]_revue\n- [redacted:private]       a task id of that project\n\n## How to write them (verified with SESSION_REDACT_TERMS_DIR and a test string)\n1. Literal entries are compiled as (?<!\\w)...(?!\\w) and `_` counts as \\w, so a literal `[redacted:private]` does NOT match inside `spike_[redacted:private]_revue`. Write that one as `re:[redacted:private]` (it then also matches inside longer words, which is acceptable for this term). The other three work as literals.\n2. Test after the change, from any repo root:\n   printf 'branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]\\n' | python3 scripts/session_redact.py --profile public\n   All four must come out as [redacted:private].\n\n## Two observations for S18 / [redacted:repo] T-063 (no action requested)\n- Raw strings from binaries (I ran `rg -a` over executables) put NUL bytes into a transcript; git and GitHub then treat the file as binary. I replace them with U+2400 after redaction. A NUL pass in the redactor would help every consumer.\n- The public profile left tool names (chezmoi, nextcloud, insync, obsidian) and the GitHub login alone. That is fine for my repository, where they are already public; check whether it is fine for yours.\n\n## What I ask, and the return signal\nAdd the four entries to the store, commit as you see fit (the store is a git clone, `[redacted:repo]`; I have not touched it), and tell me the result by replying in your own pane with the commit hash, or what you changed instead, or why you declined. I read it with `herdr agent read nvim-orch`: you do not need to prompt me.\n\nThis message contains the raw terms. Once they are in the store, your next export redacts them.\n"
+}
+```
+
+**Output:**
+```
+Wrote file successfully.
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && S=ses_e642425adffeMIf5abGTn7YC65; before=$(sqlite3 -readonly ~/.local/share/opencode/opencode.db \"select count(*) from message where session_id='$S' and json_extract(data,'\\$.role')='user'\"); echo \"nvim-orch user messages before: $before\"; echo \"status: $(herdr agent get nvim-orch | jq -r '.result.agent.agent_status')\"; herdr agent prompt nvim-orch \"$(cat briefs/request-nvim-orch.md)\" 2>&1 | jq -c '.error // (.result.agent|{name,agent_status})'; sleep 12; after=$(sqlite3 -readonly ~/.local/share/opencode/opencode.db \"select count(*) from message where session_id='$S' and json_extract(data,'\\$.role')='user'\"); echo \"nvim-orch user messages after: $after\"; echo \"status now: $(herdr agent get nvim-orch | jq -r '.result.agent.agent_status')\"",
+  "timeout": 90000
+}
+```
+
+**Output:**
+```
+nvim-orch user messages before: 238
+status: idle
+{"name":"nvim-orch","agent_status":"idle"}
+nvim-orch user messages after: 239
+status now: working
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 195.4s)
+
+_Thinking:_
+I've delivered the change (238 to 239) and the agent is running, so next I'm updating the journal and state. The "do not launch rename worker" decision needs to show up in state.md's step 4 launch section and in decision D2, and the rog-rename brief files stay as they are but get marked "not launched, maintainer said no." I'll remove the rog-rename command from state.md and note the decision there. For D2, the only evidence so far is that no worker has run, so I may do a light inventory myself.
+
+I'll change the brief for the roles task so it no longer points at a rename inventory that isn't going to happen, then regenerate its file. It's a small edit, so I'll just do it.
+
+
+Delivered exactly once (238 to 239 user messages) and `nvim-orch` has started on it. Recording the send and the rename decision, then I'll check whether it answers quickly.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && { echo \"- $(date '+%F %T') rog-orch SENT redactor-terms request to nvim-orch (pane wP:p1, session ses_e642425adffeMIf5abGTn7YC65, delivered once, 238->239 user messages): 4 terms for <store>/session-redact/redact-terms.txt, re:[redacted:private] because literal terms use (?<!\\\\w)(?!\\\\w) and _ is \\\\w (verified), NUL-byte observation; return signal = reply in its pane (herdr agent read nvim-orch). Brief: briefs/request-nvim-orch.md\"; echo \"- $(date '+%F %T') rog-orch DECISION (maintainer): do NOT launch the rename worker (rog-rename). D2 (rename) will be decided without an inventory report; brief kept in briefs/step4-rog-rename.md in case he changes his mind\"; } >> journal.md\npython3 - <<'EOF'\np='state.md'\nt=open(p).read()\nold=\"bin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md        # optional (rename inventory): ask the maintainer\\n\"\nassert old in t\nt=t.replace(old,\"# rename inventory worker: NOT launched (maintainer decision 2026-11-08). Brief kept: briefs/step4-rog-rename.md. D2 is decided without it.\\n\")\nt=t.replace(\"Goal: three read-only RESEARCH workers in parallel\",\"Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; the rename worker was declined)\")\nt=t.replace(\"`bin/watch rog-redact rog-roles\\n[rog-rename]`\",\"`bin/watch rog-redact rog-roles`\")\nt=t.replace(\"- Promote the private extra terms (`private/extra-terms.txt`: one host name, two private project names) into the fleet redactor's\\n  store `session-redact/redact-terms.txt`: owner below.\",\"- Promote the private extra terms into the fleet redactor's store: REQUEST SENT to nvim-orch on 2026-11-08 (briefs/request-nvim-orch.md).\\n  Answer expected in nvim-orch's pane (`herdr agent read nvim-orch`); when the store has them, empty `private/extra-terms.txt` (keep it as a safety net)\\n  and re-run the export check. Owner chain below.\")\nt=t.replace(\"Roadmap (maintainer's order)\",\"Roadmap (maintainer's order)\")\nt=t.replace(\"(read the reports\",\"(read the reports\")\nopen(p,'w').write(t)\np='notes/step4-decision-skeleton.md'\nt=open(p).read()\nt=t.replace(\"| D2 | Name | keep; rename now (before the first npm publish); rename later | rog-rename report (blast radius, availability, migration) | decide BEFORE step 5; rename cost is lowest now |\",\"| D2 | Name | keep; rename now (before the first npm publish); rename later | NO inventory worker (maintainer declined 2026-11-08); I can do a light inventory (grep counts + `npm view`/`gh search` for candidates) myself on request | decide BEFORE step 5; rename cost is lowest now |\")\nt=t.replace(\"(read them in the workers' worktrees\",\"(read them in the workers' worktrees\")\nt=t.replace(\"from the reports of rog-redact, rog-roles, rog-rename)\",\"from the reports of rog-redact and rog-roles; no rename worker)\")\nt=t.replace(\"`.state/rog-rename/report.md`\\n\",\"\")\nopen(p,'w').write(t)\np='briefs/step4-task-roles.md'\nt=open(p).read()\nt=t.replace(\"(the rename inventory is a separate task)\",\"(a rename inventory is NOT part of your task)\")\nopen(p,'w').write(t)\nEOF\nbin/make-brief.sh rog-roles research/roles briefs/step4-task-roles.md >/dev/null && grep -c \"NOT part of your task\" briefs/step4-rog-roles.md; grep -n \"rename\" state.md | cut -c1-150"
+}
+```
+
+**Output:**
+```
+1
+16:  The herdr name is cleared when the opencode session restarts: `herdr agent rename wR:p1 rog-orch`.
+27:5. Release: after the rename decision (D2).
+35:- Redaction layer feasibility (D3), role model / scope (D1), rename (D2), tools' home (D5), notes promotion (D6), TODO triage (D7), release (D8).
+60:| `deploy-main.sh [--dry-run] [--skip-integration]` | scratch build + tests of origin/main, spot-checks, ff-pull, 2-rename dist swap, rollback, `do
+79:Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; the rename worker was declined) (no PRs; each writes `.state/<name>/report
+89:# rename inventory worker: NOT launched (maintainer decision 2026-11-08). Brief kept: briefs/step4-rog-rename.md. D2 is decided without it.
+105:2. Read this file; `herdr agent rename wR:p1 rog-orch`; `git -C [redacted:repo] config --get core.worktree` (must be empty).
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "timeout 200 herdr agent wait nvim-orch --until idle --until blocked --until done --timeout 180000 2>&1 | jq -c '.result.agent|{agent_status}' 2>/dev/null || echo \"still working or timed out\"; herdr agent get nvim-orch | jq -c '.result.agent|{agent_status}'",
+  "timeout": 200000
+}
+```
+
+**Output:**
+```
+{"agent_status":"done"}
+{"agent_status":"done"}
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 5.9s)
+
+`nvim-orch` has finished its turn. Reading its answer, and then verifying the store myself instead of taking its word for it.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "herdr agent read nvim-orch --lines 60 2>&1 | sed 's/[[:space:]]*[█▄▀]*$//' | grep -v '^\\s*$' | grep -v '^  ┃\\s*$' | tail -30 | cut -c1-200"
+}
+```
+
+**Output:**
+```
+     the private profile and once the repo goes public, for S14's privacy review to decide.
+     Reply to rog-orch: I added all four terms, unchanged, to the global layer of the store. Commit 3c2927b in [redacted:repo] is pushed; the store
+     had no other changes and matched its remote before and after.
+     - What I added: session-redact/redact-terms.txt gets [redacted:private], [redacted:private] and [redacted:private] as literals and re:[redacted:private] as a regex, under a two-line
+       comment naming you as the source.
+     - Your test: run from ~/.config/nvim, all four strings come out as [redacted:private], with --profile public and with this repository's private
+       profile. The redactor's unit tests pass.
+     - A gap these entries still have: the three literals aren't redacted right after a literal \n, \t or \r. That happens at the start of a line
+       inside tool input in an export. The redactor's literal pattern needs a non-word character before the term, and the n is a word character.
+       Session S22 is working on this now. re:[redacted:private] has no boundary, so it isn't affected.
+     - Not added, your call: our transcripts also contain T-315 without the a, in file names such as T-315-spike_[redacted:private]_…. The regex hides the
+       project name in them, but the bare id stays.
+     - Your two observations:
+       - NUL bytes: one of our transcripts has 2 (S11 adopt-avante-extra, line 18953). Git only looks for them in the first 8000 bytes, so it still
+         treats that file as text.
+       - Tool names: our private profile also leaves chezmoi, obsidian, nextcloud and insync readable. S14 reviews that before this repository goes
+         public.
+     For you (the user):
+     - Our transcripts: this global change makes --check memory/sessions/*.md fail on 18 of 33 files here, with 783 hits; it was 1 hit before. They
+       are almost all the project name and task id, from [redacted:repo] worktree and task names. S14 already re-redacts every transcript, so nothing changes on
+       the roadmap. The transcripts on main keep these strings until then.
+     - chezmoi: the change applies to every project that uses the store, so chezmoi's own check of its transcripts may now find hits too. Its
+       orchestrator doesn't know yet.
+     - Decision, NUL bytes: I could add a step that removes NUL bytes from exports to S22, since S22 is already changing the redactor. I'd raise it
+       when I review S22's plan; otherwise it goes in the Backlog.
+     - S22: its plan agent is still working. Don't press Tab until I've reviewed its plan.
+     ▣  Build · Claude Opus 5.5 · 3m 26s
+  ┃  Build · Claude Opus 5.5 Anthropic · xhigh
+  ╹
+   ~/.config/nvim                                                                                        96.7K (10%) · $143.85  ctrl+p commands
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd ~/.local/share/[redacted:private] && echo \"store log:\"; git log --format='%h %ad %s' --date=format:'%F %H:%M' -3 | cat; echo \"uncommitted: $(git status --short | wc -l)\"; echo \"terms present now (-i -F, per term, no values printed):\"; for t in [redacted:private] [redacted:private] [redacted:private] [redacted:private]; do printf 'term %s: %s lines\\n' \"$(echo $t | sed -E 's/./x/g')\" \"$(grep -ciF -- \"$t\" session-redact/redact-terms.txt)\"; done; echo \"--- verification with the store only (no extra terms dir):\"; cd [redacted:repo] && printf 'branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]; ssh [redacted:private]x\\n' | python3 ~/.config/nvim/scripts/session_redact.py --profile public"
+}
+```
+
+**Output:**
+```
+store log:
+3c2927b 2026-11-08 08:38 chore: add four global redaction terms (rog-orch request)
+2a995bd 2026-11-08 07:30 chore: add three redaction terms and set fleet-names to redact for dotfiles
+f45e92e 2026-11-07 18:01 chore: remove what moved to session-redact/ from nvim/ and dotfiles/
+uncommitted: 0
+terms present now (-i -F, per term, no values printed):
+term xxxxxx: 1 lines
+term xxxxxxx: 1 lines
+term xxxxxxxxxxx: 1 lines
+term xxxxxx: 1 lines
+--- verification with the store only (no extra terms dir):
+branch task/[redacted:private]-spike_[redacted:private]_revue on host [redacted:private] and agent [redacted:private]; ssh [redacted:private]x
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 32.1s)
+
+_Thinking:_
+I've confirmed all four terms are in the store and that commit 3c2927b is pushed, and my test string works against the store alone. nvim-orch flagged side effects: the global change makes the session-memory check fail on 18 of 33 files in nvim's repo (783 hits), which isn't mine to fix but still affects them, and it's handling that. I'm also looking at a detail about the three literals not being redacted right after a literal \n.
+
+I'm checking the redactor's gap with literal escape sequences like "\n" in my exports, which could let terms such as "[redacted:private]" slip through. The scrub in export-sessions.sh uses plain re.sub without boundaries, so the merged transcripts should be covered, and I'll keep that scrub in place until the boundary fix lands.
+
+I'm checking whether bare "T-315" still shows up in the merged transcripts, since I only scrubbed "[redacted:private]" and "[redacted:private]" before. If it does, it would expose a task id, which is low-risk but worth adding to the extra-terms list, though the published transcripts can't easily be pulled back. Next I'll run the redactor check against them with the updated store.
+
+I'm going to run the redactor's `--check` from the repo root against memory/sessions/*.md, to see whether the published transcripts still pass with the extended store.
+
+
+_Thinking:_
+Commit 3c2927b in [redacted:repo] now holds all four terms, and my test string redacts correctly from the store alone. Two side effects were reported, so I'm re-checking my published transcripts against the new terms.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && git config --get core.worktree || echo \"core.worktree (main): unset\"; echo \"== redactor --check of the PUBLISHED transcripts with the extended store:\"; python3 ~/.config/nvim/scripts/session_redact.py --check; echo \"check exit $?\"; echo \"== bare 'T-315' (the id nvim-orch says is not covered) in the published transcripts:\"; grep -c 'T-315' memory/sessions/2*.md | grep -v ':0$' || echo \"none\"; echo \"== literal-escape gap: terms right after a literal \\\\n, \\\\t or \\\\r in the published transcripts:\"; for t in [redacted:private] [redacted:private] [redacted:private] [redacted:private]; do printf '%s: %s\\n' \"$(echo $t | sed -E 's/./x/g')\" \"$(grep -ciE \"\\\\\\\\[ntr]$t\" memory/sessions/2*.md | awk -F: '{s+=$2} END{print s+0}')\"; done"
+}
+```
+
+**Output:**
+```
+core.worktree (main): unset
+== redactor --check of the PUBLISHED transcripts with the extended store:
+profile: public
+secrets: 0
+private terms: 0
+  global: 0
+user identity: 0
+  global: 0
+path aliases: 0
+  global: 0
+fleet absolute paths: 0
+  global: 0
+home paths: 0
+repository names: 0
+credential variable names: 0
+token scope lines: 0
+ip addresses: 0
+email addresses: 0
+git hosts: 0
+check exit 0
+== bare 'T-315' (the id nvim-orch says is not covered) in the published transcripts:
+memory/sessions/202611021627-rog-orch-orchestration.md:10
+memory/sessions/202611021910-rog-rules-allowlist.md:2
+== literal-escape gap: terms right after a literal 
+, 	 or  in the published transcripts:
+xxxxxx: 0
+xxxxxxx: 0
+xxxxxx: 0
+xxxxxxxxxxx: 0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 10.2s)
+
+_Thinking:_
+I'm checking the published transcripts against the extended store, and they come back clean, with zero private terms. The literal-escape gap doesn't touch those files either. What's left is that bare "T-315" shows up 12 times across two files, and I'm not yet sure what it refers to, since I already scrubbed "[redacted:private]" and it could be a partial match.
+
+I'm now weighing whether the bare "T-315" matches are a real leak. It could be a task ID from the private project, or just a number in a listing or my own notes. Since the published files are already in main, I'm leaning toward reporting it as residual risk for the maintainer to decide on rather than rewriting history.
+
+
+_Thinking:_
+The published transcripts pass `--check` with the extended store and show no escape-sequence gap. The bare id `T-315`, which nvim-orch flagged, does appear 12 times across two published files, and I'm checking what it refers to.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:memory/sessions && grep -ohE '.{0,22}T-315.{0,22}' 202611021627-rog-orch-orchestration.md 202611021910-rog-rules-allowlist.md | sed -E 's/[0-9a-f]{7,}/<hash>/g' | sort | uniq -c | sort -rn | head -12; echo \"--- other [redacted:repo]-looking task ids (T-NNN / T-NNNa) in published transcripts, distinct, excluding the repo's own PR-free text:\"; grep -ohE '\\bT-[0-9]{2,4}[a-z]?\\b' 2*.md | sort | uniq -c | sort -rn | head -8"
+}
+```
+
+**Output:**
+```
+      2 t ajout : config.toml.T-315.bak.
+      2 llee.md project/tasks/T-315-[redacted:private]_re
+      1 ------------\n\n# --- T-315"
+      1 _name = true\n\n# --- T-315",
+      1 k convention from the T-315 spike:
+      1 following the earlier T-315 convention. That make
+      1 d the [redacted:repo] T-315 spike shares this fil
+      1 7: # --- T-315 (spike [redacted:priv
+      1 7-# --- T-315 (spike [redacted:priv
+      1 69: # --- fin du bloc T-315 ---------------------
+--- other [redacted:repo]-looking task ids (T-NNN / T-NNNa) in published transcripts, distinct, excluding the repo's own PR-free text:
+     14 T-314
+     12 T-315
+      8 T-065
+      7 T-009
+      5 T-319
+      4 T-008
+      3 T-279a
+      3 T-105
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 16.0s)
+
+_Thinking:_
+The bare task IDs are just numbers from the [redacted:repo] and [redacted:repo] repos, showing up in tabs and config comments, and the project name was only redacted where it sat next to them. On their own they reveal little, and the redactor's public profile doesn't count them as private, so I'll flag them as a minor residual and leave the decision to the maintainer rather than changing anything in the
+
+I'm wrapping up by updating the journal and state.md, and I'm leaving `private/extra-terms.txt` in place as a safety net, since the store's literals have a boundary gap my scrub doesn't cover. I'll also note the side effects: nvim-orch reports the global change makes nvim's own --check fail on 18 of 33 files, and chezmoi's orchestrator doesn't know about it yet. Its plan agent is still working, so the user shouldn't press Tab until nvim-orch has reviewed the plan.
+
+
+_Thinking:_
+Residual task numbers (T-314, T-315, T-319 and others) from private repo tab names and config comments are low-sensitivity, since the project names are redacted and they're already in main, so I'll flag them rather than act. I'm recording everything in the state files.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && { echo \"- $(date '+%F %T') rog-orch nvim-orch ANSWERED: all four terms added to <store>/session-redact/redact-terms.txt (three literals + re:[redacted:private]), commit 3c2927b in [redacted:repo], pushed. Verified by me: test string redacts with the store alone; --check of the 10 published transcripts exits 0 with the extended store\"; echo \"- $(date '+%F %T') rog-orch nvim-orch side effects reported: global change makes nvim's own --check fail on 18/33 files (783 hits; its S14 re-redacts them); chezmoi's check may find hits too (its orchestrator does not know yet); literals are not redacted right after a literal \\\\n \\\\t \\\\r (S22 is fixing the boundary); NUL step may go into S22\"; echo \"- $(date '+%F %T') rog-orch residual in PUBLISHED transcripts (main): bare [redacted:repo]/[redacted:repo] task numbers (T-314 x14, T-315 x12, T-065 x8, T-319 x5 ...) from tab names and config comments; project names beside them are redacted; not acted on, maintainer informed\"; } >> journal.md\npython3 - <<'EOF'\np='state.md'\nt=open(p).read()\nt=t.replace(\"- Promote the private extra terms into the fleet redactor's store: REQUEST SENT to nvim-orch on 2026-11-08 (briefs/request-nvim-orch.md).\\n  Answer expected in nvim-orch's pane (`herdr agent read nvim-orch`); when the store has them, empty `private/extra-terms.txt` (keep it as a safety net)\\n  and re-run the export check. Owner chain below.\",\n\"- Private extra terms: DONE 2026-11-08, nvim-orch added them to the store (commit 3c2927b in [redacted:repo]). KEEP `private/extra-terms.txt` and the scrub in\\n  `bin/export-sessions.sh` anyway: the store's literal terms need a non-word character before them, so they miss `\\\\n[redacted:private]`-style positions until nvim's\\n  session S22 fixes the boundary (my scrub has no boundaries). Re-run `python3 ~/.config/nvim/scripts/session_redact.py --check` in this repo after S22.\\n- Residual in the PUBLISHED transcripts: bare [redacted:repo]/[redacted:repo] task numbers (T-314, T-315, T-065, T-319 ...) from tab names and config comments; the project names\\n  next to them are redacted. Low sensitivity, already in main; add `re:\\\\bT-3(14|15|19)\\\\b`-style terms to `private/extra-terms.txt` for FUTURE exports only if the maintainer wants.\\n- Side effects of the store change, reported by nvim-orch: nvim's own `--check` now fails on 18 of 33 files (its S14 re-redacts); chezmoi's check may find hits\\n  (workspace wN's orchestrator does not know). The maintainer was told.\")\nt=t.replace(\"## Now (updated 2026-11-08, after #16)\",\"## Now (updated 2026-11-08, after the nvim-orch request)\")\nt=t.replace(\"- Nothing is waiting on the maintainer except the decisions listed below.\",\"- The redactor-terms request to nvim-orch is ANSWERED and verified (see below). The rename worker is declined. Nothing is waiting on the maintainer except the decisions listed below.\")\nt=t.replace(\"## Next actions\\n1. (maintainer) compacts this session.\",\"## Next actions\\n1. (maintainer) compacts this session. (nvim-orch asked him not to press Tab in its S22 plan agent until it has reviewed that plan.)\")\nopen(p,'w').write(t)\nEOF\ngrep -n \"ANSWERED\\|3c2927b\\|KEEP .private\" state.md | cut -c1-140; cd [redacted:repo] && git config --get core.worktree || echo \"core.worktree (main): unset\"; git status --short | wc -l"
+}
+```
+
+**Output:**
+```
+12:- The redactor-terms request to nvim-orch is ANSWERED and verified (see below). The rename worker is declined. Nothing is waiting on the 
+36:- Private extra terms: DONE 2026-11-08, nvim-orch added them to the store (commit 3c2927b in [redacted:repo]). KEEP `private/extra-terms
+core.worktree (main): unset
+0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 9.5s)
+
+`nvim-orch` has added the four terms to the redactor's store, and I'm not launching the rename worker.
+
+**The request**
+- **Delivery:** I sent it once to `nvim-orch`. Its user messages went from 238 to 239.
+- **Result:** it added the terms to `session-redact/redact-terms.txt` as commit `3c2927b` in `[redacted:repo]`, pushed. Three are literals and one is `re:[redacted:private]`.
+- **Why `[redacted:private]` is a regex:** I found that literal terms are matched with `(?<!\w)…(?!\w)` and `_` counts as a word character. A literal `[redacted:private]` would leak inside a branch name like `spike_[redacted:private]_revue`. I verified that on a test string and put it in the request.
+- **My check:** the test string redacts correctly using the store alone. `--check` on the 10 published transcripts exits 0 with the extended store.
+
+**Side effects `nvim-orch` reported**
+- **nvim's transcripts:** the global change makes nvim's own `--check` fail on 18 of 33 of its files (783 hits), almost all project names and task ids from [redacted:repo] worktrees. Its S14 session re-redacts them, so its roadmap doesn't change.
+- **chezmoi:** its check of its own transcripts may now find hits too, and its orchestrator doesn't know yet. You may want to tell the chezmoi session in workspace `wN`.
+- **Remaining gap:** the three literals are not redacted right after a literal `\n`, `\t` or `\r`. Its session S22 is fixing that. My export scrub has no word boundaries, so I'm keeping it and `private/extra-terms.txt` as a safety net until then. None of the 10 published transcripts has the gap.
+- **NUL bytes:** it may add a NUL-removal step to S22.
+- **Your note:** `nvim-orch` asked you not to press Tab in S22's plan agent until it has reviewed that plan.
+
+**Residual in the published transcripts**
+- Bare [redacted:repo]/[redacted:repo] task numbers remain: `T-314` ×14, `T-315` ×12, `T-065` ×8, `T-319` ×5 and a few others.
+- They come from tab names and config comments. The project names beside them are redacted, so I rate them low-sensitivity.
+- They are already in `main`, so I haven't touched them. I can add them to the scrub for future exports if you want.
+
+**Rename worker**
+- `rog-rename` is not launched. I removed it from the step 4 plan, marked D2 as decided without an inventory, and kept the brief in case you change your mind.
+- I can also do a light rename inventory myself later: grep counts plus `npm view` and `gh search` for candidates.
+
+`state.md` and `journal.md` are updated, `main` is clean at cb8fd46 and `core.worktree` is unset. Still unanswered: whether `[redacted:envvar]` is rotated. After you compact, step 4 starts from `state.md`, with `rog-redact` and `rog-roles` only.
+
+---
+
+## User
+
+restate step 4 plan,
+explicit D2 as decided without an inventory
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 21.4s)
+
+_Thinking:_
+I'm working out whether to just restate the step 4 plan in text or also update the state and decision files so D2 reads as decided without an inventory. I'm now in build mode, so I'll weigh how explicit the file changes need to be against simply restating it.
+
+Since the decision on D2 is settled only as a method, I'll make that explicit in the skeleton and the state file. I'm reading both files now so the wording matches what's actually there.
+
+
+I'm reading the current plan files first so the restatement matches what is on disk, then I'll make D2 explicit in them.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && sed -n '/^## Step 4 launch/,/^## Pitfalls/p' state.md; echo ======; rtk read notes/step4-decision-skeleton.md; echo ======; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\""
+}
+```
+
+**Output:**
+```
+## Step 4 launch (after compaction)
+Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; the rename worker was declined) (no PRs; each writes `.state/<name>/report.md`), then I write the decision document
+(`notes/step4-decision-skeleton.md` -> D1..D8), the maintainer decides in one sitting, then a `rog-triage` worker applies the TODO/README triage.
+Reports are read in the workers' worktrees (`[redacted:worktrees_root]/rog-*/.state/<name>/report.md`) until retired. Cost so far: workers cost $10-75 each.
+```
+cd [redacted:repo]:.state/rog-orch
+bin/launch-worker.sh --input notes/step4-inputs.md --input ~/.config/nvim/scripts/session_redact.py \
+    rog-redact research/redaction briefs/step4-rog-redact.md
+bin/launch-worker.sh --input journal.md --input bin/watch --input bin/lib-once.sh --input bin/stages.mjs --input bin/once \
+    --input bin/deploy-main.sh --input notes/signal-notes.md --input notes/step4-inputs.md --input briefs/rog-memory.md \
+    rog-roles research/roles briefs/step4-rog-roles.md
+# rename inventory worker: NOT launched (maintainer decision 2026-11-08). Brief kept: briefs/step4-rog-rename.md. D2 is decided without it.
+```
+Each worker first replies with a PLAN and waits for my "go" (send it with `herdr agent prompt <name> "..."`). Run `bin/watch rog-redact rog-roles` to answer prompts (it stops on anything not vetted: read it, then `bin/once`). The redaction worker builds a mock OpenAI-compatible
+provider in its sandbox (opencode fetches the adapter into the sandbox cache: expected). Retire each with `bin/retire-worker.sh <name>` after
+its report is read and the maintainer has what he needs from it.
+
+## Pitfalls
+zsh:1: ===== not found
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 2.9s)
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/notes/step4-decision-skeleton.md"
+}
+```
+
+**Output:**
+```
+<path>[redacted:repo]:.state/rog-orch/notes/step4-decision-skeleton.md</path>
+<type>file</type>
+<content>
+1: # Step 4 decision document (skeleton; fill from the reports of rog-redact and rog-roles; no rename worker)
+2: 
+3: Status: NOT STARTED. Reports land in `.state/rog-redact/report.md`, `.state/rog-roles/report.md`, (read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`).
+4: Format of the final document: one page per decision, options with cost, my recommendation, the evidence line, the maintainer's choice.
+5: 
+6: | # | Decision | Options (initial) | Evidence needed | My provisional lean |
+7: |---|---|---|---|---|
+8: | D1 | Vision and scope: what is the project? | (a) read-only guard only; (b) read-only guard + worker/orchestrator/deployer roles as presets; (c) a role-based policy tool | rog-roles report (role model, MVP slice, expressibility on 1.x) | (b) as the first step, named for (c) if the rename is cheap |
+9: | D2 | Name | keep; rename now (before the first npm publish); rename later | NO inventory worker (maintainer declined 2026-11-08); I can do a light inventory (grep counts + `npm view`/`gh search` for candidates) myself on request | decide BEFORE step 5; rename cost is lowest now |
+10: | D3 | Redaction layer | build in the plugin (which hooks, which scope); wait for 2.x; do not build | rog-redact report (H1..H4 verified?) | build only the hooks proven to change the stored AND sent data; value-based first |
+11: | D4 | `env` and `printenv *` on the shared allowlist | keep; move back to ask now (small PR); decide after D3 | rog-redact R7 | move back to ask now: cheap, and D3 may take weeks |
+12: | D5 | Where the orchestration tools live (watch, once, lib-once, stages, deploy-main, launch/retire-worker, export-sessions, box, tally) | stay in `.state/` (private, unversioned); a separate private repo; a `tools/` directory here | maintainer taste; the tools hold machine paths | a small private repo or this repo's `tools/` after de-personalising paths |
+13: | D6 | Curated notes (signal-notes, step4-inputs, decisions) | stay in `.state/`; promote the generic ones to committed memory (`memory/notes/`) redacted | D1/D2 | promote after the signal to the fleet |
+14: | D7 | TODO triage | one pass applying D1..D6: prune done/obsolete, regroup by priority and by release | decisions D1..D6 | a worker `rog-triage` applies it as one PR after the decisions |
+15: | D8 | Release (step 5) | v0.1.0 as is; v0.2.0 with the new rules, doctor and fail-closed; wait for roles | D1, D2 | v0.2.0 after D2 |
+16: 
+17: Process after the reports: I write the document; the maintainer decides D1..D8 in one sitting; then launch `rog-triage` (brief to
+18: write from the decisions), the small `env`/`printenv` PR if D4 says so, and the release workstream.
+
+(End of file - total 18 lines)
+</content>
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 15.2s)
+
+_Thinking:_
+I'm making D2 explicit in both files, and I need to pin down what "D2 as decided without an inventory" means. I'll read it as: the method for D2 is settled, with no inventory report and no worker, so the maintainer picks the name directly from what's already known. The name itself stays open, and I'll say that clearly.
+
+I'm now looking at what's already known for D2 so it can be decided without an inventory: nobody has installed from npm yet, the maintainer's global config loads the checkout by path, and the rename cost is already known at category level (package, CLI, repo, store files, env vars, slash command, file path, alias). Memory and past transcripts stay as history. I'll note that D1 and D8 depend on this, then update the skeleton's D2 row and state.md with the restated plan.
+
+
+Making D2 explicit in both files: the method is settled (no inventory, no worker), and the name itself stays open for you.
+**Tool: edit**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/notes/step4-decision-skeleton.md",
+  "oldString": "| D2 | Name | keep; rename now (before the first npm publish); rename later | NO inventory worker (maintainer declined 2026-11-08); I can do a light inventory (grep counts + `npm view`/`gh search` for candidates) myself on request | decide BEFORE step 5; rename cost is lowest now |",
+  "newString": "| D2 | Name | keep; rename now (before the first npm publish); rename later | NONE BY DECISION: the maintainer decided on 2026-11-08 that D2 is taken WITHOUT an inventory (no `rog-rename` worker, no report). Settled: the method. Open: the name itself. | decide BEFORE step 5; rename cost is lowest now |"
+}
+```
+
+**Output:**
+```
+Edit applied successfully.
+```
+
+**Tool: edit**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/notes/step4-decision-skeleton.md",
+  "oldString": "Status: NOT STARTED. Reports land in `.state/rog-redact/report.md`, `.state/rog-roles/report.md`, (read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`).",
+  "newString": "Status: NOT STARTED. Reports land in `.state/rog-redact/report.md` and `.state/rog-roles/report.md` (read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`). There is no third report: D2 has none by decision."
+}
+```
+
+**Output:**
+```
+Edit applied successfully.
+```
+
+**Tool: edit**
+
+**Input:**
+```json
+{
+  "filePath": "[redacted:repo]:.state/rog-orch/notes/step4-decision-skeleton.md",
+  "oldString": "Process after the reports: I write the document;",
+  "newString": "## D2 without an inventory: what it means\n- Settled (maintainer, 2026-11-08): no rename inventory is produced. No worker, no report, no availability sweep of candidate names.\n- Not settled: the name. D2 is still one of the eight decisions you take in the sitting; you take it from what is already known:\n  - nothing is published on npm yet (so nobody depends on the name), and the rename cost is lowest now and grows after the first publish;\n  - the name touches, by category: the package and its `bin`, the plugin id, the CLI, the `/guard-review` command and the `readonly_guard_*` tool ids,\n    the store file and log directory, the `READONLY_GUARD_*` variables, the docs, the GitHub repository URL, `package.json`/`renovate.json`/CI, and your\n    own global opencode entry (a `file://` path to this checkout);\n  - the published transcripts in `memory/sessions/` are history and keep the old name whatever you choose;\n  - D1 (scope) and D8 (release) depend on it: if D1 is (c), \"readonly\" misleads; D8 waits for D2.\n- Consequence for me: the decision document gives D2 half a page (options, the categories above, my lean) and no evidence line. If you change your mind later,\n  the brief is kept in `briefs/step4-rog-rename.md`, or I can do a light inventory myself (grep counts, `npm view` / `gh search` for a few candidates).\n\nProcess after the reports: I write the document;"
+}
+```
+
+**Output:**
+```
+Edit applied successfully.
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 6.5s)
+
+Now the same in `state.md`, so the post-compaction restart reads it identically, and a journal line.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && python3 - <<'EOF'\np='state.md'\nt=open(p).read()\nold=\"# rename inventory worker: NOT launched (maintainer decision 2026-11-08). Brief kept: briefs/step4-rog-rename.md. D2 is decided without it.\"\nnew=\"# NO rename worker, NO inventory (maintainer decision 2026-11-08): D2 is taken without an inventory. The METHOD is settled, the NAME is still open (D2).\\n# Brief kept in case he changes his mind: briefs/step4-rog-rename.md.\"\nassert old in t\nt=t.replace(old,new,1)\nold2=\"Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; the rename worker was declined) (no PRs; each writes `.state/<name>/report.md`), then I write the decision document\"\nnew2=\"Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; no PRs; each writes `.state/<name>/report.md`), then I write the decision document\"\nassert old2 in t\nt=t.replace(old2,new2,1)\nopen(p,'w').write(t)\nEOF\necho \"- $(date '+%F %T') rog-orch maintainer asked to restate step 4 with D2 explicit: D2 (name) is taken WITHOUT an inventory (method settled, name open); skeleton and state.md updated; D2 gets half a page and no evidence line in the decision document\" >> journal.md\ngrep -n \"D2\" state.md notes/step4-decision-skeleton.md | cut -c1-170; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\""
+}
+```
+
+**Output:**
+```
+state.md:27:5. Release: after the rename decision (D2).
+state.md:35:- Redaction layer feasibility (D3), role model / scope (D1), rename (D2), tools' home (D5), notes promotion (D6), TODO triage (D7), release (D8).
+state.md:93:# NO rename worker, NO inventory (maintainer decision 2026-11-08): D2 is taken without an inventory. The METHOD is settled, the NAME is still open (D2).
+notes/step4-decision-skeleton.md:3:Status: NOT STARTED. Reports land in `.state/rog-redact/report.md` and `.state/rog-roles/report.md` (read them in the workers' worktree
+notes/step4-decision-skeleton.md:9:| D2 | Name | keep; rename now (before the first npm publish); rename later | NONE BY DECISION: the maintainer decided on 2026-11-08 th
+notes/step4-decision-skeleton.md:13:| D6 | Curated notes (signal-notes, step4-inputs, decisions) | stay in `.state/`; promote the generic ones to committed memory (`memor
+notes/step4-decision-skeleton.md:15:| D8 | Release (step 5) | v0.1.0 as is; v0.2.0 with the new rules, doctor and fail-closed; wait for roles | D1, D2 | v0.2.0 after D2 |
+notes/step4-decision-skeleton.md:17:## D2 without an inventory: what it means
+notes/step4-decision-skeleton.md:19:- Not settled: the name. D2 is still one of the eight decisions you take in the sitting; you take it from what is already known:
+notes/step4-decision-skeleton.md:25:  - D1 (scope) and D8 (release) depend on it: if D1 is (c), "readonly" misleads; D8 waits for D2.
+notes/step4-decision-skeleton.md:26:- Consequence for me: the decision document gives D2 half a page (options, the categories above, my lean) and no evidence line. If you
+core.worktree (main): unset
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 12.6s)
+
+# Step 4 plan
+
+D2 is the one item I made explicit. I read your instruction as settling the method, so D2 is taken without an inventory. The name itself is still your call. If you meant the name is already decided, tell me which one.
+
+Step 4 is the vision, scope and TODO triage. No code or PR changes until you decide.
+
+## What runs
+**Two read-only research workers in parallel.** Neither opens a PR. Each writes `.state/<name>/report.md` and starts by posting a plan and waiting for my "go".
+
+| Worker | Question | Method | Feeds |
+|---|---|---|---|
+| `rog-redact` | Can the plugin keep secrets out of what the model sees and what the session stores? | Tests four hypotheses about the hooks `tool.execute.after`, `messages.transform`, `shell.env` and `text.complete`. It uses a scripted mock OpenAI-compatible provider that records every request body, and fake secrets only. | D3 and D4 |
+| `rog-roles` | What role model sits behind unattended agents: read-only, worker, orchestrator, deployer? | Classifies the roughly 300 permission decisions in the journal. It maps what globs can and can't express, gives three options for the config surface and a smallest first slice, and drafts about 80 test cases. | D1, and part of D7 |
+
+**No rename worker** (see D2 below).
+
+## D1 to D8
+| # | Decision | Evidence | My provisional lean |
+|---|---|---|---|
+| D1 | What is the project? Guard only, guard plus role presets, or a role-based policy tool | `rog-roles` | roles as presets first |
+| **D2** | **The name: keep, rename now, or rename later** | **none, by your decision** | **decide before step 5** |
+| D3 | Redaction layer: build, wait for 2.x, or don't | `rog-redact` | build only the hooks proven to change both the stored and the sent data |
+| D4 | Keep `env` and `printenv *` on the allowlist? | `rog-redact` | move them back to ask now |
+| D5 | Where the orchestration tools live | your taste | a small private repo or a `tools/` directory here |
+| D6 | Whether the curated notes become committed memory | D1 and D2 | after the fleet signal |
+| D7 | TODO triage | D1 to D6 | a `rog-triage` worker applies it as one PR |
+| D8 | Release: v0.1.0, v0.2.0 or wait | D1 and D2 | v0.2.0, after D2 |
+
+## D2 without an inventory
+- **Settled:** no inventory, no worker, no report and no availability check of candidate names.
+- **Open:** the name. It stays one of the eight decisions you take in the sitting.
+- **What you decide from:**
+  - **Publish status:** nothing is on npm yet, so nobody depends on the name, and renaming is cheapest now.
+  - **What the name touches, by category:**
+    - the package and its `bin`
+    - the plugin id and the CLI
+    - the `/guard-review` command and the `readonly_guard_*` tool ids
+    - the store file and log directory
+    - the `READONLY_GUARD_*` variables
+    - the docs and the GitHub URL
+    - `package.json`, `renovate.json` and CI
+    - your own global opencode entry (a `file://` path to this checkout)
+  - **Published transcripts:** `memory/sessions/` keeps the old name whatever you choose.
+  - **Dependencies:** D1 and D8 depend on it. D8 waits for D2, and under a role-based scope "readonly" would mislead.
+- **My side:** the decision document gives D2 half a page (options, those categories, my lean) and no evidence line.
+- **If you change your mind:** the brief is kept in `briefs/step4-rog-rename.md`, or I can do a light inventory myself (grep counts and a few `npm view` and `gh search` checks).
+
+## Order
+1. After compaction I read `state.md` and re-set the herdr name.
+2. I launch `rog-redact` and `rog-roles` with `bin/launch-worker.sh`, answer their permission prompts with the usual rules, and send each its "go" after reading its plan.
+3. I read both reports and write the decision document.
+4. You decide D1 to D8 in one sitting.
+5. A `rog-triage` worker applies the TODO and README triage as one PR.
+6. If D4 says so, a small `env`/`printenv` PR.
+7. Step 5 (release) follows, then step 6 (re-export, fleet signal).
+
+`state.md`, `notes/step4-decision-skeleton.md` and `journal.md` are updated. `main` is clean at cb8fd46 and `core.worktree` is unset.
+
+---
+
+## User
+
+sorry, I misunderstood, restore D2
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 23.5s)
+
+_Thinking:_
+I need to put back the D2 rename inventory worker, which means restoring the skeleton D2 row, the rog-rename launch command in state.md, the roles brief note I had changed, and the journal entry.
+
+Next I'm checking the state of the plan files, since the restore has to bring back the rename worker with its inventory. Launching it waits until after compaction, so for now I'm only putting the files back as they were before.
+
+
+Restoring D2 to its earlier form: the rename inventory worker is back in the plan, as it was before your decision. Checking the files first so I revert exactly what I changed.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && grep -n -i \"rename\" state.md notes/step4-decision-skeleton.md briefs/step4-task-roles.md | cut -c1-190; echo ---; grep -n \"NOT part of your task\\|separate task\" briefs/step4-rog-roles.md briefs/step4-task-roles.md | cut -c1-160; echo ---; grep -n \"rename\\|D2\" journal.md | tail -6 | cut -c1-200"
+}
+```
+
+**Output:**
+```
+state.md:12:- The redactor-terms request to nvim-orch is ANSWERED and verified (see below). The rename worker is declined. Nothing is waiting on the maintainer except the decisions listed be
+state.md:16:  The herdr name is cleared when the opencode session restarts: `herdr agent rename wR:p1 rog-orch`.
+state.md:27:5. Release: after the rename decision (D2).
+state.md:35:- Redaction layer feasibility (D3), role model / scope (D1), rename (D2), tools' home (D5), notes promotion (D6), TODO triage (D7), release (D8).
+state.md:64:| `deploy-main.sh [--dry-run] [--skip-integration]` | scratch build + tests of origin/main, spot-checks, ff-pull, 2-rename dist swap, rollback, `doctor`; run by a throwaway `rog-
+state.md:93:# NO rename worker, NO inventory (maintainer decision 2026-11-08): D2 is taken without an inventory. The METHOD is settled, the NAME is still open (D2).
+state.md:94:# Brief kept in case he changes his mind: briefs/step4-rog-rename.md.
+state.md:110:2. Read this file; `herdr agent rename wR:p1 rog-orch`; `git -C [redacted:repo] config --get core.worktree` (must be empty).
+notes/step4-decision-skeleton.md:1:# Step 4 decision document (skeleton; fill from the reports of rog-redact and rog-roles; no rename worker)
+notes/step4-decision-skeleton.md:8:| D1 | Vision and scope: what is the project? | (a) read-only guard only; (b) read-only guard + worker/orchestrator/deployer roles as presets; (c) a role-b
+notes/step4-decision-skeleton.md:9:| D2 | Name | keep; rename now (before the first npm publish); rename later | NONE BY DECISION: the maintainer decided on 2026-11-08 that D2 is taken WITHO
+notes/step4-decision-skeleton.md:18:- Settled (maintainer, 2026-11-08): no rename inventory is produced. No worker, no report, no availability sweep of candidate names.
+notes/step4-decision-skeleton.md:20:  - nothing is published on npm yet (so nobody depends on the name), and the rename cost is lowest now and grows after the first publish;
+notes/step4-decision-skeleton.md:27:  the brief is kept in `briefs/step4-rog-rename.md`, or I can do a light inventory myself (grep counts, `npm view` / `gh search` for a few candidates).
+briefs/step4-task-roles.md:14:   f. IDENTITY: does the role model change what the project is? Three short candidate framings, with the strings a rename would touch named only by category (a 
+---
+briefs/step4-rog-roles.md:51:   f. IDENTITY: does the role model change what the project is? Three short candidate framings, with the strings a rename would tou
+briefs/step4-task-roles.md:14:   f. IDENTITY: does the role model change what the project is? Three short candidate framings, with the strings a rename would to
+---
+251:- 2026-11-08 07:29:12 rog-orch step 4 launch package ready: briefs step4-rog-{redact,roles,rename}.md (assembled by bin/make-brief.sh), launch dry-runs OK, decision skeleton notes/step4-decision-s
+257:- 2026-11-08 08:35:46 rog-orch DECISION (maintainer): do NOT launch the rename worker (rog-rename). D2 (rename) will be decided without an inventory report; brief kept in briefs/step4-rog-rename.m
+262:- 2026-11-08 09:03:17 rog-orch maintainer asked to restate step 4 with D2 explicit: D2 (name) is taken WITHOUT an inventory (method settled, name open); skeleton and state.md updated; D2 gets half
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 294.8s)
+
+_Thinking:_
+I need to undo two things: my earlier call to skip the rename worker, which the user had explicitly asked for, and my later "D2 explicit" step that I hadn't checked against an inventory. Their "restore D2" could mean bringing back the rename worker, so I should confirm that before changing anything.
+
+I'm checking whether "restore D2" means bringing back the rename worker, since that would reverse the user's earlier explicit instruction not to launch it. D2 had its evidence from the rog-rename report, so without the worker it has nothing to stand on, and I want to confirm the intent before changing anything.
+
+I'm weighing whether restoring D2 means relaunching the rename worker, which would go against the user's earlier instruction. Restoring the D2 row text alone seems safer, keeping the worker unlaunched and marked "ask before launching," since the original state file had it that way.
+
+I'm weighing whether to restore D2 to its earlier state (S0) or the state from 08:35 (S1), since the rename worker's status is what ties the decision to its evidence. Restoring the earlier D2 text while keeping the rename worker unlaunched looks like the more cautious path, so I'm leaning that way.
+
+I'm settling on the restore: D2 goes back to its earlier evidence-backed text, with rog-rename listed as optional and held until he confirms. Nothing has been launched, and his earlier "do not launch rename worker" still stands until he says otherwise, since the D2 evidence depends on that worker.
+
+I'm weighing whether "restore D2" means relaunching the rename worker, which would go against the user's earlier instruction not to launch it. Restoring the D2 row to its earlier evidence-backed text while keeping the worker unlaunched and marked "ask before launching" looks like the safer path. Nothing has been launched, so I can flag the conflict and let the user decide.
+
+I'm now going through what to restore: the three-report setup, the rename-worker launch line in the watch command, and the D2 row text. The step-4 brief also needs its rename-inventory note put back and regenerated for rog-roles. After that I'll add a journal entry recording the restore.
+
+Next I'm dry-running the step-4 rename brief again to make sure it still builds after the restore, and then I'll go back to the state file and check the lines I need to change.
+
+
+The `rog-rename` brief is intact. I'll revert my three changes: the skeleton's D2 row and its "without an inventory" section, the `state.md` launch plan, and the one line I added to the roles brief.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && python3 - <<'EOF'\nimport re\n\n# 1. decision skeleton: back to D2 with the inventory as its evidence, remove the \"without an inventory\" section\np='notes/step4-decision-skeleton.md'\nt=open(p).read()\nt=t.replace(\"# Step 4 decision document (skeleton; fill from the reports of rog-redact and rog-roles; no rename worker)\",\n            \"# Step 4 decision document (skeleton; fill from the reports of rog-redact, rog-roles, rog-rename)\")\nt=t.replace(\"Reports land in `.state/rog-redact/report.md` and `.state/rog-roles/report.md` (read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`). There is no third report: D2 has none by decision.\",\n            \"Reports land in `.state/rog-redact/report.md`, `.state/rog-roles/report.md`, `.state/rog-rename/report.md` (read them in the workers' worktrees `[redacted:worktrees_root]/rog-*/.state/...` until they are retired, then in the main checkout's `.state/`).\")\nrow_start=t.index(\"| D2 |\"); row_end=t.index(\"\\n\", row_start)\nt=t[:row_start]+\"| D2 | Name | keep; rename now (before the first npm publish); rename later | rog-rename report (blast radius, availability, migration) | decide BEFORE step 5; rename cost is lowest now |\"+t[row_end:]\na=t.index(\"## D2 without an inventory: what it means\"); b=t.index(\"Process after the reports: I write the document;\")\nt=t[:a]+t[b:]\nopen(p,'w').write(t)\n\n# 2. state.md\np='state.md'\nt=open(p).read()\nt=t.replace(\" The rename worker is declined. Nothing is waiting\",\" Nothing is waiting\")\nold=\"# NO rename worker, NO inventory (maintainer decision 2026-11-08): D2 is taken without an inventory. The METHOD is settled, the NAME is still open (D2).\\n# Brief kept in case he changes his mind: briefs/step4-rog-rename.md.\\n\"\nnew=\"# D2 RESTORED (maintainer, 2026-11-08: he misunderstood the 'decided without an inventory' wording). D2 is open and its evidence is the rename inventory:\\n# bin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md\\n# His earlier 'do not launch the rename worker' has NOT been lifted explicitly: ASK before launching it (he is deciding whether it runs).\\n\"\nassert old in t\nt=t.replace(old,new,1)\nt=t.replace(\"Goal: two read-only RESEARCH workers in parallel (rog-redact, rog-roles; no PRs; each writes `.state/<name>/report.md`), then I write the decision document\",\n            \"Goal: read-only RESEARCH workers in parallel (rog-redact, rog-roles, and rog-rename once the maintainer says go; no PRs; each writes `.state/<name>/report.md`), then I write the decision document\")\nt=t.replace(\"Run `bin/watch rog-redact rog-roles` to answer prompts\",\"Run `bin/watch rog-redact rog-roles [rog-rename]` to answer prompts\")\nopen(p,'w').write(t)\n\n# 3. roles brief: put back the original sentence and rebuild the assembled brief\np='briefs/step4-task-roles.md'\nt=open(p).read()\nt=t.replace(\"(a rename inventory is NOT part of your task)\",\"(the rename inventory is a separate task)\")\nopen(p,'w').write(t)\nEOF\nbin/make-brief.sh rog-roles research/roles briefs/step4-task-roles.md; grep -c \"separate task\" briefs/step4-rog-roles.md; grep -c \"NOT part of your task\" briefs/step4-rog-roles.md; echo \"--- remaining 'declined/without an inventory/NONE BY DECISION' wording:\"; grep -n -i \"declined\\|without an inventory\\|NONE BY DECISION\\|no rename\" state.md notes/*.md briefs/step4-*.md | cut -c1-150 || true; echo \"(none above = clean)\""
+}
+```
+
+**Output:**
+```
+[redacted:repo]:.state/rog-orch/briefs/step4-rog-roles.md: 53 lines, 8944 bytes
+1
+0
+--- remaining 'declined/without an inventory/NONE BY DECISION' wording:
+state.md:93:# D2 RESTORED (maintainer, 2026-11-08: he misunderstood the 'decided without an inventory' wording). D2 is open and its evidence is the re
+(none above = clean)
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 10.8s)
+
+Re-validating the restored launch command with a dry run, then logging the reversal. The journal is append-only, so its earlier entries stay and a new one records the restore.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && bin/launch-worker.sh --dry-run rog-rename research/rename briefs/step4-rog-rename.md 2>&1 | rtk grep -E \"origin/main|DRY: herdr worktree|DRY: herdr agent prompt\"; echo \"- $(date '+%F %T') rog-orch D2 RESTORED at the maintainer's request (he misunderstood 'decided without an inventory'): skeleton D2 row back to 'evidence: rog-rename report', the 'without an inventory' section removed, state.md back to three research workers, roles brief back to 'the rename inventory is a separate task'. His earlier 'do not launch the rename worker' was NOT explicitly lifted: rog-rename is in the plan but NOT launched; asked him whether to launch it. Earlier journal lines (08:35, 09:03) stay as history.\" >> journal.md; sed -n '9p' notes/step4-decision-skeleton.md | cut -c1-200; sed -n '/^## Step 4 launch/,/^Each worker/p' state.md | tail -8 | cut -c1-210; git -C [redacted:repo] config --get core.worktree || echo \"core.worktree (main): unset\"; git -C [redacted:repo] status --short | wc -l"
+}
+```
+
+**Output:**
+```
+origin/main = cb8fd46; worktree [redacted:worktrees_root]/rog-rename; branch research/rename
+DRY: herdr worktree create --workspace wR --branch research/rename --base origin/main --path [redacted:worktrees_root]/rog-rename --label rog-rename --no-focus
+DRY: herdr agent prompt rog-rename <7143 bytes>; verify; resend up to 4 times
+| D2 | Name | keep; rename now (before the first npm publish); rename later | rog-rename report (blast radius, availability, migration) | decide BEFORE step 5; rename cost is lowest now |
+bin/launch-worker.sh --input journal.md --input bin/watch --input bin/lib-once.sh --input bin/stages.mjs --input bin/once \
+    --input bin/deploy-main.sh --input notes/signal-notes.md --input notes/step4-inputs.md --input briefs/rog-memory.md \
+    rog-roles research/roles briefs/step4-rog-roles.md
+# D2 RESTORED (maintainer, 2026-11-08: he misunderstood the 'decided without an inventory' wording). D2 is open and its evidence is the rename inventory:
+# bin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md
+# His earlier 'do not launch the rename worker' has NOT been lifted explicitly: ASK before launching it (he is deciding whether it runs).
+```
+Each worker first replies with a PLAN and waits for my "go" (send it with `herdr agent prompt <name> "..."`). Run `bin/watch rog-redact rog-roles [rog-rename]` to answer prompts (it stops on anything not vetted
+core.worktree (main): unset
+0
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 7.6s)
+
+D2 is restored to what it was before my rewrite. It is an open decision again, with the rename inventory as its evidence.
+
+**What I changed back**
+- **Decision skeleton:** the D2 row says "rog-rename report (blast radius, availability, migration)" again, with the lean "decide before step 5". I removed the "D2 without an inventory" section I had added, and the skeleton once more expects three reports.
+- **`state.md`:** the plan is back to research workers `rog-redact`, `rog-roles` and `rog-rename`. The launch command for `rog-rename` is there, and `bin/watch` covers all three again.
+- **Roles brief:** it says "the rename inventory is a separate task" again, and I rebuilt the assembled brief.
+- **Check:** a dry run of the `rog-rename` launch works, and `main` is clean with `core.worktree` unset.
+
+The journal is append-only, so the earlier lines (your "do not launch the rename worker" and my "D2 without an inventory") stay as history. A new line records the reversal.
+
+**Your "do not launch rename worker" is still in force.** I read "restore D2" as undoing the "decided without an inventory" framing, not as lifting that instruction. `rog-rename` is in the plan but not launched. Nothing has run.
+
+Do you want `rog-rename` launched with the other two? I'd say yes: without it, D2 has no evidence and you'd decide the name from my short category list alone. If you'd rather keep it unlaunched, D2 stays open and I do the light inventory myself instead (grep counts and a few `npm view` and `gh search` checks).
+
+---
+
+## User
+
+yes
+
+---
+
+## Assistant (Plan · Claude Opus 5.5 · 23.3s)
+
+_Thinking:_
+The user confirmed they want rog-rename launched alongside the other two, but plan mode is read-only, so I can't edit state.md or start anything yet. I'll note the plan: once build mode resumes, I'll launch all three and update state.md to mark rog-rename approved, replacing the "ASK before launching it" line. I'll tell the user this now.
+
+The state file still says "ASK before launching" and would reach a post-compaction me that way, even though the summary may carry the "yes." I'd need to switch out of plan mode briefly to fix that line before compacting. I'll skip any dry run, since `launch-worker --dry-run` runs a `git fetch` that writes refs, so I'll only read state.md.
+
+
+Understood: `rog-rename` launches with the other two. Plan mode is on, so I can't record that or start anything yet. Checking what the state file currently says, since that is what I'll read after compaction.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && grep -n \"rog-rename\\|ASK before\\|D2 RESTORED\" state.md | cut -c1-200; tail -2 journal.md | cut -c1-160"
+}
+```
+
+**Output:**
+```
+83:Goal: read-only RESEARCH workers in parallel (rog-redact, rog-roles, and rog-rename once the maintainer says go; no PRs; each writes `.state/<name>/report.md`), then I write the decision document
+93:# D2 RESTORED (maintainer, 2026-11-08: he misunderstood the 'decided without an inventory' wording). D2 is open and its evidence is the rename inventory:
+94:# bin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md
+95:# His earlier 'do not launch the rename worker' has NOT been lifted explicitly: ASK before launching it (he is deciding whether it runs).
+97:Each worker first replies with a PLAN and waits for my "go" (send it with `herdr agent prompt <name> "..."`). Run `bin/watch rog-redact rog-roles [rog-rename]` to answer prompts (it stops on anythi
+- 2026-11-08 09:03:17 rog-orch maintainer asked to restate step 4 with D2 explicit: D2 (name) is taken WITHOUT an inventory (method settled, name open); skeleto
+- 2026-11-08 09:17:07 rog-orch D2 RESTORED at the maintainer's request (he misunderstood 'decided without an inventory'): skeleton D2 row back to 'evidence: rog
+
+```
+
+
+---
+
+## Assistant (Plan · Claude Opus 5.5 · 11.6s)
+
+Noted: `rog-rename` launches with `rog-redact` and `rog-roles`. Plan mode is on, so I haven't changed or launched anything yet.
+
+The state file is out of date on this point. It still says "ask before launching `rog-rename`", and it's the file I read first after compaction.
+
+**When you switch me to build mode, I'll:**
+1. **Update `state.md`:** replace the "ask before launching" note with "rog-rename approved 2026-11-08", make the step 4 goal three research workers, and add a journal line for your approval.
+2. **If you compact first, then afterwards:** re-set my herdr name and check that `core.worktree` is unset in `main`.
+3. **Launch all three** with `bin/launch-worker.sh`, from `.state/rog-orch/`. Each launch is verified: one brief received, a session id assigned.
+   - `rog-redact` (`research/redaction`), with `step4-inputs.md` and the redactor's script as inputs.
+   - `rog-roles` (`research/roles`), with the journal, the approval helpers, the deploy script, the notes and a sample worker brief as inputs.
+   - `rog-rename` (`research/rename`), with no inputs. Read-only `npm view` and `gh search` checks only.
+4. **Review their plans:** each worker posts a plan and waits. I read all three, send each "go" or corrections, and run `bin/watch` on the three to answer permission prompts under the usual rules.
+5. **Decision document:** I read the three reports and write D1 to D8. D2 gets the rename report as its evidence. You decide in one sitting.
+6. **Retire the workers** with `bin/retire-worker.sh`, then launch the `rog-triage` worker and, if D4 says so, the small `env`/`printenv` PR.
+
+**Before you compact**, one thing to choose:
+- **Recommended:** let me make step 1 first, so the file I restart from matches your decision.
+- **Or** compact now, and I make the correction right after, since the conversation summary will carry your "yes".
+
+---
+
+## User
+
+update state file
+prepare for compaction
+export session and commit
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 41.2s)
+
+_Thinking:_
+Build mode is on now, with three tasks: update the state file for the approved rog-rename, prepare for compaction, and export the session and commit. For the export, I'll do an incremental re-export into memory/sessions from a worktree on its own branch and commit there, and I'm still deciding whether a push or PR is part of "commit."
+
+I'll commit the export on a local branch in a worktree but hold off on pushing or opening a PR, since pushing would make the branch visible in a public repo. For the incremental export, I need to check whether the redacted file keeps the session marker, because `--since auto` depends on finding it in the output directory.
+
+Looking at how the exporter handles incremental runs: the redacted output keeps the session marker, so I can pull the last message ID from the committed file and pass it as an explicit `--since` bound. I still need to read how the incremental file gets named, and check which other sessions remain unexported.
+
+Still working out the session export: the redactor should scrub the nvim-orch request terms, so I'll verify that after the run, and I need the rog-memory session ID from the herdr database.
+
+I'm lining up the remaining exports: the rog-deploy batch 3 session from the main checkout (dated 2026-11-08), and possibly the rog-smoke launch test, which I'd likely skip since it's a throwaway. I'll start the plan by updating the state file and journal, then look up the session IDs for the unexported sessions and check how the exporter handles `--since` and file naming.
+
+I'm settling on where the worktree should live: the old `rog-export` path and branch name are free to reuse, but a fresh branch name avoids clashing with the deleted local one. I'll update the state file at the end, after the export captures the session, and note that the worktree has to stay until the branch is pushed or merged.
+
+Next I'll update state.md to record the approved rog-rename, then run the export, and finish with a final state.md update that includes the export details.
+
+
+Build mode is on. First the state file: the `rog-rename` approval, so the file I restart from matches your decision.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && python3 - <<'EOF'\np='state.md'\nt=open(p).read()\nold=t[t.index(\"# D2 RESTORED\"):t.index(\"```\\nEach worker first replies\")]\nnew=\"\"\"# rog-rename: APPROVED by the maintainer on 2026-11-08 (\"yes\", after D2 was restored). Launch it with the other two:\nbin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md        # no inputs; read-only npm view / gh search only\n\"\"\"\nt=t.replace(old,new,1)\nt=t.replace(\"rog-redact, rog-roles, and rog-rename once the maintainer says go; no PRs;\",\"rog-redact, rog-roles, rog-rename (all three approved 2026-11-08); no PRs;\")\nt=t.replace(\"Run `bin/watch rog-redact rog-roles [rog-rename]`\",\"Run `bin/watch rog-redact rog-roles rog-rename`\")\nopen(p,'w').write(t)\nEOF\nsed -n '/^## Step 4 launch/,/^## Pitfalls/p' state.md | cut -c1-200 | head -24; echo \"- $(date '+%F %T') rog-orch maintainer said YES to launching rog-rename (D2 evidence). All three step 4 research workers (rog-redact, rog-roles, rog-rename) are approved; launch AFTER compaction. state.md updated.\" >> journal.md"
+}
+```
+
+**Output:**
+```
+## Step 4 launch (after compaction)
+Goal: read-only RESEARCH workers in parallel (rog-redact, rog-roles, rog-rename (all three approved 2026-11-08); no PRs; each writes `.state/<name>/report.md`), then I write the decision document
+(`notes/step4-decision-skeleton.md` -> D1..D8), the maintainer decides in one sitting, then a `rog-triage` worker applies the TODO/README triage.
+Reports are read in the workers' worktrees (`[redacted:worktrees_root]/rog-*/.state/<name>/report.md`) until retired. Cost so far: workers cost $10-75 each.
+```
+cd [redacted:repo]:.state/rog-orch
+bin/launch-worker.sh --input notes/step4-inputs.md --input ~/.config/nvim/scripts/session_redact.py \
+    rog-redact research/redaction briefs/step4-rog-redact.md
+bin/launch-worker.sh --input journal.md --input bin/watch --input bin/lib-once.sh --input bin/stages.mjs --input bin/once \
+    --input bin/deploy-main.sh --input notes/signal-notes.md --input notes/step4-inputs.md --input briefs/rog-memory.md \
+    rog-roles research/roles briefs/step4-rog-roles.md
+# rog-rename: APPROVED by the maintainer on 2026-11-08 ("yes", after D2 was restored). Launch it with the other two:
+bin/launch-worker.sh rog-rename research/rename briefs/step4-rog-rename.md        # no inputs; read-only npm view / gh search only
+```
+Each worker first replies with a PLAN and waits for my "go" (send it with `herdr agent prompt <name> "..."`). Run `bin/watch rog-redact rog-roles rog-rename` to answer prompts (it stops on anything no
+provider in its sandbox (opencode fetches the adapter into the sandbox cache: expected). Retire each with `bin/retire-worker.sh <name>` after
+its report is read and the maintainer has what he needs from it.
+
+## Pitfalls
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && git config --get core.worktree || echo \"core.worktree (main): unset\"; rtk git fetch -q origin; rtk git status -sb | head -2; echo \"--- unexported sessions of this run (opencode.db, filtered by directory/time):\"; sqlite3 -readonly ~/.local/share/opencode/opencode.db \"select id, datetime(time_created/1000,'unixepoch'), datetime(time_updated/1000,'unixepoch'), parent_id is not null, directory, title from session where time_created > strftime('%s','2026-11-07 20:00')*1000 and (directory like '%opencode-readonly-guard%' or directory like '%/trees/rog-%') order by time_created\" | sed \"s#$HOME#~#\" | cut -c1-190",
+  "timeout": 60000
+}
+```
+
+**Output:**
+```
+core.worktree (main): unset
+ok fetched
+## main...origin/main
+
+--- unexported sessions of this run (opencode.db, filtered by directory/time):
+ses_e46f92bb8ffetnkHmqHHt1QsM2|2026-11-08 02:39:54|2026-11-08 03:00:19|0|[redacted:repo]|rog-deploy script run and report
+ses_e469c73fbffeLtZ5apuykQ3315|2026-11-08 04:21:11|2026-11-08 05:09:25|0|[redacted:worktrees_root]/rog-memory|Repo memory sessions setup PR
+ses_e463710e6ffeFmwV4qrQ1faPzX|2026-11-08 06:11:55|2026-11-08 06:12:26|0|[redacted:worktrees_root]/rog-smoke|Launch script smoke test
+
+```
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && rtk grep -n -E 'def _incremental|since|SINCE|-since|\\.since|through' scripts/session/export.py | sed -n '1,45p' | cut -c1-190"
+}
+```
+
+**Output:**
+```
+59 matches in 1 files:
+
+54:`--since (auto|MSG_ID)` n'exporte que la partie du transcript à partir d'un m...
+58:`<!-- session-export: through <msg_id> -->` en priorité, dérivation par
+63:inchangé** : sans `--since`, comportement historique (export complet) — le mo...
+65:`milestone:close`/`hotfix:close` l'activent par défaut (`--since auto`), `--f...
+107:[--since (auto|MSG_ID) | --full] [--directory DIR] [--last-warn]
+199:# memory/sessions/** exclu de markdownlint). "through <msg_id>" = dernier mes...
+202:SESSION_EXPORT_MARKER_RE = re.compile(r"^<!-- session-export: through (\S+) -...
+346:incrémentale) et à la dérivation de borne par préfixe (cf. `find_since_index`...
+360:since_index: int = 0,
+366:de borne (T-140, ADR-201 §Export incrémental de session). `since_index` (borne
+370:la base incrémentale) sont résolus par l'appelant (cf. `find_since_index`), p...
+373:`base_path` : miroir exact du marqueur `session-export: through <msg_id>` déjà
+378:(défaut) si aucune base n'a été résolue (export complet, ou `--since MSG_ID` ...
+390:Elle liste les filles de la tranche (`messages[since_index:]`) depuis la donn...
+413:out += f"<!-- session-export: through {messages[-1].id} -->\n"
+417:child_id for child_id, _ordinal in session.collect_child_task_calls(messages,...
+426:out += "".join(texts[since_index:])
+589:def find_since_index(
+657:since_message: str | None = None,
+660:"""Résout `(since_index, base_note, base_path)` d'un export : **seul** résolv...
+667:- `since_message` (`--since MSG_ID` du parent) : borne explicite et inclusive...
+670:- sinon `--since auto` : le plus avancé des exports déjà présents dans `out_d...
+671:`session_id` (`find_since_index`), `exclude` étant le fichier cible à ignorer...
+675:deux annonces `[INFO]` du régime `--since auto` : absence d'antécédent, base ...
+680:if since_message is not None:
+  +34 more in scripts/session/export.py [+34 hidden: rtk recall 4cc06dddc76eb393]
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 5.8s)
+
+_Thinking:_
+I'm checking how the filename changes when --since is used, and whether an incremental export writes to a different file. I'll read the code around lines 360-430 and 650-720, look for where the name is built with the created timestamp, and check the docstring at lines 54-70.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && sed -n '54,100p' scripts/session/export.py | cut -c1-200"
+}
+```
+
+**Output:**
+```
+`--since (auto|MSG_ID)` n'exporte que la partie du transcript à partir d'un message
+donné, borne **inclusive** (le message est réémis complet — il pouvait être en vol,
+donc incomplet, dans l'export antérieur qu'il chaîne). `auto` recherche, dans
+`--out-dir`, l'export existant le plus avancé de la même session (marqueur
+`<!-- session-export: through <msg_id> -->` en priorité, dérivation par
+correspondance de préfixe en repli pour les exports hérités sans marqueur) ; en
+l'absence de tout export antérieur, bascule silencieusement en export complet.
+Chaque export (complet ou incrémental) porte le marqueur de borne — invisible au
+rendu, sans impact sur `mise run lint:md` (`memory/sessions/**` exclu). **Défaut
+inchangé** : sans `--since`, comportement historique (export complet) — le mode
+incrémental est strictement opt-in au niveau de ce script ; `mise run task:close`/
+`milestone:close`/`hotfix:close` l'activent par défaut (`--since auto`), `--full`
+y forçant l'export complet.
+
+Sessions filles (T-246, `DR-003` §Sessions filles) : chaque session fille (sous-agent du
+Task tool) référencée dans la tranche exportée est auto-exportée récursivement, à part,
+avec généalogie bidirectionnelle rendue ; `--no-children` désactive ce mécanisme.
+Nom `{ts_fille}-{coeur}-{segment}.md` (T-249, `DR-003` `2.5.0`) : cœur hérité du premier
+parent de l'export, jamais son slug, donc nom stable d'un export à l'autre ; une fille
+redétectée par la borne inclusive n'est réécrite, dans son propre fichier, que si son rendu
+diffère. Écriture en deux temps : tous les noms (parent et filles) sont attribués et vérifiés
+(unicité, fichier d'une autre session jamais écrasé, budget de la ligne de trailer de 100
+caractères et composant de 255 octets) avant d'écrire le moindre fichier ; un dépassement
+lève une `ExportError`, jamais un export partiel.
+
+Contrôle avant écriture (T-260, `DR-003` `2.7.0`, `CT-005.R14` `1.18.0`) : sous `--attach` et
+sous `--check-trailers`, l'ensemble que `lib.py.session_chain.discover_export_set` détermine
+sur le contenu **planifié** (parent et filles en mémoire, bases et filles de base sur le
+disque) est contrôlé avant d'écrire : longueur de chaque ligne de trailer (100 caractères,
+filles de base comprises) et égalité des filles planifiées avec les filles de la tranche
+découvertes (témoin). Un refus lève une `ExportError`, aucun fichier n'est écrit. Sans
+`--attach` ni `--check-trailers`, aucun contrôle : un export de fin de séance commité à la
+main ne porte pas de trailer. `--check-trailers` n'attache rien : c'est l'option que
+`task:close` et `milestone:close` passent à `session:export`.
+
+Chaque export écrit dans son en-tête la ligne `<!-- session-children: id1, id2 -->` (vide sans
+fille), tirée de la donnée structurée du Task tool : source de la découverte et de la garde
+`check:session-chain`, que le texte du transcript ne peut pas forger (`render_markdown`).
+
+Attache à `HEAD` (T-182, T-196, T-246, `CT-005.R14`) : `--attach` amende le commit `HEAD`
+avec l'export du parent **et** ceux des filles auto-exportées par le même appel (trailers
+`Session-ID:`/`Session-Export:` pour le parent, une paire `Session-Child-ID:`/
+`Session-Child-Export:` par fille), en un seul processus, via `session.attach.attach_exports`.
+Les chemins attachés sont relatifs au répertoire courant (T-247) : à lancer depuis la racine
+du dépôt. `--allow-dirty` tolère du contenu non commité hors des exports ; `--reattach`
+complète un `HEAD` dont le `Session-ID:` est identique (dépend de `--attach`).
+Ce script étant lancé comme script par `.mise/tasks/session/export`, il place lui-même
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 24.1s)
+
+_Thinking:_
+I'm working out how an incremental run would write its output, and whether the file name would clash with the one that already exists. The name would be built from the session's creation time, so it would likely match the existing file.
+
+I'm planning to run the exporter into a scratch directory with --since pointing at the committed file's marker, to see how an incremental output gets named. I'm also checking whether child sessions detected only from the slice get rewritten, and whether the name collides with the existing file.
+
+
+The exporter supports incremental slices (`--since MSG_ID`, inclusive). Checking where my first export ended and what name the slice gets, using a scratch dir.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && M=$(grep -o 'session-export: through [^ ]*' memory/sessions/202611021627-rog-orch-orchestration.md | head -1 | awk '{print $4}'); echo \"first export ended at message: $M\"; T=.state/rog-orch/tmp/inc-test; rm -rf $T; install -d -m 0700 $T; cd [redacted:repo] && time timeout 900 .venv/bin/python scripts/session/export.py ses_e6320a0e1ffexOEYp4Zi3QELSa --slug rog-orch-orchestration --since \"$M\" --out-dir [redacted:repo]:$T 2>&1 | tail -4 | sed -E \"s#$HOME#~#g\"; ls -la [redacted:repo]:$T | awk '{print $5, $9}' | tail -5",
+  "timeout": 900000
+}
+```
+
+**Output:**
+```
+first export ended at message: 
+[INFO] Export fille (écrite) : [redacted:repo]:.state/rog-orch/tmp/inc-test/202611021714-rog-orch-orchestrati-research_herdr_worktree.md (ses_e62f52903ffeTa4xelPxCnylPV)
+[redacted:repo]:.state/rog-orch/tmp/inc-test/202611021627-rog-orch-orchestration.md
+[redacted:repo]:.state/rog-orch/tmp/inc-test/202611021714-rog-orch-orchestrati-research_herdr_worktree.md
+timeout 900 .venv/bin/python scripts/session/export.py  --slug  --since "$M"   20,69s user 2,27s system 150% cpu 15,216 total
+tail -4  0,00s user 0,00s system 0% cpu 15,216 total
+sed -E "s#$HOME#~#g"  0,00s user 0,00s system 0% cpu 15,215 total
+ 
+196 .
+128 ..
+1775891 202611021627-rog-orch-orchestration.md
+141068 202611021714-rog-orch-orchestrati-research_herdr_worktree.md
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 6.9s)
+
+_Thinking:_
+I'm checking whether the marker in the committed file was redacted, since the earlier grep came back empty and that left the since-value blank. That's why the export ran in full at about 1.77 MB. Next I'll look at the head of the committed file to see what the marker actually says.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && head -8 memory/sessions/202611021627-rog-orch-orchestration.md | cut -c1-140; echo ---; rtk grep -c 'session-export' memory/sessions/*orchestration.md; T=.state/rog-orch/tmp/inc-test; head -8 $T/202611021627-rog-orch-orchestration.md | cut -c1-140; echo \"--- last message id in the new raw export:\"; rtk grep -o 'session-export: through [^ ]*' $T/202611021627-rog-orch-orchestration.md; echo \"--- message id at the end of the first export = the last msg_ ... in the committed file?\"; rtk grep -o 'msg_[A-Za-z0-9]*' memory/sessions/202611021627-rog-orch-orchestration.md | tail -1; rtk grep -c 'msg_' memory/sessions/202611021627-rog-orch-orchestration.md"
+}
+```
+
+**Output:**
+```
+# Orchestrating agent setup and plan mode
+**Session ID:** ses_e6320a0e1ffexOEYp4Zi3QELSa
+**Created:** 11/2/2026, 4:27:27 PM
+**Updated:** 11/8/2026, 6:24:46 AM
+<!-- session-export: through msg_1b99dc49100214T5jWYfssgDSU -->
+<!-- session-children: ses_e62f52903ffeTa4xelPxCnylPV -->
+
+---
+---
+3
+# Orchestrating agent setup and plan mode
+**Session ID:** ses_e6320a0e1ffexOEYp4Zi3QELSa
+**Created:** 11/2/2026, 4:27:27 PM
+**Updated:** 11/8/2026, 9:40:30 AM
+<!-- session-export: through msg_1ba50f5b2002EkurtmFx6QKmFU -->
+<!-- session-children: ses_e62f52903ffeTa4xelPxCnylPV -->
+
+---
+--- last message id in the new raw export:
+session-export: through msg_1ba50f5b2002EkurtmFx6QKmFU
+--- message id at the end of the first export = the last msg_ ... in the committed file?
+/usr/bin/grep: .state/rog-orch/tmp/inc-test/202611021627-rog-orch-orchestration.md: binary file matches
+msg_1a1957f1a001KL0JcImgBD0AO2
+4
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 18.2s)
+
+_Thinking:_
+The committed file contains the marker `msg_1b99dc49100214T5jWYfssgDSU`. My earlier grep came back empty because I printed the wrong awk field, so I'm fixing that. The raw file is also showing "binary file matches" because of NUL bytes, which the scrub step will handle.
+
+Checking the incremental slice now: the new raw file is 1.77 MB against 1.54 MB for the first export, so the newer messages since the Nov 8 6:24 AM export look like they're in there. I'm going to run the export with `--since` set to the marker and check what file name it produces, since the chain needs a distinct name.
+
+
+The marker was fine; my `awk` field was wrong. Running the real incremental slice from the committed file's marker.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && T=.state/rog-orch/tmp/inc-test; rm -rf $T; install -d -m 0700 $T; M=$(grep -o 'session-export: through msg_[A-Za-z0-9]*' memory/sessions/202611021627-rog-orch-orchestration.md | head -1 | sed 's/.*through //'); echo \"since $M\"; cd [redacted:repo] && timeout 900 .venv/bin/python scripts/session/export.py ses_e6320a0e1ffexOEYp4Zi3QELSa --slug rog-orch-orchestration --since \"$M\" --out-dir [redacted:repo]:$T 2>&1 | sed -E \"s#$HOME#~#g\" | tail -4; ls -la [redacted:repo]:$T | awk 'NR>3{print $5, $9}'; for f in [redacted:repo]:$T/*.md; do echo \"== $(basename $f): $(grep -c '^## ' $f) sections; first lines:\"; sed -n '1,8p' \"$f\" | cut -c1-110; done",
+  "timeout": 900000
+}
+```
+
+**Output:**
+```
+since msg_1b99dc49100214T5jWYfssgDSU
+[redacted:repo]:.state/rog-orch/tmp/inc-test/202611021627-rog-orch-orchestration.md
+241592 202611021627-rog-orch-orchestration.md
+== 202611021627-rog-orch-orchestration.md: 94 sections; first lines:
+# Orchestrating agent setup and plan mode
+**Session ID:** ses_e6320a0e1ffexOEYp4Zi3QELSa
+**Created:** 11/2/2026, 4:27:27 PM
+**Updated:** 11/8/2026, 9:41:01 AM
+<!-- session-export: through msg_1ba517107002iUCzeQkeVVouzM -->
+<!-- session-children: -->
+
+> **Export incrémental** (T-140) : reprise explicite à partir du message `msg_1b99dc49100214T5jWYfssgDSU` (b
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 8.5s)
+
+_Thinking:_
+I'm working out what to name the slice file, since the 241 KB increment shares its filename with the committed one. I'm weighing a new timestamped name against how [redacted:repo] names its increments, and whether the incremental file is meant to overwrite the existing one.
+
+I'm going to check the naming code for the incremental case, searching for `base_path` and how the incremental file name gets determined, since the exporter wrote the same name here and it would overwrite the existing file in a repo directory.
+
+
+The slice is 241 KB (94 sections), but it got the same file name as the first export, which would overwrite it in a repo directory. Checking how [redacted:repo] names a chained export.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && sed -n '1,40p' .mise/tasks/session/README.md 2>/dev/null | head -5; rtk grep -n -i -E \"chaîne|chain|incrément\" specs/drs/DR-014-regime_sessions_exports.md | sed -n '1,22p' | cut -c1-200"
+}
+```
+
+**Output:**
+```
+42 matches in 1 files:
+
+20:- la chaîne incrémentale des réexports,
+45:*Ce qui entre dans la strate et quand* : déclencheur, nommage, réexport, chaî...
+73:- des fragments vivent ailleurs : `review` lit le modèle et le fournisseur da...
+74:- deux dépendances vont vers le haut : la résolution de la session courante f...
+76:- **Exceptions** : `ExportError` (commande `session/export.py`) est levée par...
+109:Support : marqueur `through`, base incrémentale.
+196:- résolution de l'incrément,
+197:- chaîne et découverte (absorbe `session_chain`, dont le nom disparaît),
+214:- `session/export.py`, `session/attach.py`, `check/session_chain.py` gardent ...
+288:| **Marqueurs d'en-tête** (§Marqueurs machine de l'en-tête) | Rendu ; `sessio...
+289:| **Corps** : tours, séparateur de messages, ligne `**Tool: <nom>**`, marqueu...
+290:| **Note de base en prose** | Rendu de l'incrément | Repli de la découverte, ...
+291:| **Nom d'un export** : préfixe horodaté, préfixe d'identifiant, slug, cœur e...
+325:- **`ExportError`** (`sessions.exports`) : nommage, incrément, budgets, plani...
+373:La **session continuée** (encore ouverte, réexportée plusieurs fois avant sa ...
+375:Cette exception est inchangée par l'**export incrémental**, qui joue *entre *...
+377:#### Export incrémental par défaut
+379:L'export incrémental d'`[redacted:repo]:ADR-201` §Export incrémental de session est le *...
+390:#### Base incrémentale : résolution, indexation, marqueur
+392:La **base d'un export incrémental** se résout :
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 7.0s)
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && sed -n '373,376p;390,400p' specs/drs/DR-014-regime_sessions_exports.md | cut -c1-420; echo ...; rtk grep -n -i -E \"timestamp|horodat|préfixe\" specs/drs/DR-014-regime_sessions_exports.md | sed -n '1,8p' | cut -c1-260"
+}
+```
+
+**Output:**
+```
+La **session continuée** (encore ouverte, réexportée plusieurs fois avant sa propre clôture) est l'**exception** explicite : *écrasement du même fichier à chaque réexport*, régime `[redacted:repo]` (*"Re-running export on the same (continuing) session overwrites the same file"*), *git portant l'incrément* comme un diff ordinaire.
+
+Cette exception est inchangée par l'**export incrémental**, qui joue *entre **fichiers distincts** d'une même session* (slugs successifs de clôtures de lot réparties dans le temps), pas sur le fichier réécrit d'une session continuée.
+
+#### Base incrémentale : résolution, indexation, marqueur
+
+La **base d'un export incrémental** se résout :
+
+- par un scan du seul système de fichiers,
+- sans vérification de statut git.
+
+Le fichier ciblé est exclu de sa propre recherche de base : aucune perte de contenu n'est possible.
+
+Deux dispositions conjointes, aucune ne suffisant seule :
+
+...
+69:  - le préfixe d'identifiant d'un nom d'export ignore le suffixe de sous-tâche : une session titrée `T-124a-...` s'exporte à la main sous `T-124-a_...`, à la clôture sous `T-124a-...` ;
+289:| **Corps** : tours, séparateur de messages, ligne `**Tool: <nom>**`, marqueur `session-child:` | Rendu | Résolution de l'incrément (préfixe de message), découverte (repli d'un export sans liste) |
+291:| **Nom d'un export** : préfixe horodaté, préfixe d'identifiant, slug, cœur et segment d'une fille, suffixe de collision, repli `child_{NN}` | Nommage (exporteur et slug par défaut des clôtures, une seule dérivation) | Résolution de l'incrément, c
+302:- **Préfixe d'identifiant** : une définition, dans `exports` ; son écart avec la grammaire des identifiants de records (`T-NNNa`) reste à lever (`B-119`, planifié dans `M-026`).
+402:  Le **slug par défaut d'un export de clôture** garde le préfixe d'identifiant du nom du record, comme celui de l'attache de session à la création d'une tâche.
+500:- **`ts_fille`** est l'horodatage de création de la fille, **au même format que le préfixe d'un export parent** (`{YYYYMMDDHHMM}`, heure locale).
+502:  - son *préfixe d'id* (`T-NNN`, `M-NNN`, `D-NNN`, `H-NNN`) si son nom d'export en porte un, sinon
+505:- **`segment`** est le *slug du titre de la fille*, après retrait du suffixe `(@agent subagent)` que OpenCode ajoute au titre d'un sous-agent, puis du préfixe d'id s'il est identique au cœur.
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 94.7s)
+
+_Thinking:_
+I'm weighing two export patterns: overwriting the same file for a continued session, with git showing the increment as a diff, or writing separate files with successive slugs. Since the first export is already committed in PR #16 and the user asked to export and commit, re-exporting the whole session to the same file looks simplest and matches the continued-session approach, though the committed file will then show
+
+I'm checking whether a full re-export overwriting the same file will produce a clean diff against the committed version. Redaction should be deterministic, so the earlier portion should match apart from the header and the session-export marker, which means the diff should mostly be the appended slice. I'll check the diff stat afterwards to confirm few lines were removed.
+
+I'm deciding which sessions to export now: the orchestration session gets overwritten, the rog-memory worker and rog-deploy batch 3 become new files, and I'm leaving out the throwaway rog-smoke session. I'll set up a fresh worktree off origin/main and run the export script with those three specs, then check whether it picks up the new files correctly.
+
+I'm checking whether the orch session's export will also pull in the herdr child file, and whether that file stays unchanged so git shows no diff. The script's cleanup at the start and trap at the end look fine. The export includes everything up to this point, so the state updates I make afterwards will fall outside it, and the next re-export will pick them up.
+
+I'm checking the redaction output now: exact tokens, key and token shapes, home-directory paths, NUL bytes, and the private names like [redacted:private] and [redacted:private]. I also want to see whether the [redacted:private] store path leaks through, since the export will mention it heavily.
+
+I'm deciding whether to push the export branch, since the earlier flow pushed and that would make the transcripts public before review. I'll commit one per session and hold off on pushing until the redaction scan is clean.
+
+I'm settling on committing only, not pushing, since the transcripts would go public before anyone reviews them. Next I'll clear out the test directory and run the export.
+
+
+_Thinking:_
+[redacted:repo]'s rules call for overwriting the continued session's export each time, so git diffs show only the new material, and I'll re-export the orchestration transcript that way. Two sessions remain unexported, and I'm skipping the 30-second rog-smoke test.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo] && rm -rf .state/rog-orch/tmp/inc-test && git config --get core.worktree || echo \"core.worktree (main): unset\"; rtk git worktree add -q -b docs/sessions-export-2 [redacted:worktrees_root]/rog-export origin/main 2>&1 | tail -1; cd [redacted:worktrees_root]/rog-export && mise trust 2>&1 | tail -1; bun install --frozen-lockfile 2>&1 | tail -1; rtk git log --oneline -1 | cat; ls memory/sessions | wc -l; cd [redacted:repo] && time .state/rog-orch/bin/export-sessions.sh [redacted:worktrees_root]/rog-export rog-orch-orchestration=ses_e6320a0e1ffexOEYp4Zi3QELSa rog-memory-session-transcripts-plumbing=ses_e469c73fbffeLtZ5apuykQ3315 rog-deploy-batch-3=ses_e46f92bb8ffetnkHmqHHt1QsM2 2>&1 | tail -10",
+  "timeout": 1800000
+}
+```
+
+**Output:**
+```
+core.worktree (main): unset
+ok
+mise WARN  No untrusted config or environment files found.
+43 packages installed [540.00ms]
+cb8fd46 Merge pull request #16 from [redacted:repo]/sessions-export
+11
+202611021627-rog-orch-orchestration.md                         raw  1789662 B -> redacted  1790727 B
+202611021714-rog-orch-orchestrati-research_herdr_worktree.md   raw   141068 B -> redacted   140962 B
+202611080521-rog-memory-session-transcripts-plumbing.md        raw   196921 B -> redacted   197223 B
+202611080339-rog-deploy-batch-3.md                             raw     5540 B -> redacted     5393 B
+redactor --check exit 0
+fleet names: 1 readable, 10 hidden
+.state/rog-orch/bin/export-sessions.sh [redacted:worktrees_root]/rog-export    2>&1  84,03s user 5,25s system 122% cpu 1:13,17 total
+tail -10  0,00s user 0,00s system 0% cpu 1:13,17 total
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 26.7s)
+
+_Thinking:_
+I'm checking a new output line, "fleet names: 1 readable, 10 hidden," to see whether it's a real hit or just a status line from the grep. I think it's just a status line, but I'm still looking at the "1 readable" part.
+
+I'm trying to work out which fleet repo name is the readable one, and my guess is that it's this repo itself, public-repos, since the public profile should redact everything else by default. I'll pull up the full check output to confirm.
+
+
+The check passed, but it printed a new line, "fleet names: 1 readable, 10 hidden". Looking at what that means before trusting it.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export && python3 ~/.config/nvim/scripts/session_redact.py --check 2>&1 | tail -6; python3 ~/.config/nvim/scripts/session_redact.py --explain 2>&1 | grep -i -E \"fleet|profile\" | head -5; grep -n \"readable\" ~/.config/nvim/scripts/session_redact.py | head -5 | cut -c1-160"
+}
+```
+
+**Output:**
+```
+credential variable names: 0
+token scope lines: 0
+ip addresses: 0
+email addresses: 0
+git hosts: 0
+nul bytes: 0
+profile: public (project file)
+fleet-names: redact (default)
+fleet names: 1 readable, 10 hidden
+  fleet-repos.txt (12 entries)
+57:                     fleet repositories that 'keep' leaves readable
+71:           repository is readable only when its name is in
+73:           ~/Work/<repo>/<path> form is readable (DR-012) only with
+114:profile the line 'fleet names: <R> readable, <H> hidden' follows the
+730:        # Public profile: readable only under `keep` and only for a public repository (for
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 8.9s)
+
+_Thinking:_
+The redactor now reports a "nul bytes" count of 0, which looks like a new category, possibly from the S22 change that landed in the meantime. The "fleet names" line, one readable and ten hidden, is just informational, and the readable one is this public repo, so nothing to worry about there. Next I want to run an independent scan over the three new or overwritten files and the whole directory for anything added, including names like [redacted:repo], [redacted:private], and nvim.
+
+
+_Thinking:_
+Both results are informational: the redactor now has a NUL-byte category, and the "1 readable" fleet name likely points to this public repo. I'm running a wider independent scan next, since this session touches the redactor and its private store.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export/memory/sessions && F=\"202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md\"; echo \"NUL bytes: $(grep -lP '\\x00' $F | wc -l) files\"; echo \"exact token: $(grep -lF \"${[redacted:envvar]:-__none__}\" $F | wc -l); token shapes: $(grep -ElE 'gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}' $F | wc -l); key shapes: $(grep -ElE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE' $F | wc -l)\"; echo \"real /home/<user>: $(grep -ohE '/home/[A-Za-z0-9_.-]+' $F | grep -vE '^/home/(linuxbrew|user)$' | wc -l); IPv4: $(grep -ohE '\\b([0-9]{1,3}\\.){3}[0-9]{1,3}\\b' $F | grep -vE '^(127\\.0\\.0\\.1|0\\.0\\.0\\.0)$' | sort -u | wc -l); emails: $(grep -ohE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}' $F | sort -u | tr '\\n' ' ')\"; echo \"--- private words (counts per file):\"; for w in [redacted:private] [redacted:private] [redacted:private] '[redacted:private]' [redacted:repo] [redacted:private] 'T-314' 'T-319' 'S22' 'S18' 'nvim-orch' '[redacted:repo]-orch' 'nvim-coord'; do printf '%-18s' \"$w\"; for f in $F; do printf '%s ' \"$(grep -ci -- \"$w\" $f)\"; done; echo; done"
+}
+```
+
+**Output:**
+```
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+NUL bytes: 0 files
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+exact token: 0; token shapes: 0; key shapes: 0
+real /home/<user>: 0; IPv4: 0; emails: 
+--- private words (counts per file):
+[redacted:private]             
+[redacted:private]            
+[redacted:private]        
+[redacted:private]             
+[redacted:repo]   
+[redacted:private]    
+T-314             grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+ 
+T-319              
+S22                
+S18                
+nvim-orch          
+[redacted:repo]-orch        grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+grep: 202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md: No such file or directory
+ 
+nvim-coord         
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 9.2s)
+
+_Thinking:_
+zsh doesn't split unquoted variables into words the way bash does, so $F won't expand into separate arguments here. I'll either switch to an array or re-run the command under bash -c.
+
+
+zsh doesn't split `$F`, so that scan read nothing and its zeros mean nothing. Re-running it under bash with an array.
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:worktrees_root]/rog-export/memory/sessions && bash -c '\nF=(202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md)\nfor f in \"${F[@]}\"; do [ -s \"$f\" ] || { echo \"MISSING $f\"; exit 1; }; done\necho \"files: ${#F[@]}, bytes: $(cat \"${F[@]}\" | wc -c)\"\necho \"NUL bytes: $(grep -lP \"\\x00\" \"${F[@]}\" | wc -l) files\"\necho \"exact token: $(grep -lF \"${[redacted:envvar]:-__none__}\" \"${F[@]}\" | wc -l); token shapes: $(grep -ElE \"gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}\" \"${F[@]}\" | wc -l); key shapes: $(grep -ElE \"sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE\" \"${F[@]}\" | wc -l)\"\necho \"real /home/<user>: $(grep -ohE \"/home/[A-Za-z0-9_.-]+\" \"${F[@]}\" | grep -vE \"^/home/(linuxbrew|user)$\" | wc -l); IPv4: $(grep -ohE \"\\b([0-9]{1,3}\\.){3}[0-9]{1,3}\\b\" \"${F[@]}\" | grep -vE \"^(127\\.0\\.0\\.1|0\\.0\\.0\\.0)$\" | sort -u | wc -l)\"\necho \"emails: $(grep -ohE \"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}\" \"${F[@]}\" | sort -u | tr \"\\n\" \" \")\"\necho \"--- private words, matches per file (orch / memory / deploy3):\"\nfor w in [redacted:private] [redacted:private] [redacted:private] [redacted:private] [redacted:repo] [redacted:private] T-314 T-319 T-065 nvim-orch [redacted:repo]-orch nvim-coord; do printf \"%-18s\" \"$w\"; for f in \"${F[@]}\"; do printf \"%s \" \"$(grep -ci -- \"$w\" \"$f\")\"; done; echo; done'"
+}
+```
+
+**Output:**
+```
+files: 3, bytes: 1993343
+NUL bytes: 0 files
+exact token: 0; token shapes: 0; key shapes: 0
+real /home/<user>: 0; IPv4: 0
+emails: git@gitlab.com 
+--- private words, matches per file (orch / memory / deploy3):
+[redacted:private]            0 0 0 
+[redacted:private]           0 0 0 
+[redacted:private]       0 0 0 
+[redacted:private]            0 0 0 
+[redacted:repo]  0 0 0 
+[redacted:private]   27 9 0 
+T-314             14 0 0 
+T-319             8 0 0 
+T-065             7 0 0 
+nvim-orch         53 0 0 
+[redacted:repo]-orch        0 0 0 
+nvim-coord        10 0 0 
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5 · 18.8s)
+
+_Thinking:_
+I'm checking how often `[redacted:private]` shows up: 27 hits in the orchestrator and 9 in the memory worker. It's the local path of the private chezmoi store, and the directory name alone might hint that a private dotfiles setup exists, even though the repo itself, `[redacted:repo]`, has no hits.
+
+I'm weighing whether the nvim-orch and nvim-coord agent names count as sensitive, since the name "nvim" could point to a private repo, and whether the fleet repo list already covers that.
+
+I'm weighing whether the `nvim-orch` and `nvim-coord` agent names should be scrubbed too, since they point to other private fleet projects the way `[redacted:private]` and `[redacted:private]` did in the earlier PR. I also need to check whether `nvim-coord` already appears in the published orchestrator file, because it was in the herdr list from the start of this session.
+
+I'm checking whether `[redacted:repo]` and `[redacted:repo]` still show up in the published file, since the redactor only hides repo names when they stand as whole words. `nvim-orch` may be surviving the scrub because the hyphen breaks the word boundary the pattern expects.
+
+Next I'm checking whether `nvim-orch` reveals anything: "nvim" is a generic tool name, so it likely stays public, and the redactor's failure to touch it fits that. Then I'll decide whether `[redacted:private]` needs scrubbing and check whether the earlier published export already contains it.
+
+I'm adding `[redacted:private]` and `[redacted:repo]` to the extra scrub terms, then re-running the export so the orchestrator and memory worker files come out clean.
+
+I'm re-running the export with the same three specs so the new scrub terms take effect, and I want to check how many times the published orchestrator file already contains `[redacted:private]` first.
+
+
+_Thinking:_
+The scan is clean on tokens, keys, paths and every nvim-orch term, but the `[redacted:private]` directory name shows up 36 times and needs a decision. I'm checking what's already published next.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:memory/sessions && echo \"already published on main (counts per file):\"; for w in [redacted:private] [redacted:repo] nvim-coord nvim-orch [redacted:private]; do printf '%-18s' \"$w\"; grep -c -- \"$w\" 2*.md | awk -F: '$2>0{printf \"%s:%s \", substr($1,1,22), $2}'; echo; done; echo \"--- how [redacted:private] appears (shapes):\"; grep -ohE '.{0,25}[redacted:private].{0,25}' [redacted:worktrees_root]/rog-export/memory/sessions/202611080521-rog-memory-session-transcripts-plumbing.md | sort -u | head -4"
+}
+```
+
+**Output:**
+```
+already published on main (counts per file):
+[redacted:private]   202611021627-rog-orch-:10 
+[redacted:repo]  
+nvim-coord        202611021627-rog-orch-:7 
+nvim-orch         
+[redacted:private]           
+--- how [redacted:private] appears (shapes):
+ (default ~/.local/share/[redacted:private], a clone of a
+er only, the global one `[redacted:private]/session-redact`: spell 5
+r global: ~/.local/share/[redacted:private]/session-redact
+store: ~/.local/share/[redacted:private]
+
+```
+
+
+---
+
+## Assistant (Build · Claude Sonnet 5.5)
+
+_Thinking:_
+I've already seen that `[redacted:private]` appears in the orch file on main, ten lines' worth, and `nvim-coord` in seven. The new export will add more, so I'm deciding to scrub the private dotfiles store name from new exports while leaving the generic `nvim-*` agent names alone. The lines already published will stay in history unless the maintainer asks for a rewrite, though overwriting the file in this commit removes them from the current tree.
+
+I'm going to replace `[redacted:private]` with a redaction placeholder in new exports, and I'll leave the `nvim-*` agent names alone while flagging `nvim-coord` for the maintainer. I'll also add `[redacted:private]` and `[redacted:repo]` to the extra terms, since the scrub's case-insensitive match without word boundaries will catch the name inside longer paths too. Next I'm re-running the export on the three specs.
+
+
+_Thinking:_
+`[redacted:private]` and `nvim-coord` are already in the published orchestration file, so I'm scrubbing the store's directory name from the new exports and re-exporting with that term added to the local scrub list.
+
+
+**Tool: bash**
+
+**Input:**
+```json
+{
+  "command": "cd [redacted:repo]:.state/rog-orch && printf '[redacted:private]\\n[redacted:repo]\\n' >> private/extra-terms.txt && grep -vc '^#' private/extra-terms.txt && rm -f [redacted:worktrees_root]/rog-export/memory/sessions/202611021627-rog-orch-orchestration.md [redacted:worktrees_root]/rog-export/memory/sessions/202611080521-rog-memory-session-transcripts-plumbing.md [redacted:worktrees_root]/rog-export/memory/sessions/202611080339-rog-deploy-batch-3.md && cd [redacted:worktrees_root]/rog-export && git checkout -q -- memory/sessions && cd [redacted:repo] && .state/rog-orch/bin/export-sessions.sh [redacted:worktrees_root]/rog-export rog-orch-orchestration=ses_e6320a0e1ffexOEYp4Zi3QELSa rog-memory-session-transcripts-plumbing=ses_e469c73fbffeLtZ5apuykQ3315 rog-deploy-batch-3=ses_e46f92bb8ffetnkHmqHHt1QsM2 2>&1 | tail -8; cd [redacted:worktrees_root]/rog-export/memory/sessions && bash -c '\nF=(202611021627-rog-orch-orchestration.md 202611080521-rog-memory-session-transcripts-plumbing.md 202611080339-rog-deploy-batch-3.md)\necho \"[redacted:private]/[redacted:repo]/[redacted:private]/[redacted:private]/[redacted:private]/[redacted:private]:\"; for f in \"${F[@]}\"; do printf \"%s \" \"$(grep -ciE \"[redacted:private]|[redacted:repo]|[redacted:private]|[redacted:private]|[redacted:private]|[redacted:private]\" \"$f\")\"; done; echo\necho \"NUL: $(grep -lP \"\\x00\" \"${F[@]}\" | wc -l); exact token: $(grep -lF \"${[redacted:envvar]:-__none__}\" \"${F[@]}\" | wc -l); token/key shapes: $(grep -ElE \"gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE\" \"${F[@]}\" | wc -l); /home/<user>: $(grep -ohE \"/home/[A-Za-z0-9_.-]+\" \"${F[@]}\" | grep -vE \"^/home/(linuxbrew|user)$\" | wc -l)\"'; cd [redacted:worktrees_root]/rog-export && git status --short | cat; git diff --stat | tail -3",
+  "timeout": 1800000
 }
 ```
 
