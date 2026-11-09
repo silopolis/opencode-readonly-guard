@@ -1,0 +1,1 @@
+{"rule":"EN_QUOTES","sentence":"^\\QDo not edit any file, do not \"fix\" anything, do not run other commands except the ones listed below.\\E$"}
